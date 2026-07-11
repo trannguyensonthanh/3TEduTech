@@ -71,7 +71,7 @@ import PayoutManagement from '@/pages/admin/PayoutManagement';
 // Utility Pages
 import IntroPage from '@/pages/IntroPage';
 import NotFound from './pages/NotFound';
-import Unauthorized from './pages/Unauthorized';
+import Unauthorized from './pages/Unauthorized'; 
 import CryptoPaymentPage from '@/pages/CryptoPaymentPage';
 
 const AppRouter = () => {
