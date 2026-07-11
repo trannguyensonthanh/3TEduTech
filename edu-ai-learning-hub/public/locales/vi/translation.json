@@ -1,0 +1,1192 @@
+{
+  "approvals": {
+    "tabs": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối",
+      "all": "Tất cả yêu cầu"
+    },
+    "searchPlaceholder": "Tìm kiếm theo khóa học hoặc giảng viên...",
+    "errorLoading": "Lỗi tải dữ liệu",
+    "unknownError": "Lỗi không xác định",
+    "noResults": "Không tìm thấy yêu cầu phê duyệt nào phù hợp.",
+    "table": {
+      "courseName": "Tên khóa học",
+      "instructor": "Giảng viên",
+      "submitted": "Ngày gửi",
+      "requestType": "Loại yêu cầu",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "requestType": {
+      "new_course": "Khóa học mới",
+      "course_update": "Cập nhật khóa học"
+    },
+    "status": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối"
+    },
+    "actions": {
+      "review": "Duyệt",
+      "viewDetail": "Xem chi tiết"
+    },
+    "noResultsStatus": "Không có yêu cầu phê duyệt nào cho trạng thái này."
+  },
+  "cta": {
+    "title": "Sẵn sàng bắt đầu hành trình học tập của bạn?",
+    "description": "Tham gia cùng hàng ngàn học viên đang học tập, phát triển và đạt được mục tiêu với các khóa học ứng dụng AI của chúng tôi. Tương lai của bạn bắt đầu từ đây.",
+    "getStarted": "Bắt đầu miễn phí",
+    "browseCourses": "Xem các khóa học",
+    "noCreditCard": "Không cần thẻ tín dụng để tạo tài khoản miễn phí. Hãy bắt đầu học ngay hôm nay!"
+  },
+  "categories": {
+    "title": "Khám phá các lĩnh vực hàng đầu",
+    "description": "Khám phá các lĩnh vực khóa học phổ biến nhất và tìm lĩnh vực phù hợp với mục tiêu học tập của bạn.",
+    "errorTitle": "Rất tiếc! Đã xảy ra lỗi.",
+    "errorDesc": "Hiện không thể tải danh mục. Vui lòng thử lại sau.",
+    "courseCount": "{{count}} khóa học",
+    "noCategories": "Hiện chưa có danh mục nào.",
+    "viewAll": "Xem tất cả lĩnh vực",
+    "exploreCourses": "Khám phá khóa học"
+  },
+  "featured": {
+    "title": "Khóa học nổi bật",
+    "description": "Những khóa học được chọn lọc để khởi đầu hành trình học tập cùng các giảng viên hàng đầu.",
+    "viewAll": "Xem tất cả khóa học",
+    "errorTitle": "Không thể tải các khóa học nổi bật.",
+    "errorDesc": "Vui lòng thử tải lại trang hoặc quay lại sau.",
+    "noCourses": "Hiện chưa có khóa học nổi bật nào."
+  },
+  "courseDetail": {
+    "backToPending": "Quay lại danh sách chờ duyệt",
+    "reject": "Từ chối",
+    "approve": "Duyệt",
+    "previewCourse": "Xem trước trang khóa học",
+    "by": "Bởi {{instructor}}",
+    "submitted": "Ngày gửi",
+    "requestId": "Mã yêu cầu: {{id}}",
+    "shortDescription": "Mô tả ngắn",
+    "category": "Danh mục",
+    "level": "Trình độ",
+    "language": "Ngôn ngữ",
+    "price": "Giá gốc",
+    "discount": "Giảm giá",
+    "none": "Không có",
+    "fullDescription": "Mô tả đầy đủ",
+    "requirements": "Yêu cầu",
+    "learningOutcomes": "Bạn sẽ học được gì",
+    "instructorNotes": "Ghi chú của giảng viên",
+    "curriculumReview": "Xem chương trình học",
+    "noCurriculum": "Chưa có chương trình học nào được gửi.",
+    "reviewDecision": "Quyết định duyệt",
+    "reviewDesc": "Hãy nhập nhận xét và duyệt hoặc từ chối khóa học này.",
+    "adminNotes": "Ghi chú / Phản hồi của quản trị viên",
+    "adminNotesPlaceholder": "Nhập phản hồi cho giảng viên (bắt buộc nếu từ chối)...",
+    "adminNotesHint": "Ghi chú này sẽ được gửi cho giảng viên.",
+    "approveCourse": "Duyệt khóa học",
+    "rejectCourse": "Từ chối khóa học",
+    "notesRequired": "Cần nhập ghi chú để từ chối",
+    "sectionLessonCount": "{{count}} bài học",
+    "min": "phút",
+    "lessonType": {
+      "video": "Video",
+      "text": "Lý thuyết",
+      "quiz": "Trắc nghiệm"
+    },
+    "preview": "Xem thử",
+    "watch": "Xem video",
+    "viewContent": "Xem nội dung",
+    "viewQuiz": "Xem trắc nghiệm",
+    "sectionTitle": "Chương {{index}}: {{name}}",
+    "untitledSection": "Chương chưa đặt tên",
+    "sectionItemCount": "{{count}} mục",
+    "untitledLesson": "Bài học chưa đặt tên",
+    "previewable": "Có thể xem thử",
+    "files": "Tệp",
+    "questions": "Câu hỏi",
+    "view": "Xem",
+    "noLessonsInSection": "Chưa có bài học nào trong chương này."
+  },
+  "lessonDialogs": {
+    "videoPreview": "Xem trước video",
+    "errorLoadingVideo": "Lỗi tải video",
+    "unknownError": "Lỗi không xác định",
+    "noVideoSource": "Không có nguồn video phù hợp",
+    "textContent": "Nội dung lý thuyết",
+    "noContent": "Không có nội dung.",
+    "quizPreview": "Xem trước trắc nghiệm",
+    "explanation": "Giải thích:",
+    "noQuestions": "Không có câu hỏi nào trong bài trắc nghiệm này."
+  },
+  "courseDelete": {
+    "title": "Xóa khóa học",
+    "confirm": "Bạn có chắc chắn muốn xóa khóa học này? Hành động này không thể hoàn tác.",
+    "warning": "Cảnh báo",
+    "description": "Việc xóa khóa học sẽ xóa toàn bộ nội dung, lượt đăng ký và dữ liệu doanh thu liên quan. Học viên đã mua khóa học này sẽ mất quyền truy cập.",
+    "cancel": "Hủy",
+    "delete": "Xóa khóa học"
+  },
+  "courseDetails": {
+    "title": "Chi tiết khóa học",
+    "description": "Thông tin chi tiết về khóa học.",
+    "by": "Bởi {{instructor}}",
+    "createdOn": "Tạo ngày {{date}}",
+    "status": {
+      "published": "Đã xuất bản",
+      "pending": "Chờ duyệt",
+      "rejected": "Từ chối",
+      "draft": "Bản nháp"
+    },
+    "tabs": {
+      "info": "Thông tin",
+      "curriculum": "Chương trình",
+      "stats": "Thống kê"
+    },
+    "descriptionTitle": "Mô tả",
+    "category": "Danh mục",
+    "price": "Giá",
+    "rating": "Đánh giá",
+    "students": "Học viên đã đăng ký",
+    "curriculumTitle": "Chương trình học",
+    "sectionLessonCount": "{{count}} bài học",
+    "min": "phút",
+    "lessonType": {
+      "video": "Video",
+      "text": "Lý thuyết",
+      "quiz": "Trắc nghiệm",
+      "lesson": "Bài học"
+    },
+    "preview": "Xem thử",
+    "view": "Xem",
+    "statsTitle": "Thống kê khóa học",
+    "statsDesc": "Chỉ số hiệu quả của khóa học này",
+    "totalEnrollments": "Tổng số lượt đăng ký:",
+    "averageRating": "Điểm đánh giá trung bình:",
+    "totalRevenue": "Tổng doanh thu:",
+    "completionRate": "Tỉ lệ hoàn thành:",
+    "avgTimeToComplete": "Thời gian hoàn thành trung bình:",
+    "days": "ngày",
+    "previewCourse": "Xem trước khóa học",
+    "close": "Đóng"
+  },
+  "courseFilters": {
+    "searchPlaceholder": "Tìm kiếm khóa học...",
+    "filterByCategory": "Lọc theo lĩnh vực",
+    "allCategories": "Tất cả lĩnh vực",
+    "category": {
+      "programming": "Lập trình",
+      "design": "Thiết kế",
+      "business": "Kinh doanh",
+      "marketing": "Marketing",
+      "photography": "Nhiếp ảnh"
+    },
+    "filterByStatus": "Lọc theo trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "status": {
+      "draft": "Bản nháp",
+      "pending": "Chờ duyệt",
+      "published": "Đã xuất bản",
+      "rejected": "Từ chối"
+    }
+  },
+  "coursesTable": {
+    "headers": {
+      "id": "Mã",
+      "title": "Tiêu đề",
+      "instructor": "Giảng viên",
+      "category": "Danh mục",
+      "price": "Giá",
+      "status": "Trạng thái",
+      "rating": "Đánh giá",
+      "students": "Học viên",
+      "actions": "Thao tác"
+    },
+    "actions": {
+      "viewDetails": "Xem chi tiết",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "unpublish": "Gỡ xuất bản",
+      "delete": "Xóa",
+      "actionsLabel": "Thao tác"
+    },
+    "status": {
+      "draft": "Bản nháp",
+      "pending": "Chờ duyệt",
+      "published": "Đã xuất bản",
+      "rejected": "Từ chối"
+    }
+  },
+  "lessonDetails": {
+    "videoContent": "Nội dung video",
+    "noVideoUrl": "Không có URL video",
+    "duration": "Thời lượng",
+    "textContent": "Nội dung lý thuyết",
+    "noContent": "Không có nội dung.",
+    "quizContent": "Nội dung trắc nghiệm",
+    "question": "Câu hỏi {{number}}: {{text}}",
+    "correct": "Đúng",
+    "explanation": "Giải thích:",
+    "noQuizQuestions": "Không có câu hỏi trắc nghiệm nào.",
+    "resources": "Tài nguyên",
+    "close": "Đóng"
+  },
+  "pagination": {
+    "previous": "Trước",
+    "next": "Tiếp",
+    "controls": {
+      "prev": "Trang trước",
+      "next": "Trang sau",
+      "gotoPage": "Đến trang {{page}}"
+    }
+  },
+  "currenciesTable": {
+    "headers": {
+      "id": "Mã",
+      "name": "Tên",
+      "type": "Loại",
+      "decimals": "Số thập phân",
+      "actions": "Thao tác"
+    },
+    "type": {
+      "fiat": "Tiền pháp định",
+      "crypto": "Tiền mã hóa"
+    },
+    "actions": {
+      "edit": "Chỉnh sửa tiền tệ",
+      "delete": "Xóa tiền tệ"
+    },
+    "noCurrencies": "Không tìm thấy loại tiền nào."
+  },
+  "currencyDialog": {
+    "titleAdd": "Thêm tiền tệ mới",
+    "titleEdit": "Chỉnh sửa tiền tệ",
+    "descAdd": "Thêm một loại tiền tệ mới vào hệ thống.",
+    "descEdit": "Cập nhật thông tin cho {{name}}.",
+    "currencyId": "Mã tiền tệ",
+    "currencyName": "Tên tiền tệ",
+    "type": "Loại",
+    "fiat": "Tiền pháp định",
+    "crypto": "Tiền mã hóa",
+    "decimals": "Số thập phân",
+    "cancel": "Hủy",
+    "save": "Lưu thay đổi",
+    "add": "Thêm tiền tệ",
+    "required": "Bắt buộc",
+    "placeholderId": "VD: USD, VND, BTC",
+    "placeholderName": "VD: Đô la Mỹ, Bitcoin"
+  },
+  "deleteCurrencyDialog": {
+    "title": "Xóa tiền tệ",
+    "desc": "Bạn có chắc chắn muốn xóa tiền tệ {{name}} ({{id}})? Hành động này không thể hoàn tác.",
+    "cancel": "Hủy",
+    "confirm": "Đồng ý xóa tiền tệ"
+  },
+  "deleteExchangeRateDialog": {
+    "title": "Xóa tỷ giá",
+    "desc": "Bạn có chắc chắn muốn xóa tỷ giá từ {{from}} sang {{to}}? Hành động này không thể hoàn tác và có thể ảnh hưởng đến việc tính toán thanh toán.",
+    "cancel": "Hủy",
+    "confirm": "Xóa"
+  },
+  "exchangeRateDialog": {
+    "titleAdd": "Thêm tỷ giá mới",
+    "titleEdit": "Chỉnh sửa tỷ giá",
+    "fromCurrency": "Từ tiền tệ",
+    "toCurrency": "Đến tiền tệ",
+    "selectCurrency": "Chọn tiền tệ",
+    "rate": "Tỷ giá",
+    "rateRequired": "Vui lòng nhập tỷ giá",
+    "rateMin": "Tỷ giá phải lớn hơn 0",
+    "effectiveFrom": "Hiệu lực từ",
+    "effectiveRequired": "Vui lòng chọn thời gian hiệu lực",
+    "source": "Nguồn (không bắt buộc)",
+    "sourcePlaceholder": "VD: Yahoo Finance, CoinMarketCap, Cập nhật thủ công",
+    "cancel": "Hủy",
+    "add": "Thêm tỷ giá",
+    "update": "Cập nhật tỷ giá"
+  },
+  "exchangeRatesTable": {
+    "headers": {
+      "id": "Mã",
+      "from": "Từ tiền tệ",
+      "to": "Đến tiền tệ",
+      "rate": "Tỷ giá",
+      "effectiveFrom": "Hiệu lực từ",
+      "source": "Nguồn",
+      "actions": "Thao tác"
+    },
+    "noExchangeRates": "Không tìm thấy tỷ giá nào.",
+    "emptySource": "—",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "deleteLevelDialog": {
+    "title": "Xóa trình độ",
+    "desc": "Bạn có chắc chắn muốn xóa trình độ '{{levelName}}'? Hành động này không thể hoàn tác.",
+    "cancel": "Hủy",
+    "confirm": "Xóa"
+  },
+  "levelDialog": {
+    "titleAdd": "Thêm trình độ mới",
+    "titleEdit": "Chỉnh sửa trình độ",
+    "levelName": "Tên trình độ",
+    "nameRequired": "Vui lòng nhập tên trình độ",
+    "cancel": "Hủy",
+    "add": "Thêm trình độ",
+    "update": "Cập nhật trình độ"
+  },
+  "levelsTable": {
+    "headers": {
+      "id": "Mã",
+      "levelName": "Tên trình độ",
+      "createdAt": "Ngày tạo",
+      "updatedAt": "Ngày cập nhật",
+      "actions": "Thao tác"
+    },
+    "noLevels": "Không tìm thấy trình độ nào.",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "deletePaymentMethodDialog": {
+    "title": "Xóa phương thức thanh toán",
+    "desc": "Bạn có chắc chắn muốn xóa phương thức thanh toán '{{methodId}} ({{methodName}})'? Hành động này không thể hoàn tác và có thể ảnh hưởng đến các thiết lập thanh toán hiện tại.",
+    "cancel": "Hủy",
+    "confirm": "Xóa"
+  },
+  "paymentMethodDialog": {
+    "titleAdd": "Thêm phương thức thanh toán mới",
+    "titleEdit": "Chỉnh sửa phương thức thanh toán",
+    "methodId": "Mã phương thức",
+    "methodName": "Tên phương thức",
+    "idRequired": "Vui lòng nhập mã phương thức",
+    "idMaxLength": "Mã phương thức không được vượt quá 20 ký tự",
+    "nameRequired": "Vui lòng nhập tên phương thức",
+    "placeholderId": "MOMO, VNPAY, BANK, CRYPTO",
+    "placeholderName": "MoMo E-Wallet, VNPay, Chuyển khoản ngân hàng",
+    "cancel": "Hủy",
+    "add": "Thêm phương thức",
+    "update": "Cập nhật phương thức"
+  },
+  "paymentMethodsTable": {
+    "headers": {
+      "methodId": "Mã phương thức",
+      "methodName": "Tên phương thức",
+      "actions": "Thao tác"
+    },
+    "noPaymentMethods": "Không tìm thấy phương thức thanh toán nào.",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "deleteSkillDialog": {
+    "title": "Xóa kỹ năng",
+    "desc": "Bạn có chắc chắn muốn xóa kỹ năng '{{skillName}}'? Hành động này không thể hoàn tác.",
+    "warning": "Cảnh báo",
+    "warningDesc": "Việc xóa kỹ năng này sẽ xóa khỏi tất cả giảng viên đã được gán. Điều này có thể ảnh hưởng đến hồ sơ giảng viên và danh sách khóa học.",
+    "cancel": "Hủy",
+    "confirm": "Xóa kỹ năng"
+  },
+  "skillDialog": {
+    "titleAdd": "Thêm kỹ năng",
+    "titleEdit": "Chỉnh sửa kỹ năng",
+    "skillName": "Tên kỹ năng",
+    "description": "Mô tả",
+    "placeholderName": "Nhập tên kỹ năng",
+    "placeholderDesc": "Nhập mô tả (không bắt buộc)",
+    "add": "Thêm",
+    "update": "Cập nhật"
+  },
+  "skillsTable": {
+    "headers": {
+      "id": "Mã",
+      "skillName": "Tên kỹ năng",
+      "description": "Mô tả",
+      "createdAt": "Ngày tạo",
+      "updatedAt": "Ngày cập nhật",
+      "actions": "Thao tác"
+    },
+    "noSkills": "Không tìm thấy kỹ năng nào.",
+    "emptyDescription": "—",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "addUserDialog": {
+    "tabs": {
+      "basic": "Thông tin cơ bản",
+      "instructor": "Thông tin giảng viên"
+    },
+    "fullName": "Họ và tên",
+    "email": "Email",
+    "role": "Vai trò",
+    "roles": {
+      "student": "Học viên",
+      "instructor": "Giảng viên",
+      "admin": "Quản trị viên",
+      "superAdmin": "Super Admin"
+    },
+    "roleDesc": "Quyền hạn của người dùng sẽ được xác định theo vai trò này.",
+    "password": "Mật khẩu",
+    "confirmPassword": "Nhập lại mật khẩu",
+    "gender": "Giới tính",
+    "genders": {
+      "male": "Nam",
+      "female": "Nữ"
+    },
+    "birthDate": "Ngày sinh",
+    "phoneNumber": "Số điện thoại",
+    "location": "Địa chỉ",
+    "professionalTitle": "Chức danh chuyên môn",
+    "bio": "Giới thiệu ngắn",
+    "bioDesc": "Mô tả chuyên môn ngắn gọn (hiển thị trên thẻ giảng viên)",
+    "aboutMe": "Giới thiệu chi tiết",
+    "aboutMeDesc": "Mô tả chi tiết hiển thị trên trang hồ sơ giảng viên",
+    "skills": "Kỹ năng",
+    "skillsDesc": "Nhập các kỹ năng, cách nhau bằng dấu phẩy",
+    "socialLinks": "Liên kết mạng xã hội",
+    "paymentInfo": "Thông tin thanh toán",
+    "bankName": "Tên ngân hàng",
+    "bankAccountNumber": "Số tài khoản",
+    "bankAccountHolderName": "Chủ tài khoản",
+    "placeholder": {
+      "fullName": "Nguyễn Văn A",
+      "email": "nguoidung@email.com",
+      "role": "Chọn vai trò",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "gender": "Chọn giới tính",
+      "phoneNumber": "+84987654321",
+      "location": "Thành phố, Quốc gia",
+      "professionalTitle": "Lập trình viên, Nhà khoa học dữ liệu, ...",
+      "bio": "Mô tả chuyên môn ngắn",
+      "aboutMe": "Quá trình học tập, kinh nghiệm chuyên môn",
+      "skills": "JavaScript, React, Node.js, ... (cách nhau dấu phẩy)",
+      "linkedinUrl": "Đường dẫn LinkedIn",
+      "githubUrl": "Đường dẫn GitHub",
+      "twitterUrl": "Đường dẫn Twitter",
+      "bankName": "Tên ngân hàng",
+      "bankAccountNumber": "Số tài khoản ngân hàng",
+      "bankAccountHolderName": "Tên như trên tài khoản"
+    }
+  },
+  "userEditDialog": {
+    "editTitle": "Chỉnh sửa người dùng",
+    "editDesc": "Cập nhật thông tin cho {{name}}.",
+    "status": "Trạng thái",
+    "statusPlaceholder": "Chọn trạng thái",
+    "statusActive": "Hoạt động",
+    "statusInactive": "Không hoạt động",
+    "statusBanned": "Bị khóa",
+    "statusPending": "Chờ xác minh"
+  },
+  "userFilters": {
+    "searchPlaceholder": "Tìm kiếm người dùng...",
+    "filterByRole": "Lọc theo vai trò",
+    "allRoles": "Tất cả vai trò",
+    "role": {
+      "student": "Học viên",
+      "instructor": "Giảng viên",
+      "admin": "Quản trị viên",
+      "superAdmin": "Quản trị cấp cao"
+    },
+    "filterByStatus": "Lọc theo trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "status": {
+      "active": "Đang hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị khóa",
+      "pendingVerification": "Chờ xác minh"
+    }
+  },
+  "userTable": {
+    "headers": {
+      "id": "Mã",
+      "name": "Họ tên",
+      "email": "Email",
+      "role": "Vai trò",
+      "status": "Trạng thái",
+      "joined": "Ngày tham gia",
+      "actions": "Thao tác"
+    },
+    "role": {
+      "NU": "Học viên",
+      "GV": "Giảng viên",
+      "AD": "Quản trị viên",
+      "SA": "Quản trị cấp cao"
+    },
+    "status": {
+      "ACTIVE": "Đang hoạt động",
+      "INACTIVE": "Không hoạt động",
+      "BANNED": "Bị khóa",
+      "PENDING_VERIFICATION": "Chờ xác minh"
+    },
+    "actions": {
+      "view": "Xem chi tiết",
+      "edit": "Chỉnh sửa",
+      "delete": "Xóa người dùng"
+    }
+  },
+  "userViewDialog": {
+    "title": "Chi tiết người dùng",
+    "description": "Xem thông tin chi tiết về {{name}}",
+    "tabs": {
+      "profile": "Hồ sơ",
+      "instructor": "Thông tin giảng viên"
+    },
+    "label": {
+      "userId": "Mã người dùng",
+      "joinedDate": "Ngày tham gia",
+      "email": "Email",
+      "phoneNumber": "Số điện thoại",
+      "gender": "Giới tính",
+      "birthDate": "Ngày sinh",
+      "location": "Địa chỉ",
+      "bio": "Giới thiệu ngắn",
+      "aboutMe": "Giới thiệu chi tiết",
+      "skills": "Kỹ năng",
+      "socialLinks": "Liên kết mạng xã hội"
+    },
+    "gender": {
+      "MALE": "Nam",
+      "FEMALE": "Nữ"
+    },
+    "course": "khóa học",
+    "courses": "khóa học",
+    "actions": {
+      "close": "Đóng"
+    }
+  },
+  "authModal": {
+    "login": {
+      "title": "Chào mừng trở lại!",
+      "description": "Đăng nhập để tiếp tục hành trình học tập của bạn."
+    },
+    "signup": {
+      "title": "Tạo tài khoản mới",
+      "description": "Tham gia cộng đồng và bắt đầu học ngay hôm nay."
+    },
+    "tabs": {
+      "login": "Đăng nhập",
+      "signup": "Đăng ký"
+    },
+    "toast": {
+      "successTitle": "Đăng ký thành công!",
+      "successDesc": "Vui lòng đăng nhập bằng tài khoản vừa tạo."
+    }
+  },
+  "emailModal": {
+    "title": "Yêu cầu email",
+    "description": "Facebook không cung cấp email của bạn. Vui lòng nhập email bên dưới để hoàn tất đăng ký.",
+    "label": {
+      "email": "Email"
+    },
+    "placeholder": {
+      "email": "your.email@example.com"
+    },
+    "error": {
+      "invalid": "Email không hợp lệ",
+      "required": "Vui lòng nhập email"
+    },
+    "cancel": "Hủy",
+    "continue": "Tiếp tục",
+    "processing": "Đang xử lý...",
+    "toast": {
+      "errorTitle": "Lỗi",
+      "errorDesc": "Đã xảy ra lỗi. Vui lòng thử lại."
+    }
+  },
+  "loginForm": {
+    "email": "Địa chỉ email",
+    "emailPlaceholder": "ban@email.com",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "••••••••",
+    "forgot": "Quên mật khẩu?",
+    "signIn": "Đăng nhập",
+    "signInSuccess": "Đăng nhập thành công",
+    "signInWelcome": "Chào mừng trở lại, {{name}}!",
+    "signInFailed": "Đăng nhập thất bại",
+    "signInFailedDesc": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+    "orContinue": "Hoặc tiếp tục với",
+    "becomeInstructor": "Trở thành giảng viên",
+    "wantToShare": "Bạn muốn chia sẻ kiến thức?",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "errors": {
+      "invalidEmail": "Email không hợp lệ",
+      "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự"
+    }
+  },
+  "loginWithFacebook": {
+    "success": "Đăng nhập Facebook thành công!",
+    "error": "Đăng nhập Facebook thất bại.",
+    "configError": "Lỗi cấu hình đăng nhập Facebook.",
+    "checkEmail": "Vui lòng kiểm tra email bạn vừa cung cấp để xác thực tài khoản.",
+    "button": "Đăng nhập bằng Facebook",
+    "cancelled": "Đăng nhập bằng Facebook thất bại hoặc đã bị hủy."
+  },
+  "loginWithGoogle": {
+    "success": "Đăng nhập Google thành công!",
+    "error": "Đăng nhập Google thất bại. Vui lòng thử lại.",
+    "configError": "Chưa cấu hình Google Client ID. Vui lòng liên hệ quản trị viên.",
+    "noCredential": "Google không trả về credential (ID Token).",
+    "processing": "Đang xử lý đăng nhập Google..."
+  },
+  "signupForm": {
+    "fullName": "Họ và tên",
+    "fullNamePlaceholder": "Nguyễn Văn A",
+    "email": "Địa chỉ email",
+    "emailPlaceholder": "ban@email.com",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Tối thiểu 8 ký tự",
+    "confirmPassword": "Nhập lại mật khẩu",
+    "confirmPasswordPlaceholder": "Nhập lại mật khẩu",
+    "togglePassword": "Hiện/ẩn mật khẩu",
+    "toggleConfirmPassword": "Hiện/ẩn nhập lại mật khẩu",
+    "createAccount": "Tạo tài khoản",
+    "successTitle": "Tạo tài khoản thành công",
+    "successDesc": "Vui lòng đăng nhập với tài khoản mới.",
+    "errorTitle": "Đăng ký thất bại",
+    "errorDesc": "Có lỗi xảy ra khi tạo tài khoản.",
+    "validation": {
+      "email": "Email không hợp lệ",
+      "passwordMin": "Mật khẩu phải có ít nhất 8 ký tự",
+      "fullNameMin": "Họ và tên phải có ít nhất 3 ký tự",
+      "fullNameMax": "Họ và tên không được vượt quá 150 ký tự",
+      "passwordsMatch": "Mật khẩu nhập lại không khớp"
+    }
+  },
+  "certificate": {
+    "title": "Chứng nhận hoàn thành",
+    "presentedTo": "Chứng chỉ này được trao cho",
+    "forCompleting": "Vì đã hoàn thành xuất sắc khóa học trực tuyến",
+    "instructor": "Giảng viên",
+    "instructorSignature": "Chữ ký giảng viên",
+    "completionDate": "Ngày hoàn thành",
+    "certificateId": "Mã chứng chỉ: {{id}}",
+    "verifyAt": "Xác thực tại: yourdomain.com/verify-certificate?id={{id}}",
+    "downloadPNG": "Tải xuống Ảnh (PNG)"
+  },
+  "aiAssistant": {
+    "greeting": "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?",
+    "contextPrefix": "Dựa trên bài học về {{lesson}}: ",
+    "inputPlaceholder": "Hãy hỏi tôi bất cứ điều gì về khóa học...",
+    "responses": {
+      "0": "Đó là một câu hỏi hay! Để tôi giải thích...",
+      "1": "Tôi có thể giúp bạn về vấn đề này. Đây là những gì bạn cần biết...",
+      "2": "Dựa trên nội dung khóa học, tôi khuyên bạn nên tập trung vào...",
+      "3": "Để tôi phân tích từng bước cho bạn...",
+      "4": "Đó là một ý kiến thú vị. Bạn đã cân nhắc..."
+    }
+  },
+  "chatbot": {
+    "greeting": "👋 Xin chào! Tôi là trợ lý học tập AI của bạn cho 3TEduTech. Hôm nay tôi có thể giúp gì cho bạn về {{lesson, default:học tập của bạn}}?",
+    "inputPlaceholder": "Hãy hỏi bất cứ điều gì...",
+    "sendHint": "Nhấn <1>Enter</1> để gửi. Shift+Enter để xuống dòng mới.",
+    "response": {
+      "hello": "Xin chào! Tôi có thể hỗ trợ gì cho hành trình học tập của bạn hôm nay?",
+      "thank": "Rất hân hạnh được giúp bạn! Bạn còn điều gì muốn tôi giải đáp không?",
+      "python": "À, về {{topic}} trong Python cho bài học \"{{lesson}}\", đây là những kiến thức nền tảng! Vòng lặp giúp bạn lặp lại tác vụ, còn hàm giúp bạn tổ chức mã nguồn. Có phần nào bạn muốn tìm hiểu sâu hơn không?",
+      "lesson": "Với bài học \"{{lesson}}\", đó là một câu hỏi thú vị! Tôi có thể giải thích các khái niệm cốt lõi hoặc đưa ra ví dụ. Bạn muốn tìm hiểu điều gì?",
+      "general": "Đó là một câu hỏi hay! Dù tôi chưa có ngữ cảnh bài học cụ thể, tôi vẫn có thể hỗ trợ bạn về kiến thức chung. Bạn có thể nói rõ hơn không?",
+      "error": "Xin lỗi, tôi gặp sự cố khi trả lời. Vui lòng thử lại."
+    },
+    "loop": "vòng lặp",
+    "function": "hàm"
+  },
+  "bankTransferPayment": {
+    "title": "Thanh toán chuyển khoản ngân hàng",
+    "qrInstruction": "Quét mã VietQR bằng ứng dụng ngân hàng để tự động điền thông tin chuyển khoản.",
+    "bankName": "Tên ngân hàng",
+    "accountNumber": "Số tài khoản",
+    "accountHolder": "Chủ tài khoản",
+    "branch": "Chi nhánh",
+    "transferContentLabel": "Nội dung chuyển khoản (bắt buộc)",
+    "copiedTitle": "Đã sao chép!",
+    "copiedDesc": "Đã sao chép nội dung chuyển khoản.",
+    "copyBtn": "Sao chép",
+    "amount": "Số tiền: {{amount}} VND",
+    "amountNote": "Vui lòng chuyển đúng số tiền trên để hệ thống tự động xác nhận.",
+    "note1": "Sau khi chuyển khoản, vui lòng chờ 1-2 phút để hệ thống xác nhận thanh toán.",
+    "note2": "Nếu gặp sự cố, hãy liên hệ bộ phận hỗ trợ để được trợ giúp.",
+    "otherMethod": "Phương thức khác",
+    "completedBtn": "Tôi đã chuyển khoản"
+  },
+  "cryptoPayment": {
+    "title": "Thanh toán {{coin}}",
+    "coinLabel": "Loại coin",
+    "networkLabel": "Mạng lưới",
+    "addressLabel": "Địa chỉ ví",
+    "amountLabel": "Số lượng",
+    "equivalent": "Giá trị tương đương: ${{amount}}",
+    "equivalentNote": "Vui lòng chuyển đúng loại coin, đúng mạng và đúng số lượng.",
+    "note1": "Chờ xác nhận blockchain, có thể mất 10-15 phút tùy thuộc vào tắc nghẽn mạng.",
+    "note2": "Chúng tôi sẽ cập nhật trạng thái đơn hàng sau khi xác nhận giao dịch thành công.",
+    "otherMethod": "Chọn phương thức khác",
+    "completedBtn": "Tôi đã chuyển coin"
+  },
+  "momoPayment": {
+    "title": "Thanh toán bằng MoMo",
+    "tabQRCode": "Mã QR",
+    "tabApp": "Ứng dụng",
+    "qrTitle": "Thanh toán bằng MoMo QR",
+    "amount": "Số tiền: ${{amount}}",
+    "qrInstruction": "Mở ứng dụng MoMo, chọn 'Quét Mã' và quét mã QR trên để hoàn tất thanh toán.",
+    "qrExpire": "Mã QR sẽ hết hạn sau: <1>{{time}}</1>",
+    "qrExpired": "Mã QR đã hết hạn. Vui lòng tạo lại.",
+    "retry": "Thử lại",
+    "waiting": "Đang chờ xác nhận thanh toán...",
+    "processing": "Đang xử lý thanh toán...",
+    "appInstruction": "Nhấn vào nút bên dưới để chuyển đến ứng dụng MoMo và hoàn tất thanh toán của bạn.",
+    "appBtn": "Thanh toán với MoMo",
+    "appNote": "Bạn sẽ được chuyển đến ứng dụng MoMo hoặc trang web thanh toán của MoMo để hoàn tất giao dịch.",
+    "otherMethod": "Chọn phương thức khác"
+  },
+  "paypalPayment": {
+    "title": "Thanh toán bằng PayPal",
+    "info1": "Bạn sẽ được chuyển hướng đến trang thanh toán PayPal để hoàn tất giao dịch.",
+    "info2": "Sau khi thanh toán thành công, bạn sẽ được tự động chuyển về trang thông báo kết quả.",
+    "amountLabel": "Số tiền thanh toán:",
+    "processing": "Đang xử lý thanh toán...",
+    "loading": "Đang tải PayPal...",
+    "otherMethod": "Chọn phương thức khác",
+    "checkoutBtn": "Thanh toán PayPal"
+  },
+  "orderSummary": {
+    "title": "Tóm tắt đơn hàng",
+    "instructor": "Giảng viên: {{instructor}}",
+    "subtotal": "Tạm tính:",
+    "tax": "Thuế (10%):",
+    "total": "Tổng cộng:"
+  },
+  "paymentMethodList": {
+    "tabCard": "Thẻ",
+    "tabBank": "Ngân hàng",
+    "tabDigital": "Ví điện tử",
+    "tabCrypto": "Tiền điện tử"
+  },
+  "fullScreenLoader": {
+    "processing": "Đang xử lý..."
+  },
+  "languageToggle": {
+    "toggle": "Chuyển đổi ngôn ngữ",
+    "en": "Tiếng Anh",
+    "vi": "Tiếng Việt"
+  },
+  "courseInfoDialog": {
+    "title": "Thông tin khóa học",
+    "description": "Thông tin chi tiết về khóa học.",
+    "courseTitle": "Tên khóa học",
+    "instructor": "Giảng viên",
+    "progress": "Tiến độ",
+    "progressValue": "Hoàn thành {{completed}} trên {{total}} bài học ({{percent}}%)",
+    "sections": "Chương",
+    "completed": "Đã hoàn thành",
+    "inProgress": "Đang học",
+    "close": "Đóng"
+  },
+  "lessonContent": {
+    "explanation": "Giải thích:",
+    "quizResults": "Kết quả bài kiểm tra",
+    "yourScore": "Điểm của bạn: {{score}}%",
+    "tryAgain": "Làm lại",
+    "submitAnswers": "Nộp bài",
+    "quiz": {
+      "errorStartTitle": "Lỗi Bắt Đầu Bài Thi",
+      "errorStartDesc": "Không thể tải bài trắc nghiệm.",
+      "errorNoActiveAttempt": "Không có lượt làm bài nào đang hoạt động.",
+      "incompleteTitle": "Chưa Hoàn Thành",
+      "incompleteDesc": "Vui lòng trả lời tất cả {{total}} câu hỏi. Bạn còn {{unanswered}} câu chưa trả lời.",
+      "errorSubmitTitle": "Lỗi Nộp Bài",
+      "errorSubmitDesc": "Không thể nộp bài.",
+      "loading": "Đang tải bài trắc nghiệm...",
+      "questionProgress": "Câu {{current}} / {{total}}",
+      "unavailable": "Nội dung trắc nghiệm hiện không có. Vui lòng thử tải lại trang.",
+      "results": {
+        "title": "Đã Hoàn Thành!",
+        "defaultLessonName": "bài học",
+        "passedDesc": "Chúc mừng! Bạn đã hoàn thành xuất sắc bài trắc nghiệm \"{{lessonName}}\".",
+        "failedDesc": "Bạn đạt {{score}}%. Điểm đạt là {{passingScore}}%. Đừng bỏ cuộc, hãy xem lại câu trả lời và thử lại nhé!",
+        "reviewBtn": "Xem Lại Đáp Án",
+        "tryAgainBtn": "Thử Lại"
+      },
+      "review": {
+        "title": "Đang xem lại",
+        "defaultTitle": "Đáp Án",
+        "yourAnswer": "Câu trả lời của bạn",
+        "yourCorrectAnswer": "Câu trả lời đúng của bạn",
+        "correctAnswer": "Đáp án đúng",
+        "backToSummary": "Quay lại tổng kết",
+        "nextQuestion": "Câu tiếp theo"
+      },
+      "playing": {
+        "defaultTitle": "Kiểm Tra Kiến Thức",
+        "submitBtn": "Nộp Bài",
+        "nextBtn": "Câu tiếp theo"
+      }
+    }
+  },
+  "lessonContentRenderer": {
+    "videoErrorTitle": "Lỗi phát video",
+    "videoErrorDefault": "Không thể tải video. Vui lòng thử lại sau.",
+    "videoErrorMissingId": "Thiếu ID/URL video cho nguồn {{source}}.",
+    "videoErrorMissingSource": "Chưa xác định loại nguồn video.",
+    "videoErrorCloudinary": "Không thể tải video từ Cloudinary.",
+    "videoErrorCloudinaryNoUrl": "Tài nguyên video tạm thời không khả dụng. Vui lòng thử lại sau.",
+    "videoErrorCloudinaryMisconfigured": "Nguồn video bị cấu hình sai (thiếu ID).",
+    "videoErrorNotAvailable": "Không có nội dung video cho bài học này.",
+    "videoErrorPlayback": "Không thể phát video. Đường dẫn có thể không hợp lệ, đã hết hạn hoặc lỗi mạng.",
+    "videoLoading": "Đang tải video...",
+    "textNoContent": "Không có nội dung cho bài học này.",
+    "videoNoContent": "Không có nội dung video cho bài học này.",
+    "unsupportedType": "Loại bài học không được hỗ trợ hoặc không thể tải nội dung."
+  },
+  "lessonContentWrapper": {
+    "selectLessonTitle": "Chọn một bài học để bắt đầu",
+    "selectLessonDesc": "Hành trình học tập của bạn bắt đầu tại đây. Hãy chọn một bài học từ thanh bên.",
+    "prev": "Trước",
+    "next": "Tiếp",
+    "finish": "Hoàn thành",
+    "completed": "Đã hoàn thành",
+    "markAsComplete": "Đánh dấu đã hoàn thành"
+  },
+  "common": {
+    "save": "Lưu",
+    "cancel": "Huỷ",
+    "delete": "Xoá",
+    "edit": "Sửa",
+    "add": "Thêm",
+    "submit": "Gửi",
+    "loading": "Đang tải...",
+    "error": "Đã có lỗi xảy ra",
+    "retry": "Thử lại",
+    "confirm": "Xác nhận",
+    "closeSidebar": "Đóng thanh bên",
+    "openSidebar": "Mở thanh bên"
+  },
+  "lessonTabs": {
+    "loadingDiscussions": "Đang tải thảo luận...",
+    "errorLoadingDiscussions": "Lỗi tải thảo luận.",
+    "noDiscussions": "Chưa có thảo luận nào",
+    "noDiscussionsDesc": "Hãy là người đầu tiên bắt đầu một cuộc thảo luận cho bài học này.",
+    "loadMoreReplies": "Tải thêm trả lời",
+    "noReplies": "Chưa có trả lời nào. Hãy là người đầu tiên chia sẻ suy nghĩ của bạn!",
+    "replyingTo": "Đang trả lời {{name}}:",
+    "postReplyTo": "Đăng một câu trả lời cho \\\"{{title}}\\\":",
+    "writeYourReply": "Viết câu trả lời của bạn...",
+    "shareYourThoughts": "Chia sẻ suy nghĩ của bạn...",
+    "cancelReply": "Hủy trả lời",
+    "postReply": "Đăng trả lời",
+    "loadMoreDiscussions": "Tải thêm thảo luận",
+    "overview": "Tổng quan",
+    "resources": "Tài nguyên ({{count}})",
+    "qna": "Hỏi & Đáp",
+    "deleteCommentTitle": "Xóa bình luận?",
+    "deleteDiscussionTitle": "Xóa thảo luận?",
+    "deleteConfirmDesc": "Bạn có chắc chắn muốn xóa {{type}} này không? Hành động này không thể hoàn tác.",
+    "delete": "Xóa",
+    "noResources": "Không có tài nguyên",
+    "noResourcesDesc": "Không có tài liệu nào để tải xuống cho bài học này.",
+    "downloadableResources": "Tài nguyên tải xuống",
+    "resourcesProvided": "Tài liệu được cung cấp bởi giảng viên cho bài học này.",
+    "itemType": {
+      "post": "bình luận",
+      "thread": "thảo luận",
+      "item": "mục"
+    },
+    "toast": {
+      "discussionStarted": "Đã bắt đầu thảo luận!",
+      "errorCreatePost": "Không thể đăng bình luận: {{message}}",
+      "errorCreateThread": "Không thể bắt đầu thảo luận: {{message}}",
+      "replyPosted": "Đã gửi trả lời",
+      "commentPosted": "Đã gửi bình luận",
+      "commentDeleted": "Đã xóa bình luận",
+      "deleteFailed": "Xóa thất bại"
+    },
+    "loginToDiscuss": "Vui lòng <1>đăng nhập</1> để tham gia thảo luận.",
+    "errorLoadReplies": "Lỗi tải các câu trả lời. <1>Thử lại</1>",
+    "repliesCount": "{{count}} trả lời",
+    "noDiscussionsDesc_start": "Bắt đầu thảo luận mới",
+    "cancelNewThread": "Hủy tạo chủ đề mới",
+    "startNewDiscussion": "Bắt đầu thảo luận mới",
+    "newThreadTitlePlaceholder": "Tiêu đề thảo luận (VD: Câu hỏi về form trong HTML)",
+    "newThreadTextPlaceholder": "Câu hỏi hoặc ý kiến thảo luận của bạn...",
+    "postDiscussion": "Đăng thảo luận"
+  },
+  "sidebar": {
+    "backToLearning": "Quay lại học tập",
+    "yourProgress": "Tiến độ của bạn",
+    "lessonsCompleted": "Đã hoàn thành {{completed}} trên {{total}} bài học",
+    "preview": "Xem thử",
+    "completed": "Đã hoàn thành",
+    "of": "trên",
+    "courseInfo": "Thông tin khóa học",
+    "aiAssistant": "Trợ lý AI",
+    "sectionCompleted": "Chương đã hoàn thành",
+    "contentLocked": "Nội dung bị khóa",
+    "enrollToAccess": "Đăng ký để truy cập",
+    "previewable": "Có thể xem thử",
+    "video": "Video",
+    "text": "Lý thuyết",
+    "quiz": "Trắc nghiệm"
+  },
+  "addLessonForm": {
+    "title": "Thêm bài học mới",
+    "lessonTitle": "Tiêu đề bài học",
+    "lessonTitlePlaceholder": "Nhập tiêu đề bài học",
+    "description": "Mô tả (không bắt buộc)",
+    "descriptionPlaceholder": "Nhập mô tả bài học",
+    "lessonType": "Loại bài học",
+    "lessonTypePlaceholder": "Chọn loại bài học",
+    "typeVideo": "Video",
+    "typeText": "Lý thuyết",
+    "typeQuiz": "Trắc nghiệm",
+    "addLesson": "Thêm bài học"
+  },
+  "addSectionForm": {
+    "title": "Thêm chương mới",
+    "sectionTitle": "Tiêu đề chương",
+    "sectionTitlePlaceholder": "Nhập tiêu đề chương",
+    "description": "Mô tả (không bắt buộc)",
+    "descriptionPlaceholder": "Nhập mô tả chương",
+    "addSection": "Thêm chương"
+  },
+  "features": {
+    "whyTitle": "Tại sao nên học với",
+    "whyDesc": "Nền tảng của chúng tôi kết hợp các khóa học do chuyên gia hướng dẫn với công nghệ AI tiên tiến, mang lại trải nghiệm học tập cá nhân hóa và hiệu quả.",
+    "aiTitle": "Học tập cùng AI",
+    "aiDesc": "Trợ lý học tập AI cung cấp trợ giúp cá nhân hóa, trả lời câu hỏi và hướng dẫn bạn vượt qua các khái niệm khó.",
+    "expertTitle": "Giảng viên chuyên gia",
+    "expertDesc": "Học hỏi từ các chuyên gia trong ngành với kinh nghiệm thực tế và đam mê chia sẻ kiến thức.",
+    "anywhereTitle": "Học mọi lúc, mọi nơi",
+    "anywhereDesc": "Truy cập khóa học trên mọi thiết bị, hỗ trợ xem ngoại tuyến và di động phù hợp với lịch trình của bạn.",
+    "trustedTitle": "Nội dung tin cậy & cập nhật",
+    "trustedDesc": "Các khóa học được chọn lọc với kiến thức mới nhất, đảm bảo bạn học được kỹ năng giá trị và phù hợp.",
+    "interactiveTitle": "Bài tập tương tác",
+    "interactiveDesc": "Tham gia dự án thực tế, bài kiểm tra và bài tập để củng cố kiến thức.",
+    "creativeTitle": "Công cụ học sáng tạo",
+    "creativeDesc": "Sử dụng các công cụ và tài nguyên sáng tạo giúp việc học thú vị và hiệu quả hơn.",
+    "aiBadge": "AI đột phá",
+    "aiSectionTitle": "Trợ lý học tập AI cá nhân của bạn",
+    "aiSectionDesc": "Tích hợp trực tiếp vào từng bài học, chatbot AI cung cấp hỗ trợ tức thì, giải thích và hướng dẫn theo ngữ cảnh bất cứ khi nào bạn cần.",
+    "ai24h": "<strong>Hỗ trợ 24/7:</strong> Giải đáp mọi lúc với câu trả lời tức thì.",
+    "aiPersonalized": "<strong>Giải thích cá nhân hóa:</strong> AI thích ứng với trình độ hiểu biết của bạn.",
+    "aiPractice": "<strong>Luyện tập tương tác:</strong> Củng cố kiến thức với ví dụ do AI tạo ra.",
+    "ctaExplore": "Khám phá các khóa học AI"
+  },
+  "hero": {
+    "title1": "Mở rộng tri thức của bạn ",
+    "title2a": "cùng ",
+    "title2b": "Nền tảng học tập AI",
+    "title2c": " hiện đại",
+    "desc": "Khám phá các khóa học do chuyên gia giảng dạy và được hỗ trợ bởi trợ lý AI đồng hành cùng bạn trên hành trình học tập.",
+    "ctaExplore": "Khám phá khóa học",
+    "ctaInstructor": "Trở thành giảng viên",
+    "bullet1": "Truy cập 10.000+ khóa học chất lượng.",
+    "bullet2": "Học theo tốc độ của bạn, mọi lúc, mọi nơi.",
+    "bullet3": "Trợ lý học tập AI hỗ trợ 24/7."
+  },
+  "testimonials": {
+    "title": "Học viên nói gì về chúng tôi",
+    "description": "Hàng ngàn học viên và giảng viên tin tưởng EduAI Learning Hub để nâng cao kỹ năng và sự nghiệp. Đây là những chia sẻ từ họ.",
+    "stats": {
+      "activeStudents": "Học viên đang hoạt động",
+      "qualityCourses": "Khóa học chất lượng",
+      "expertInstructors": "Giảng viên chuyên gia",
+      "averageRating": "Đánh giá trung bình"
+    },
+    "testimonial1": {
+      "quote": "Nền tảng rất dễ sử dụng và các khóa học thực tiễn. Tôi đã cải thiện kỹ năng nhanh chóng!",
+      "title": "Học viên Web Development"
+    },
+    "testimonial2": {
+      "quote": "Giảng viên tuyệt vời và cộng đồng hỗ trợ nhiệt tình. Rất đáng để học!",
+      "title": "Học viên Data Science"
+    },
+    "testimonial3": {
+      "quote": "Các tính năng AI giúp việc học dễ dàng và thú vị hơn rất nhiều.",
+      "title": "Học viên AI Fundamentals"
+    },
+    "testimonial4": {
+      "quote": "Là giảng viên, tôi rất thích các công cụ và phân tích mà nền tảng cung cấp. Học viên của tôi tích cực hơn bao giờ hết!",
+      "title": "Giảng viên"
+    }
+  },
+  "adminLayout": {
+    "title": "Bảng điều khiển quản trị",
+    "goToMainSite": "Về trang chính",
+    "navigation": {
+      "dashboard": "Tổng quan",
+      "users": "Người dùng",
+      "courses": "Khóa học",
+      "courseApprovals": "Duyệt khóa học",
+      "categories": "Danh mục",
+      "skills": "Kỹ năng",
+      "currencies": "Tiền tệ",
+      "paymentMethods": "Phương thức thanh toán",
+      "exchangeRates": "Tỷ giá",
+      "levels": "Trình độ",
+      "promotions": "Khuyến mãi"
+    }
+  },
+  "cartDropdown": {
+    "loginToView": "Vui lòng đăng nhập để xem giỏ hàng.",
+    "loginBtn": "Đăng nhập",
+    "loading": "Đang tải giỏ hàng...",
+    "errorLoading": "Lỗi tải giỏ hàng.",
+    "empty": "Giỏ hàng của bạn đang trống",
+    "addCoursesHint": "Thêm khóa học để bắt đầu hành trình học tập!",
+    "browseCourses": "Xem các khóa học",
+    "yourCart": "Giỏ hàng của bạn ({{count}})",
+    "subtotal": "Tạm tính:",
+    "goToCheckout": "Thanh toán",
+    "viewCart": "Xem giỏ hàng",
+    "by": "Bởi",
+    "removeFromCart": "Xóa khỏi giỏ hàng",
+    "cartIsEmpty": "Giỏ hàng trống"
+  },
+  "footer": {
+    "slogan": "Trao quyền cho người học và giảng viên toàn cầu thông qua công nghệ đổi mới và giáo dục chất lượng cao ứng dụng AI.",
+    "explore": "Khám phá",
+    "allCourses": "Tất cả khóa học",
+    "categories": "Danh mục",
+    "instructors": "Giảng viên",
+    "freeCourses": "Khóa học miễn phí",
+    "newReleases": "Khóa học mới",
+    "company": "Công ty",
+    "aboutUs": "Về chúng tôi",
+    "blog": "Blog",
+    "careers": "Tuyển dụng",
+    "press": "Báo chí",
+    "support": "Hỗ trợ",
+    "helpCenter": "Trung tâm trợ giúp",
+    "contactUs": "Liên hệ",
+    "faq": "Câu hỏi thường gặp",
+    "communityForum": "Diễn đàn cộng đồng",
+    "legal": "Pháp lý",
+    "termsOfService": "Điều khoản dịch vụ",
+    "privacyPolicy": "Chính sách bảo mật",
+    "cookiePolicy": "Chính sách cookie",
+    "social": {
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "instagram": "Instagram",
+      "youtube": "YouTube",
+      "linkedin": "LinkedIn"
+    },
+    "copyright": "© {{year}} 3TEduTech, Inc. Bảo lưu mọi quyền."
+  },
+  "instructorLayout": {
+    "title": "Giảng viên",
+    "goToMainSite": "Về trang chính",
+    "myAccount": "Tài khoản của tôi",
+    "dashboardTitle": "Bảng điều khiển giảng viên",
+    "copyright": "© {{year}} 3TEduTech Cổng giảng viên. Bảo lưu mọi quyền.",
+    "navigation": {
+      "dashboard": "Tổng quan",
+      "myCourses": "Khóa học của tôi",
+      "createCourse": "Tạo khóa học",
+      "courseApprovals": "Duyệt khóa học",
+      "students": "Học viên",
+      "earnings": "Doanh thu & Thanh toán",
+      "myProfile": "Hồ sơ của tôi"
+    },
+    "mainProfile": "Hồ sơ chính",
+    "logOut": "Đăng xuất"
+  },
+  "navbar": {
+    "links": {
+      "Home": "Trang chủ",
+      "Courses": "Khóa học",
+      "Categories": "Danh mục",
+      "Instructors": "Giảng viên",
+      "About Us": "Giới thiệu về chúng tôi",
+      "Blog": "Blog"
+    },
+    "search": "Tìm kiếm...",
+    "openSearch": "Mở tìm kiếm",
+    "dashboards": "Bảng điều khiển",
+    "adminPanel": "Quản trị viên",
+    "instructorHub": "Kênh giảng viên",
+    "mySpace": "Không gian của tôi",
+    "myLearning": "Khóa học của tôi",
+    "profileSettings": "Hồ sơ & Cài đặt",
+    "orderHistory": "Lịch sử đơn hàng",
+    "myCertificates": "Chứng chỉ của tôi",
+    "logOut": "Đăng xuất",
+    "login": "Đăng nhập",
+    "signup": "Đăng ký"
+  },
+  "aboutPage": {
+    "hero": {
+      "title": "Về 3TEduTech",
+      "subtitle": "Trao quyền cho người học và nhà giáo dục trên toàn thế giới thông qua công nghệ đổi mới và giáo dục chất lượng cao, dễ tiếp cận."
+    },
+    "story": {
+      "title": "Hành trình của chúng tôi",
+      "p1": "Được thành lập vào năm 2020 với một tầm nhìn táo bạo, 3TEduTech ra đời từ mong muốn cách mạng hóa cách chia sẻ và tiếp thu kiến thức. Khởi đầu là một đội ngũ tận tâm gồm các nhà giáo dục, chuyên gia AI và kỹ sư công nghệ, chúng tôi đã nhanh chóng phát triển thành một nền tảng toàn cầu năng động, nuôi dưỡng một cộng đồng sôi nổi gồm các giảng viên và hàng triệu người học trên toàn thế giới.",
+      "p2": "Chúng tôi tin tưởng rằng giáo dục là chất xúc tác cho sự chuyển đổi và công nghệ là công cụ để mở khóa tiềm năng vô hạn của nó. Nền tảng của chúng tôi kết hợp một cách tài tình giữa AI tiên tiến với nội dung được tuyển chọn chuyên nghiệp, mang lại trải nghiệm học tập đắm chìm và thích ứng, phù hợp với nhịp độ và phong cách riêng của mỗi cá nhân.",
+      "p3": "Ngày nay, 3TEduTech tự hào phục vụ một cộng đồng đa dạng trải dài trên 150 quốc gia, cung cấp một kho tàng khóa học phong phú bằng nhiều ngôn ngữ trên vô số lĩnh vực. Tuy nhiên, giữa sự mở rộng của mình, sứ mệnh nền tảng của chúng tôi vẫn không thay đổi: trao quyền cho các cá nhân với kiến thức biến đổi và các kỹ năng sẵn sàng cho tương lai."
+    },
+    "mission": {
+      "title": "Sứ mệnh của chúng tôi",
+      "description": "Dân chủ hóa giáo dục bằng cách cung cấp các trải nghiệm học tập được tăng cường bởi AI, có thể truy cập toàn cầu, giúp các cá nhân và tổ chức đạt được tiềm năng cao nhất và định hình một tương lai tốt đẹp hơn.",
+      "item1": "Mang giáo dục đẳng cấp thế giới đến với bất kỳ ai, ở bất kỳ đâu, bất kỳ lúc nào.",
+      "item2": "Cung cấp kiến thức thực tế, dựa trên kỹ năng để tạo ra tác động hữu hình trong thế giới thực.",
+      "item3": "Nuôi dưỡng một cộng đồng học tập suốt đời toàn cầu, luôn hỗ trợ và hợp tác.",
+      "item4": "Liên tục đổi mới để làm cho việc học trở nên hấp dẫn, hiệu quả và được cá nhân hóa hơn."
+    },
+    "vision": {
+      "title": "Tầm nhìn của chúng tôi",
+      "description": "Trở thành nền tảng toàn cầu hàng đầu nơi công nghệ và chuyên môn của con người hội tụ, tạo ra một tương lai nơi việc học không có giới hạn và mọi người đều có sức mạnh để thay đổi cuộc sống của mình thông qua giáo dục."
+    },
+    "values": {
+      "title": "Giá trị cốt lõi",
+      "learnerCentric": "Lấy người học làm trung tâm",
+      "learnerCentricDesc": "Chúng tôi đặt người học vào trung tâm của mọi thứ, điều chỉnh trải nghiệm theo nhu cầu và nguyện vọng của họ.",
+      "innovation": "Sự đổi mới",
+      "innovationDesc": "Chúng tôi không ngừng khám phá và triển khai AI tiên tiến và các phương pháp sư phạm để nâng cao việc học.",
+      "excellence": "Sự xuất sắc",
+      "excellenceDesc": "Chúng tôi cam kết đạt tiêu chuẩn cao nhất về chất lượng khóa học, hiệu suất nền tảng và dịch vụ hỗ trợ.",
+      "accessibility": "Khả năng tiếp cận",
+      "accessibilityDesc": "Chúng tôi cố gắng tạo ra một nền giáo dục không rào cản, đảm bảo nền tảng của chúng tôi có thể sử dụng và giá cả phải chăng cho tất cả mọi người.",
+      "integrity": "Sự chính trực",
+      "integrityDesc": "Chúng tôi hoạt động với sự minh bạch, trung thực và một la bàn đạo đức vững chắc trong mọi tương tác.",
+      "empowerment": "Sự trao quyền",
+      "empowermentDesc": "Chúng tôi mong muốn trang bị cho các cá nhân những kỹ năng và kiến thức giúp họ đạt được mục tiêu của mình."
+    },
+    "leadership": {
+      "title": "Gặp gỡ đội ngũ lãnh đạo",
+      "ceo": {
+        "name": "TS. Evelyn Reed",
+        "title": "CEO & Đồng sáng lập",
+        "bio": "Nhà lãnh đạo có tầm nhìn, đầy nhiệt huyết thúc đẩy sự đổi mới giáo dục thông qua công nghệ."
+      },
+      "cto": {
+        "name": "Marcus Chen",
+        "title": "CTO & Đồng sáng lập",
+        "bio": "Kiến trúc sư công nghệ biến đổi trải nghiệm học tập bằng các giải pháp AI tiên tiến."
+      },
+      "cpo": {
+        "name": "Aisha Khan",
+        "title": "Giám đốc Sản phẩm",
+        "bio": "Nhà chiến lược tận tâm tạo ra các sản phẩm học tập trực quan và có tác động mạnh mẽ."
+      },
+      "headOfLearning": {
+        "name": "TS. Ben Carter",
+        "title": "Trưởng phòng Học liệu & Sư phạm",
+        "bio": "Chuyên gia khoa học giáo dục, đảm bảo nội dung khóa học hiệu quả và hấp dẫn."
+      }
+    },
+    "stats": {
+      "title": "3TEduTech qua những con số",
+      "learners": "Người học trên toàn cầu",
+      "courses": "Khóa học được tuyển chọn",
+      "instructors": "Giảng viên chuyên gia",
+      "countries": "Quốc gia tiếp cận"
+    },
+    "cta": {
+      "title": "Sẵn sàng thay đổi tương lai của bạn?",
+      "description": "Tham gia cộng đồng học tập toàn cầu của chúng tôi ngay hôm nay. Khám phá hàng ngàn khóa học, kết nối với các chuyên gia và mở khóa tiềm năng của bạn.",
+      "explore": "Khám phá khóa học",
+      "becomeInstructor": "Trở thành giảng viên"
+    }
+  }
+}

@@ -1,0 +1,138 @@
+/* src/components/editor/TiptapStyles.css */
+.tiptap-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden; /* Giữ bo góc cho menubar */
+}
+
+.tiptap-menubar {
+  display: flex;
+  flex-wrap: wrap; /* Cho phép xuống dòng nếu không đủ chỗ */
+  align-items: center;
+  padding: 8px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+}
+
+.tiptap-menubar button,
+.tiptap-menubar select,
+.tiptap-menubar input[type="color"] {
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  margin-right: 4px;
+  margin-bottom: 4px; /* Cho trường hợp xuống dòng */
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex; /* Để icon và text căn giữa (nếu có) */
+  align-items: center;
+  justify-content: center;
+  min-width: 32px; /* Đảm bảo kích thước tối thiểu cho nút icon */
+  min-height: 32px;
+}
+.tiptap-menubar input[type="color"] {
+  padding: 2px; /* Input color có style riêng */
+  width: 32px;
+  height: 32px;
+}
+
+
+.tiptap-menubar button:hover,
+.tiptap-menubar select:hover {
+  background-color: #e0e0e0;
+}
+
+.tiptap-menubar button.is-active,
+.tiptap-menubar select option:checked {
+  background-color: #d0d0d0;
+  font-weight: bold;
+}
+.tiptap-menubar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tiptap-menubar-select {
+  appearance: none; /* Bỏ style mặc định của select */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 6px 24px 6px 10px; /* Thêm padding cho mũi tên (nếu tự làm) */
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 8px top 50%;
+  background-size: .65em auto;
+  border: 1px solid #ccc; /* Thêm border cho select để dễ nhìn hơn */
+}
+
+
+/* Style cho vùng soạn thảo */
+.tiptap-editor-content {
+  padding: 16px;
+  min-height: 250px; /* Chiều cao tối thiểu */
+  outline: none; /* Bỏ viền focus mặc định */
+  line-height: 1.6;
+}
+
+.tiptap-editor-content p {
+  margin: 0 0 1em 0;
+}
+
+.tiptap-editor-content h1,
+.tiptap-editor-content h2,
+.tiptap-editor-content h3,
+.tiptap-editor-content h4,
+.tiptap-editor-content h5,
+.tiptap-editor-content h6 {
+  line-height: 1.2;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.tiptap-editor-content blockquote {
+  border-left: 3px solid #ccc;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1em;
+  font-style: italic;
+  color: #555;
+}
+
+.tiptap-editor-content pre {
+  background: #f4f4f4;
+  border-radius: 4px;
+  padding: 0.75em 1em;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+}
+
+.tiptap-editor-content img {
+  max-width: 100%;
+  height: auto;
+  display: block; /* Hoặc inline nếu bạn muốn */
+  margin: 1em 0;
+  border-radius: 4px;
+}
+.tiptap-editor-content img.ProseMirror-selectednode { /* Khi ảnh được chọn */
+  outline: 3px solid #68CEF8;
+}
+
+.tiptap-editor-content a {
+  color: #007bff;
+  text-decoration: none;
+}
+.tiptap-editor-content a:hover {
+  text-decoration: underline;
+}
+
+/* Đảm bảo vùng soạn thảo có thể scroll nếu nội dung dài */
+.tiptap-editor-content.ProseMirror {
+  max-height: 500px; /* Giới hạn chiều cao và cho phép scroll */
+  overflow-y: auto;
+}

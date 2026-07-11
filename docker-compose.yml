@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./3t-edu-tech-backend
+      dockerfile: Dockerfile
+    container_name: edutech-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      # - DB_SERVER=${DB_SERVER}
+      # - DB_USER=${DB_USER}
+      # - DB_PASSWORD=${DB_PASSWORD}
+      # - DB_NAME=${DB_NAME}
+      - AI_SERVICE_PORT=2111
+      # Thêm các biến môi trường khác cần thiết ở đây, hoặc dùng env_file
+    env_file:
+      - ./3t-edu-tech-backend/.env
+    restart: always
+    networks:
+      - edutech-net
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: edutech-ai-service
+    ports:
+      - "2111:2111"
+    environment:
+      - PORT=2111
+      # - GEMINI_API_KEY=${GEMINI_API_KEY}
+    env_file:
+      - ./ai-service/.env
+    restart: always
+    networks:
+      - edutech-net
+    volumes:
+      - ./ai-service/data:/app/data # Persist ChromaDB or document data if needed
+
+  frontend:
+    build:
+      context: ./edu-ai-learning-hub
+      dockerfile: Dockerfile
+    container_name: edutech-frontend
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - edutech-net
+
+networks:
+  edutech-net:
+    driver: bridge

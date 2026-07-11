@@ -1,0 +1,1155 @@
+{
+  "approvals": {
+    "tabs": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "all": "All Requests"
+    },
+    "searchPlaceholder": "Search by course or instructor...",
+    "errorLoading": "Error loading data",
+    "unknownError": "Unknown error",
+    "noResults": "No approval requests found matching your criteria.",
+    "table": {
+      "courseName": "Course Name",
+      "instructor": "Instructor",
+      "submitted": "Submitted",
+      "requestType": "Request Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "requestType": {
+      "new_course": "New Course",
+      "course_update": "Course Update"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "review": "Review",
+      "viewDetail": "View Detail"
+    },
+    "noResultsStatus": "No approval requests found for this status."
+  },
+  "cta": {
+    "title": "Ready to Start Your Learning Journey?",
+    "description": "Join thousands of students who are already learning, growing, and achieving their goals with our AI-enhanced courses. Your future starts now.",
+    "getStarted": "Get Started For Free",
+    "browseCourses": "Browse Courses",
+    "noCreditCard": "No credit card required for free account. Start learning today!"
+  },
+  "categories": {
+    "title": "Explore Top Categories",
+    "description": "Discover our most popular course categories and find the perfect fit for your learning goals.",
+    "errorTitle": "Oops! Something went wrong.",
+    "errorDesc": "We couldn't load the categories right now. Please try again later.",
+    "courseCount": "{{count}} courses",
+    "noCategories": "No categories available at the moment.",
+    "viewAll": "View All Categories",
+    "exploreCourses": "Explore Courses"
+  },
+  "featured": {
+    "title": "Featured Courses",
+    "description": "Handpicked courses to kickstart your learning journey with our top instructors.",
+    "viewAll": "View All Courses",
+    "errorTitle": "Could not load featured courses.",
+    "errorDesc": "Please try refreshing the page or check back later.",
+    "noCourses": "No featured courses available at this time."
+  },
+  "courseDetail": {
+    "backToPending": "Back to Pending List",
+    "reject": "Reject",
+    "approve": "Approve",
+    "previewCourse": "Preview Course Page",
+    "by": "By {{instructor}}",
+    "submitted": "Submitted",
+    "requestId": "Request ID: {{id}}",
+    "shortDescription": "Short Description",
+    "category": "Category",
+    "level": "Level",
+    "language": "Language",
+    "price": "Price",
+    "discount": "Discount",
+    "none": "None",
+    "fullDescription": "Full Description",
+    "requirements": "Requirements",
+    "learningOutcomes": "What You'll Learn",
+    "instructorNotes": "Instructor Notes",
+    "curriculumReview": "Curriculum Review",
+    "noCurriculum": "No curriculum submitted.",
+    "reviewDecision": "Review Decision",
+    "reviewDesc": "Provide feedback and approve or reject the submission.",
+    "adminNotes": "Admin Notes / Feedback",
+    "adminNotesPlaceholder": "Enter feedback for the instructor (required if rejecting)...",
+    "adminNotesHint": "These notes will be sent to the instructor.",
+    "approveCourse": "Approve Course",
+    "rejectCourse": "Reject Course",
+    "notesRequired": "Notes are required to reject",
+    "sectionLessonCount": "{{count}} lessons",
+    "min": "min",
+    "lessonType": {
+      "video": "Video",
+      "text": "Text",
+      "quiz": "Quiz"
+    },
+    "preview": "Preview",
+    "watch": "Watch",
+    "viewContent": "View Content",
+    "viewQuiz": "View Quiz",
+    "sectionTitle": "Section {{index}}: {{name}}",
+    "untitledSection": "Untitled Section",
+    "sectionItemCount": "{{count}} items",
+    "untitledLesson": "Untitled Lesson",
+    "previewable": "Previewable",
+    "files": "File(s)",
+    "questions": "Qs",
+    "view": "View",
+    "noLessonsInSection": "No lessons in this section."
+  },
+  "lessonDialogs": {
+    "videoPreview": "Video Preview",
+    "errorLoadingVideo": "Error loading video",
+    "unknownError": "Unknown error",
+    "noVideoSource": "Video source not available",
+    "textContent": "Text Content",
+    "noContent": "No content available.",
+    "quizPreview": "Quiz Preview",
+    "explanation": "Explanation:",
+    "noQuestions": "No questions in this quiz."
+  },
+  "courseDelete": {
+    "title": "Delete Course",
+    "confirm": "Are you sure you want to delete this course? This action cannot be undone.",
+    "warning": "Warning",
+    "description": "Deleting this course will remove all associated content, enrollments, and revenue data. Students who have purchased this course will lose access to it.",
+    "cancel": "Cancel",
+    "delete": "Delete Course"
+  },
+  "courseDetails": {
+    "title": "Course Details",
+    "description": "Detailed information about the course.",
+    "by": "By {{instructor}}",
+    "createdOn": "Created on {{date}}",
+    "status": {
+      "published": "Published",
+      "pending": "Pending",
+      "rejected": "Rejected",
+      "draft": "Draft"
+    },
+    "tabs": {
+      "info": "Course Info",
+      "curriculum": "Curriculum",
+      "stats": "Statistics"
+    },
+    "descriptionTitle": "Description",
+    "category": "Category",
+    "price": "Price",
+    "rating": "Rating",
+    "students": "Enrolled Students",
+    "curriculumTitle": "Course Curriculum",
+    "sectionLessonCount": "{{count}} lessons",
+    "min": "min",
+    "lessonType": {
+      "video": "Video",
+      "text": "Text",
+      "quiz": "Quiz",
+      "lesson": "Lesson"
+    },
+    "preview": "Preview",
+    "view": "View",
+    "statsTitle": "Course Statistics",
+    "statsDesc": "Performance metrics for this course",
+    "totalEnrollments": "Total Enrollments:",
+    "averageRating": "Average Rating:",
+    "totalRevenue": "Total Revenue:",
+    "completionRate": "Completion Rate:",
+    "avgTimeToComplete": "Average Time to Complete:",
+    "days": "days",
+    "previewCourse": "Preview Course",
+    "close": "Close"
+  },
+  "courseFilters": {
+    "searchPlaceholder": "Search courses...",
+    "filterByCategory": "Filter by Category",
+    "allCategories": "All Categories",
+    "category": {
+      "programming": "Programming",
+      "design": "Design",
+      "business": "Business",
+      "marketing": "Marketing",
+      "photography": "Photography"
+    },
+    "filterByStatus": "Filter by Status",
+    "allStatuses": "All Statuses",
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "published": "Published",
+      "rejected": "Rejected"
+    }
+  },
+  "coursesTable": {
+    "headers": {
+      "id": "ID",
+      "title": "Title",
+      "instructor": "Instructor",
+      "category": "Category",
+      "price": "Price",
+      "status": "Status",
+      "rating": "Rating",
+      "students": "Students",
+      "actions": "Actions"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "approve": "Approve",
+      "reject": "Reject",
+      "unpublish": "Unpublish",
+      "delete": "Delete",
+      "actionsLabel": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "published": "Published",
+      "rejected": "Rejected"
+    }
+  },
+  "lessonDetails": {
+    "videoContent": "Video Content",
+    "noVideoUrl": "No video URL provided",
+    "duration": "Duration",
+    "textContent": "Text Content",
+    "noContent": "No content provided.",
+    "quizContent": "Quiz Content",
+    "question": "Question {{number}}: {{text}}",
+    "correct": "Correct",
+    "explanation": "Explanation:",
+    "noQuizQuestions": "No quiz questions provided.",
+    "resources": "Resources",
+    "close": "Close"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "paginationControls": {
+    "prev": "Previous page",
+    "next": "Next page",
+    "gotoPage": "Go to page {{page}}"
+  },
+  "currenciesTable": {
+    "headers": {
+      "id": "ID",
+      "name": "Name",
+      "type": "Type",
+      "decimals": "Decimal Places",
+      "actions": "Actions"
+    },
+    "type": {
+      "fiat": "Fiat",
+      "crypto": "Crypto"
+    },
+    "actions": {
+      "edit": "Edit Currency",
+      "delete": "Delete Currency"
+    },
+    "noCurrencies": "No currencies found."
+  },
+  "currencyDialog": {
+    "titleAdd": "Add New Currency",
+    "titleEdit": "Edit Currency",
+    "descAdd": "Add a new currency to the system.",
+    "descEdit": "Update the details for {{name}}.",
+    "currencyId": "Currency ID",
+    "currencyName": "Currency Name",
+    "type": "Type",
+    "fiat": "FIAT",
+    "crypto": "CRYPTO",
+    "decimals": "Decimal Places",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "add": "Add Currency",
+    "required": "Required",
+    "placeholderId": "e.g. USD, VND, BTC",
+    "placeholderName": "e.g. US Dollar, Bitcoin"
+  },
+  "deleteCurrencyDialog": {
+    "title": "Delete Currency",
+    "desc": "Are you absolutely sure you want to delete the currency {{name}} ({{id}})? This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Yes, Delete Currency"
+  },
+  "deleteLevelDialog": {
+    "title": "Delete Level",
+    "desc": "Are you sure you want to delete the level '{{levelName}}'? This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "levelDialog": {
+    "titleAdd": "Add New Level",
+    "titleEdit": "Edit Level",
+    "levelName": "Level Name",
+    "nameRequired": "Level name is required",
+    "cancel": "Cancel",
+    "add": "Add Level",
+    "update": "Update Level"
+  },
+  "levelsTable": {
+    "headers": {
+      "id": "ID",
+      "levelName": "Level Name",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "actions": "Actions"
+    },
+    "noLevels": "No levels found.",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "deletePaymentMethodDialog": {
+    "title": "Delete Payment Method",
+    "desc": "Are you sure you want to delete the payment method '{{methodId}} ({{methodName}})'? This action cannot be undone and may affect existing payment settings.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "paymentMethodDialog": {
+    "titleAdd": "Add New Payment Method",
+    "titleEdit": "Edit Payment Method",
+    "methodId": "Method ID",
+    "methodName": "Method Name",
+    "idRequired": "Method ID is required",
+    "idMaxLength": "Method ID cannot exceed 20 characters",
+    "nameRequired": "Method name is required",
+    "placeholderId": "MOMO, VNPAY, BANK, CRYPTO",
+    "placeholderName": "MoMo E-Wallet, VNPay, Bank Transfer",
+    "cancel": "Cancel",
+    "add": "Add Method",
+    "update": "Update Method"
+  },
+  "paymentMethodsTable": {
+    "headers": {
+      "methodId": "Method ID",
+      "methodName": "Method Name",
+      "actions": "Actions"
+    },
+    "noPaymentMethods": "No payment methods found.",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "deleteSkillDialog": {
+    "title": "Delete Skill",
+    "desc": "Are you sure you want to delete the skill '{{skillName}}'? This action cannot be undone.",
+    "warning": "Warning",
+    "warningDesc": "Deleting this skill will remove it from all instructors who have it assigned. This may affect instructor profiles and course listings.",
+    "cancel": "Cancel",
+    "confirm": "Delete Skill"
+  },
+  "skillDialog": {
+    "titleAdd": "Add Skill",
+    "titleEdit": "Edit Skill",
+    "skillName": "Skill Name",
+    "description": "Description",
+    "placeholderName": "Enter skill name",
+    "placeholderDesc": "Enter description (optional)",
+    "add": "Add",
+    "update": "Update"
+  },
+  "skillsTable": {
+    "headers": {
+      "id": "ID",
+      "skillName": "Skill Name",
+      "description": "Description",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "actions": "Actions"
+    },
+    "noSkills": "No skills found.",
+    "emptyDescription": "—",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "addUserDialog": {
+    "tabs": {
+      "basic": "Basic Information",
+      "instructor": "Instructor Details"
+    },
+    "fullName": "Full Name",
+    "email": "Email",
+    "role": "Role",
+    "roles": {
+      "student": "Student",
+      "instructor": "Instructor",
+      "admin": "Admin",
+      "superAdmin": "Super Admin"
+    },
+    "roleDesc": "This determines what permissions the user will have.",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "gender": "Gender",
+    "genders": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "birthDate": "Birth Date",
+    "phoneNumber": "Phone Number",
+    "location": "Location",
+    "professionalTitle": "Professional Title",
+    "bio": "Short Bio",
+    "bioDesc": "A brief professional description (shown in instructor cards)",
+    "aboutMe": "About Me",
+    "aboutMeDesc": "Detailed description shown on the instructor profile page",
+    "skills": "Skills",
+    "skillsDesc": "Enter skills separated by commas",
+    "socialLinks": "Social Links",
+    "paymentInfo": "Payment Information",
+    "bankName": "Bank Name",
+    "bankAccountNumber": "Account Number",
+    "bankAccountHolderName": "Account Holder Name",
+    "placeholder": {
+      "fullName": "John Doe",
+      "email": "user@example.com",
+      "role": "Select role",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "gender": "Select gender",
+      "phoneNumber": "+1234567890",
+      "location": "City, Country",
+      "professionalTitle": "Web Developer, Data Scientist, etc.",
+      "bio": "Short professional description",
+      "aboutMe": "Detailed professional background and experience",
+      "skills": "JavaScript, React, Node.js, etc. (comma separated)",
+      "linkedinUrl": "LinkedIn profile URL",
+      "githubUrl": "GitHub profile URL",
+      "twitterUrl": "Twitter profile URL",
+      "bankName": "Bank name",
+      "bankAccountNumber": "Bank account number",
+      "bankAccountHolderName": "Name as it appears on the account"
+    }
+  },
+  "userEditDialog": {
+    "editTitle": "Edit User",
+    "editDesc": "Update user information for {{name}}.",
+    "status": "Status",
+    "statusPlaceholder": "Select status",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "statusBanned": "Banned",
+    "statusPending": "Pending Verification"
+  },
+  "userFilters": {
+    "searchPlaceholder": "Search users...",
+    "filterByRole": "Filter by role",
+    "allRoles": "All roles",
+    "role": {
+      "student": "Student",
+      "instructor": "Instructor",
+      "admin": "Admin",
+      "superAdmin": "Super Admin"
+    },
+    "filterByStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned",
+      "pendingVerification": "Pending verification"
+    }
+  },
+  "userTable": {
+    "headers": {
+      "id": "ID",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "role": {
+      "NU": "Student",
+      "GV": "Instructor",
+      "AD": "Admin",
+      "SA": "Super Admin"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "BANNED": "Banned",
+      "PENDING_VERIFICATION": "Pending Verification"
+    },
+    "actions": {
+      "view": "View Details",
+      "edit": "Edit User",
+      "delete": "Delete User"
+    }
+  },
+  "userViewDialog": {
+    "title": "User Details",
+    "description": "View detailed information about {{name}}",
+    "tabs": {
+      "profile": "Profile",
+      "instructor": "Instructor Details"
+    },
+    "label": {
+      "userId": "User ID",
+      "joinedDate": "Joined Date",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "gender": "Gender",
+      "birthDate": "Birth Date",
+      "location": "Location",
+      "bio": "Bio",
+      "aboutMe": "About Me",
+      "skills": "Skills",
+      "socialLinks": "Social Links"
+    },
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female"
+    },
+    "course": "Course",
+    "courses": "Courses",
+    "actions": {
+      "close": "Close"
+    }
+  },
+  "authModal": {
+    "login": {
+      "title": "Welcome Back!",
+      "description": "Sign in to continue your learning journey."
+    },
+    "signup": {
+      "title": "Create Your Account",
+      "description": "Join our community and start learning today."
+    },
+    "tabs": {
+      "login": "Log In",
+      "signup": "Sign Up"
+    },
+    "toast": {
+      "successTitle": "Registration Successful!",
+      "successDesc": "Please log in with your new account."
+    }
+  },
+  "emailModal": {
+    "title": "Email Required",
+    "description": "Facebook didn't provide your email. Please enter it below to complete your registration.",
+    "label": {
+      "email": "Email"
+    },
+    "placeholder": {
+      "email": "your.email@example.com"
+    },
+    "error": {
+      "invalid": "Invalid email address",
+      "required": "Please enter your email"
+    },
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "processing": "Processing...",
+    "toast": {
+      "errorTitle": "Error",
+      "errorDesc": "An error occurred. Please try again."
+    }
+  },
+  "loginForm": {
+    "email": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "forgot": "Forgot password?",
+    "signIn": "Sign In",
+    "signInSuccess": "Successfully logged in",
+    "signInWelcome": "Welcome back, {{name}}!",
+    "signInFailed": "Login failed",
+    "signInFailedDesc": "Invalid email or password. Please try again.",
+    "orContinue": "Or continue with",
+    "becomeInstructor": "Become an Instructor",
+    "wantToShare": "Want to share your knowledge?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "errors": {
+      "invalidEmail": "Invalid email address",
+      "passwordMin": "Password must be at least 6 characters"
+    }
+  },
+  "loginWithFacebook": {
+    "success": "Facebook login successful!",
+    "error": "Facebook login failed.",
+    "configError": "Facebook login configuration error.",
+    "checkEmail": "Please check the email you just provided to verify your account.",
+    "button": "Sign in with Facebook",
+    "cancelled": "Facebook login failed or was cancelled."
+  },
+  "loginWithGoogle": {
+    "success": "Login with Google successful!",
+    "error": "Google login failed. Please try again.",
+    "configError": "Google Client ID is not configured. Please contact the administrator.",
+    "noCredential": "Google login did not return credential (ID Token).",
+    "processing": "Processing Google login..."
+  },
+  "signupForm": {
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "John Doe",
+    "email": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Min. 8 characters",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter password",
+    "togglePassword": "Toggle password visibility",
+    "toggleConfirmPassword": "Toggle confirm password visibility",
+    "createAccount": "Create Account",
+    "successTitle": "Account created successfully",
+    "successDesc": "Please sign in with your new account.",
+    "errorTitle": "Registration failed",
+    "errorDesc": "There was an error creating your account.",
+    "validation": {
+      "email": "Invalid email address",
+      "passwordMin": "Password must be at least 8 characters",
+      "fullNameMin": "Full Name must be at least 3 characters",
+      "fullNameMax": "Full Name must not exceed 150 characters",
+      "passwordsMatch": "Passwords must match"
+    }
+  },
+  "certificate": {
+    "title": "Certificate of Completion",
+    "presentedTo": "This certificate is proudly presented to",
+    "forCompleting": "For successfully completing the online course",
+    "instructor": "Instructor",
+    "instructorSignature": "Instructor Signature",
+    "completionDate": "Completion Date",
+    "certificateId": "Certificate ID: {{id}}",
+    "verifyAt": "Verify at: yourdomain.com/verify-certificate?id={{id}}",
+    "downloadPNG": "Download Image (PNG)"
+  },
+  "aiAssistant": {
+    "greeting": "Hello! How can I assist you today?",
+    "contextPrefix": "Based on the lesson about {{lesson}}: ",
+    "inputPlaceholder": "Ask me anything about the course...",
+    "responses": {
+      "0": "That's a great question! Let me explain...",
+      "1": "I can help you with that. Here's what you need to know...",
+      "2": "Based on the course content, I'd recommend focusing on...",
+      "3": "Let me break this down for you step by step...",
+      "4": "That's an interesting point. Have you considered..."
+    }
+  },
+  "chatbot": {
+    "greeting": "👋 Hi there! I'm your AI learning assistant for 3TEduTech. How can I help you with {{lesson, default:your learning}} today?",
+    "inputPlaceholder": "Ask anything...",
+    "sendHint": "Press <1>Enter</1> to send. Shift+Enter for new line.",
+    "response": {
+      "hello": "Hello! How can I assist you with your learning journey today?",
+      "thank": "You're most welcome! Is there anything else I can clarify for you?",
+      "python": "Ah, regarding {{topic}} in Python for the lesson on \"{{lesson}}\", they are fundamental! Loops help you repeat tasks, and functions help you organize code. Any specific part you'd like to dive into?",
+      "lesson": "For the lesson on \"{{lesson}}\", that's an interesting question! I can explain the core concepts or provide some examples. What are you curious about?",
+      "general": "That's a great question! While I don't have specific lesson context right now, I can try to help with general knowledge. Could you tell me more?",
+      "error": "I'm sorry, I encountered an issue trying to respond. Please try again."
+    },
+    "loop": "loops",
+    "function": "functions"
+  },
+  "bankTransferPayment": {
+    "title": "Bank Transfer Payment",
+    "qrInstruction": "Scan the VietQR code with your banking app to auto-fill transfer details.",
+    "bankName": "Bank Name",
+    "accountNumber": "Account Number",
+    "accountHolder": "Account Holder",
+    "branch": "Branch",
+    "transferContentLabel": "Transfer Content (required)",
+    "copiedTitle": "Copied!",
+    "copiedDesc": "Transfer content copied to clipboard.",
+    "copyBtn": "Copy",
+    "amount": "Amount: {{amount}} VND",
+    "amountNote": "Please transfer the exact amount above for automatic confirmation.",
+    "note1": "After transferring, please wait 1-2 minutes for the system to confirm your payment.",
+    "note2": "If you have any issues, contact support for assistance.",
+    "otherMethod": "Other Payment Method",
+    "completedBtn": "I Have Paid"
+  },
+  "cryptoPayment": {
+    "title": "Pay with {{coin}}",
+    "coinLabel": "Coin Type",
+    "networkLabel": "Network",
+    "addressLabel": "Wallet Address",
+    "amountLabel": "Amount",
+    "equivalent": "Equivalent value: ${{amount}}",
+    "equivalentNote": "Please transfer the correct coin, network, and amount.",
+    "note1": "Wait for blockchain confirmation, which may take 10-15 minutes depending on network congestion.",
+    "note2": "We will update your order status after the transaction is confirmed.",
+    "otherMethod": "Choose another method",
+    "completedBtn": "I have transferred coins"
+  },
+  "momoPayment": {
+    "title": "Pay with MoMo",
+    "tabQRCode": "QR Code",
+    "tabApp": "App",
+    "qrTitle": "Pay with MoMo QR",
+    "amount": "Amount: ${{amount}}",
+    "qrInstruction": "Open the MoMo app, select 'Scan' and scan the QR code above to complete your payment.",
+    "qrExpire": "QR code will expire in: <1>{{time}}</1>",
+    "qrExpired": "QR code has expired. Please generate again.",
+    "retry": "Retry",
+    "waiting": "Waiting for payment confirmation...",
+    "processing": "Processing payment...",
+    "appInstruction": "Click the button below to open the MoMo app and complete your payment.",
+    "appBtn": "Pay with MoMo",
+    "appNote": "You will be redirected to the MoMo app or payment website to complete your transaction.",
+    "otherMethod": "Choose another method"
+  },
+  "paypalPayment": {
+    "title": "Pay with PayPal",
+    "info1": "You will be redirected to the PayPal payment page to complete your transaction.",
+    "info2": "After successful payment, you will be automatically redirected to the result notification page.",
+    "amountLabel": "Payment amount:",
+    "processing": "Processing payment...",
+    "loading": "Loading PayPal...",
+    "otherMethod": "Choose another method",
+    "checkoutBtn": "PayPal Checkout"
+  },
+  "orderSummary": {
+    "title": "Order Summary",
+    "instructor": "Instructor: {{instructor}}",
+    "subtotal": "Subtotal:",
+    "tax": "Tax (10%):",
+    "total": "Total:"
+  },
+  "paymentMethodList": {
+    "tabCard": "Card",
+    "tabBank": "Bank",
+    "tabDigital": "E-wallet",
+    "tabCrypto": "Cryptocurrency"
+  },
+  "fullScreenLoader": {
+    "processing": "Processing..."
+  },
+  "languageToggle": {
+    "toggle": "Toggle language",
+    "en": "English",
+    "vi": "Vietnamese"
+  },
+  "courseInfoDialog": {
+    "title": "Course Information",
+    "description": "Detailed information about the course.",
+    "courseTitle": "Course Title",
+    "instructor": "Instructor",
+    "progress": "Progress",
+    "progressValue": "{{completed}} of {{total}} lessons completed ({{percent}}%)",
+    "sections": "Sections",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "close": "Close"
+  },
+  "lessonContent": {
+    "explanation": "Explanation:",
+    "quizResults": "Quiz Results",
+    "yourScore": "Your score: {{score}}%",
+    "tryAgain": "Try Again",
+    "submitAnswers": "Submit Answers",
+    "quiz": {
+      "errorStartTitle": "Error Starting Quiz",
+      "errorStartDesc": "Could not load quiz.",
+      "errorNoActiveAttempt": "No active quiz attempt.",
+      "incompleteTitle": "Incomplete Quiz",
+      "incompleteDesc": "Please answer all {{total}} questions. You have {{unanswered}} unanswered.",
+      "errorSubmitTitle": "Submission Error",
+      "errorSubmitDesc": "Could not submit quiz.",
+      "loading": "Loading Quiz...",
+      "questionProgress": "Question {{current}} of {{total}}",
+      "unavailable": "Quiz content is currently unavailable. Please try refreshing the page.",
+      "results": {
+        "title": "Quiz Completed!",
+        "defaultLessonName": "lesson",
+        "passedDesc": "Congratulations! You've successfully passed the \"{{lessonName}}\" quiz.",
+        "failedDesc": "You scored {{score}}%. Passing score is {{passingScore}}%. Don't give up, review your answers and try again!",
+        "reviewBtn": "Review Answers",
+        "tryAgainBtn": "Try Again"
+      },
+      "review": {
+        "title": "Reviewing",
+        "defaultTitle": "Quiz Answers",
+        "yourAnswer": "Your Answer",
+        "yourCorrectAnswer": "Your Correct Answer",
+        "correctAnswer": "Correct Answer",
+        "backToSummary": "Back to Results Summary",
+        "nextQuestion": "Next Question"
+      },
+      "playing": {
+        "defaultTitle": "Test Your Knowledge",
+        "submitBtn": "Submit Quiz",
+        "nextBtn": "Next Question"
+      }
+    }
+  },
+  "lessonContentRenderer": {
+    "videoErrorTitle": "Video Playback Error",
+    "videoErrorDefault": "Could not load the video. Please try again later.",
+    "videoErrorMissingId": "Missing Video ID/URL for {{source}} source.",
+    "videoErrorMissingSource": "Video source type is not specified.",
+    "videoErrorCloudinary": "Could not load Cloudinary video.",
+    "videoErrorCloudinaryNoUrl": "Video resource is temporarily unavailable. Please try again shortly.",
+    "videoErrorCloudinaryMisconfigured": "Video source is misconfigured (missing ID).",
+    "videoErrorNotAvailable": "Video content is not available for this lesson.",
+    "videoErrorPlayback": "Failed to load video. The link might be invalid, expired, or network issue.",
+    "videoLoading": "Loading video...",
+    "textNoContent": "No content available for this lesson.",
+    "videoNoContent": "Video content is not available for this lesson.",
+    "unsupportedType": "Unsupported lesson type or content could not be loaded."
+  },
+  "lessonContentWrapper": {
+    "selectLessonTitle": "Select a lesson to begin",
+    "selectLessonDesc": "Your learning journey starts here. Choose a lesson from the sidebar.",
+    "prev": "Prev",
+    "next": "Next",
+    "finish": "Finish",
+    "completed": "Completed",
+    "markAsComplete": "Mark as Complete"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "confirm": "Confirm",
+    "closeSidebar": "Close Sidebar",
+    "openSidebar": "Open Sidebar"
+  },
+  "lessonTabs": {
+    "loadingDiscussions": "Loading discussions...",
+    "errorLoadingDiscussions": "Error loading discussions.",
+    "noDiscussions": "No discussions yet",
+    "noDiscussionsDesc": "Be the first to start a discussion for this lesson.",
+    "loadMoreReplies": "Load More Replies",
+    "noReplies": "No replies yet. Be the first to share your thoughts!",
+    "replyingTo": "Replying to {{name}}:",
+    "postReplyTo": "Post a reply to \\\"{{title}}\\\":",
+    "writeYourReply": "Write your reply...",
+    "shareYourThoughts": "Share your thoughts...",
+    "cancelReply": "Cancel Reply",
+    "postReply": "Post Reply",
+    "loadMoreDiscussions": "Load More Discussions",
+    "overview": "Overview",
+    "resources": "Resources ({{count}})",
+    "qna": "Q&A",
+    "deleteCommentTitle": "Delete Comment?",
+    "deleteDiscussionTitle": "Delete Discussion?",
+    "deleteConfirmDesc": "Are you sure you want to delete this {{type}}? This action cannot be undone.",
+    "delete": "Delete",
+    "noResources": "No Resources Available",
+    "noResourcesDesc": "There are no downloadable materials for this lesson.",
+    "downloadableResources": "Downloadable Resources",
+    "resourcesProvided": "Materials provided by the instructor for this lesson.",
+    "itemType": {
+      "post": "comment",
+      "thread": "discussion",
+      "item": "item"
+    },
+    "toast": {
+      "discussionStarted": "Discussion Started!",
+      "errorCreatePost": "Could not post comment: {{message}}",
+      "errorCreateThread": "Could not start thread: {{message}}",
+      "replyPosted": "Reply Posted",
+      "commentPosted": "Comment Posted",
+      "commentDeleted": "Comment Deleted",
+      "deleteFailed": "Delete Failed"
+    },
+    "loginToDiscuss": "Please <1>log in</1> to participate in discussions.",
+    "errorLoadReplies": "Error loading replies. <1>Retry</1>",
+    "repliesCount_one": "{{count}} reply",
+    "repliesCount_other": "{{count}} replies",
+    "noDiscussionsDesc_start": "Start New Discussion",
+    "cancelNewThread": "Cancel New Thread",
+    "startNewDiscussion": "Start New Discussion",
+    "newThreadTitlePlaceholder": "Thread Title (e.g., Question about HTML forms)",
+    "newThreadTextPlaceholder": "Your question or discussion point...",
+    "postDiscussion": "Post Discussion"
+  },
+  "sidebar": {
+    "backToLearning": "Back to Learning",
+    "yourProgress": "Your Progress",
+    "lessonsCompleted": "{{completed}} of {{total}} lessons completed",
+    "preview": "Preview",
+    "completed": "Completed",
+    "of": "of",
+    "courseInfo": "Course Info",
+    "aiAssistant": "AI Assistant",
+    "sectionCompleted": "Section completed",
+    "contentLocked": "Content locked",
+    "enrollToAccess": "Enroll to access",
+    "previewable": "Previewable",
+    "video": "Video",
+    "text": "Text",
+    "quiz": "Quiz"
+  },
+  "addLessonForm": {
+    "title": "Add New Lesson",
+    "lessonTitle": "Lesson Title",
+    "lessonTitlePlaceholder": "Enter lesson title",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Enter lesson description",
+    "lessonType": "Lesson Type",
+    "lessonTypePlaceholder": "Select lesson type",
+    "typeVideo": "Video",
+    "typeText": "Text",
+    "typeQuiz": "Quiz",
+    "addLesson": "Add Lesson"
+  },
+  "addSectionForm": {
+    "title": "Add New Section",
+    "sectionTitle": "Section Title",
+    "sectionTitlePlaceholder": "Enter section title",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Enter section description",
+    "addSection": "Add Section"
+  },
+  "features": {
+    "whyTitle": "Why Learn with",
+    "whyDesc": "Our platform combines expert-led courses with cutting-edge AI technology for a truly personalized and effective learning experience.",
+    "aiTitle": "AI-Powered Learning",
+    "aiDesc": "Our AI learning assistant provides personalized help, answers questions, and guides you through challenging concepts.",
+    "expertTitle": "Expert Instructors",
+    "expertDesc": "Learn from industry professionals with real-world experience who are passionate about sharing their knowledge.",
+    "anywhereTitle": "Learn Anywhere, Anytime",
+    "anywhereDesc": "Access your courses on any device, with mobile and offline viewing options to fit your busy schedule.",
+    "trustedTitle": "Trusted & Up-to-Date Content",
+    "trustedDesc": "Curated courses with the latest industry knowledge, ensuring you learn relevant and valuable skills.",
+    "interactiveTitle": "Interactive Exercises",
+    "interactiveDesc": "Engage with hands-on projects, quizzes, and assignments to solidify your understanding.",
+    "creativeTitle": "Creative Learning Tools",
+    "creativeDesc": "Utilize innovative tools and resources designed to make your learning experience more engaging and effective.",
+    "aiBadge": "Revolutionary AI",
+    "aiSectionTitle": "Meet Your Personal AI Learning Assistant",
+    "aiSectionDesc": "Integrated directly into each lesson, our AI chatbot provides instant, context-aware support, explanations, and guidance whenever you need it.",
+    "ai24h": "<strong>24/7 Instant Help:</strong> Get unstuck anytime with immediate answers.",
+    "aiPersonalized": "<strong>Personalized Explanations:</strong> AI adapts to your understanding level.",
+    "aiPractice": "<strong>Interactive Practice:</strong> Reinforce learning with AI-generated examples.",
+    "ctaExplore": "Explore AI-Enhanced Courses"
+  },
+  "hero": {
+    "title1": "Expand Your Knowledge ",
+    "title2a": "With Our ",
+    "title2b": "AI-Enhanced",
+    "title2c": " Learning Platform",
+    "desc": "Discover courses taught by experts and enhanced with our AI tutor that guides you through your learning journey.",
+    "ctaExplore": "Explore Courses",
+    "ctaInstructor": "Become an Instructor",
+    "bullet1": "Access to 10.000+ quality courses.",
+    "bullet2": "Learn at your own pace, anytime, anywhere.",
+    "bullet3": "AI-powered learning assistant for 24/7 support."
+  },
+  "testimonials": {
+    "title": "What Our Learners Say",
+    "description": "Thousands of students and instructors trust EduAI Learning Hub to boost their skills and careers. Here’s what they say about us.",
+    "stats": {
+      "activeStudents": "Active Students",
+      "qualityCourses": "Quality Courses",
+      "expertInstructors": "Expert Instructors",
+      "averageRating": "Average Rating"
+    },
+    "testimonial1": {
+      "quote": "The platform is intuitive and the courses are very practical. I improved my skills quickly!",
+      "title": "Student of Web Development"
+    },
+    "testimonial2": {
+      "quote": "Great instructors and a supportive community. Highly recommended!",
+      "title": "Student of Data Science"
+    },
+    "testimonial3": {
+      "quote": "The AI-powered features make learning so much easier and more fun.",
+      "title": "Student of AI Fundamentals"
+    },
+    "testimonial4": {
+      "quote": "As an instructor, I love the tools and analytics provided. My students are more engaged than ever!",
+      "title": "Instructor"
+    }
+  },
+  "adminLayout": {
+    "title": "Admin Dashboard",
+    "goToMainSite": "Go to Main Site",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "courses": "Courses",
+      "courseApprovals": "Course Approvals",
+      "categories": "Categories",
+      "skills": "Skills",
+      "currencies": "Currencies",
+      "paymentMethods": "Payment Methods",
+      "exchangeRates": "Exchange Rates",
+      "levels": "Levels",
+      "promotions": "Promotions"
+    }
+  },
+  "cartDropdown": {
+    "loginToView": "Please log in to view your cart.",
+    "loginBtn": "Log In",
+    "loading": "Loading cart...",
+    "errorLoading": "Error loading cart.",
+    "empty": "Your cart is empty",
+    "addCoursesHint": "Add courses to get started on your learning journey!",
+    "browseCourses": "Browse Courses",
+    "yourCart": "Your Cart ({{count}})",
+    "subtotal": "Subtotal:",
+    "goToCheckout": "Go to Checkout",
+    "viewCart": "View Cart",
+    "by": "By",
+    "removeFromCart": "Remove from cart",
+    "cartIsEmpty": "Cart is Empty"
+  },
+  "footer": {
+    "slogan": "Empowering learners and educators worldwide through innovative technology and accessible, high-quality AI-enhanced education.",
+    "explore": "Explore",
+    "allCourses": "All Courses",
+    "categories": "Categories",
+    "instructors": "Instructors",
+    "freeCourses": "Free Courses",
+    "newReleases": "New Releases",
+    "company": "Company",
+    "aboutUs": "About Us",
+    "blog": "Blog",
+    "careers": "Careers",
+    "press": "Press",
+    "support": "Support",
+    "helpCenter": "Help Center",
+    "contactUs": "Contact Us",
+    "faq": "FAQ",
+    "communityForum": "Community Forum",
+    "legal": "Legal",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "cookiePolicy": "Cookie Policy",
+    "social": {
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "instagram": "Instagram",
+      "youtube": "YouTube",
+      "linkedin": "LinkedIn"
+    },
+    "copyright": "© {{year}} 3TEduTech, Inc. All rights reserved."
+  },
+  "instructorLayout": {
+    "title": "Instructor",
+    "goToMainSite": "Go to Main Site",
+    "myAccount": "My Account",
+    "dashboardTitle": "Instructor Dashboard",
+    "copyright": "© {{year}} 3TEduTech Instructor Portal. All rights reserved.",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "myCourses": "My Courses",
+      "createCourse": "Create Course",
+      "courseApprovals": "Course Approvals",
+      "students": "Students",
+      "earnings": "Earnings & Payouts",
+      "myProfile": "My Profile"
+    },
+    "mainProfile": "Main Profile",
+    "logOut": "Log Out"
+  },
+  "navbar": {
+    "links": {
+      "Home": "Home",
+      "Courses": "Courses",
+      "Categories": "Categories",
+      "Instructors": "Instructors",
+      "About Us": "About Us",
+      "Blog": "Blog"
+    },
+    "search": "Search...",
+    "openSearch": "Open Search",
+    "dashboards": "Dashboards",
+    "adminPanel": "Admin Panel",
+    "instructorHub": "Instructor Hub",
+    "mySpace": "My Space",
+    "myLearning": "My Learning",
+    "profileSettings": "Profile & Settings",
+    "orderHistory": "Order History",
+    "myCertificates": "My Certificates",
+    "logOut": "Log Out",
+    "login": "Log In",
+    "signup": "Sign Up"
+  },
+  "aboutPage": {
+    "hero": {
+      "title": "About 3TEduTech",
+      "subtitle": "Empowering learners and educators worldwide through innovative technology and accessible, high-quality education."
+    },
+    "story": {
+      "title": "Our Journey",
+      "p1": "Founded in 2020 with a bold vision, 3TEduTech emerged from a desire to revolutionize how knowledge is shared and acquired. What began as a dedicated team of educators, AI specialists, and technologists has rapidly evolved into a dynamic global platform, fostering a vibrant community of instructors and millions of eager learners across the globe.",
+      "p2": "We firmly believe that education is a catalyst for transformation, and technology is the enabler to unlock its boundless potential. Our platform ingeniously fuses cutting-edge AI with expertly-curated content, delivering an immersive and adaptive learning experience tailored to the unique pace and style of each individual.",
+      "p3": "Today, 3TEduTech proudly serves a diverse community spanning over 150 countries, offering a rich tapestry of courses in numerous languages across a multitude of disciplines. Yet, amidst our expansion, our foundational mission remains steadfast: to empower individuals with transformative knowledge and future-ready skills."
+    },
+    "mission": {
+      "title": "Our Mission",
+      "description": "To democratize education by providing universally accessible, AI-enhanced learning experiences that empower individuals and organizations to achieve their highest potential and shape a better future.",
+      "item1": "Make world-class education available to anyone, anywhere, anytime.",
+      "item2": "Deliver practical, skills-based learning for tangible real-world impact.",
+      "item3": "Cultivate a supportive and collaborative global community of lifelong learners.",
+      "item4": "Continuously innovate to make learning more engaging, effective, and personalized."
+    },
+    "vision": {
+      "title": "Our Vision",
+      "description": "To be the leading global platform where technology and human expertise converge, creating a future where learning knows no bounds and everyone has the power to transform their lives through education."
+    },
+    "values": {
+      "title": "Our Core Values",
+      "learnerCentric": "Learner-Centric",
+      "learnerCentricDesc": "We place learners at the heart of everything, tailoring experiences to their needs and aspirations.",
+      "innovation": "Innovation",
+      "innovationDesc": "We constantly explore and implement cutting-edge AI and pedagogical approaches to enhance learning.",
+      "excellence": "Excellence",
+      "excellenceDesc": "We are committed to the highest standards in course quality, platform performance, and support services.",
+      "accessibility": "Accessibility",
+      "accessibilityDesc": "We strive to make education barrier-free, ensuring our platform is usable and affordable for all.",
+      "integrity": "Integrity",
+      "integrityDesc": "We operate with transparency, honesty, and a strong ethical compass in all our interactions.",
+      "empowerment": "Empowerment",
+      "empowermentDesc": "We aim to equip individuals with skills and knowledge that empower them to achieve their goals."
+    },
+    "leadership": {
+      "title": "Meet Our Leadership",
+      "ceo": {
+        "name": "Dr. Evelyn Reed",
+        "title": "CEO & Co-Founder",
+        "bio": "Visionary leader passionately driving educational innovation through technology."
+      },
+      "cto": {
+        "name": "Marcus Chen",
+        "title": "CTO & Co-Founder",
+        "bio": "Tech architect transforming learning experiences with cutting-edge AI solutions."
+      },
+      "cpo": {
+        "name": "Aisha Khan",
+        "title": "Chief Product Officer",
+        "bio": "Strategist dedicated to crafting intuitive and impactful learning products."
+      },
+      "headOfLearning": {
+        "name": "Dr. Ben Carter",
+        "title": "Head of Learning & Pedagogy",
+        "bio": "Expert in educational science, ensuring effective and engaging course content."
+      }
+    },
+    "stats": {
+      "title": "3TEduTech by the Numbers",
+      "learners": "Learners Worldwide",
+      "courses": "Curated Courses",
+      "instructors": "Expert Instructors",
+      "countries": "Countries Reached"
+    },
+    "cta": {
+      "title": "Ready to Transform Your Future?",
+      "description": "Join our global learning community today. Explore thousands of courses, connect with experts, and unlock your potential.",
+      "explore": "Explore Courses",
+      "becomeInstructor": "Become an Instructor"
+    }
+  }
+}

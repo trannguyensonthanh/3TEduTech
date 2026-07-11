@@ -1,0 +1,41 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react-hooks/recommended",
+    "eslint-config-prettier"
+  ],
+  "plugins": ["@typescript-eslint", "react"],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "rules": {
+    // --- Các quy tắc quan trọng ---
+    "react/react-in-jsx-scope": "off", // Không cần import React ở các phiên bản mới
+    "react/prop-types": "off", // Chúng ta dùng TypeScript, không cần prop-types
+    "@typescript-eslint/no-explicit-any": "warn", // Cảnh báo khi dùng 'any', nhưng không báo lỗi
+    "@typescript-eslint/explicit-module-boundary-types": "off", // Không bắt buộc khai báo kiểu trả về cho mọi hàm
+
+    // --- Các quy tắc về style (tùy chọn) ---
+    "no-console": ["warn", { "allow": ["warn", "error"] }], // Cảnh báo khi dùng console.log, nhưng cho phép console.warn/error
+    "eqeqeq": ["error", "always"], // Bắt buộc dùng === và !==
+    "no-unused-vars": "off", // Tắt quy tắc này, dùng của TypeScript bên dưới
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }] // Cảnh báo biến không dùng, trừ khi bắt đầu bằng '_'
+  }
+}

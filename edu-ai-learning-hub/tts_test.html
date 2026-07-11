@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Web Speech API Test</title>
+  </head>
+  <body>
+    <h1>Web Speech API Test</h1>
+    <textarea id="textToSpeak" rows="4" cols="50">
+Xin chào, đây là thử nghiệm giọng nói.</textarea
+    >
+    <br />
+    <button onclick="speak()">Speak</button>
+    <button onclick="listVoices()">List Voices</button>
+    <h2>Available Voices:</h2>
+    <ul id="voiceList"></ul>
+
+    <script>
+      function speak() {
+        if (!("speechSynthesis" in window)) {
+          alert("Sorry, your browser does not support text to speech!");
+          return;
+        }
+
+        var text = document.getElementById("textToSpeak").value;
+        var msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.volume = 1;
+        msg.rate = 1;
+        msg.pitch = 1;
+        msg.lang = "vi-VN"; // Thử bỏ comment dòng này
+
+        // Tìm giọng Việt Nam nếu muốn
+        // const voices = window.speechSynthesis.getVoices();
+        // const vietnameseVoice = voices.find(voice => voice.lang === 'vi-VN');
+        // if (vietnameseVoice) {
+        //     msg.voice = vietnameseVoice;
+        // }
+
+        msg.onstart = function (event) {
+          console.log("Started speaking", event);
+        };
+        msg.onend = function (event) {
+          console.log("Finished speaking", event);
+        };
+        msg.onerror = function (event) {
+          console.error("Speech synthesis error", event.error, event);
+        }; // Log lỗi
+
+        console.log("Requesting speak...");
+        window.speechSynthesis.speak(msg);
+      }
+
+      // Hàm liệt kê giọng nói (cần gọi sau khi voiceschanged hoặc chờ)
+      function listVoices() {
+        const voiceList = document.getElementById("voiceList");
+        voiceList.innerHTML = ""; // Clear list
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length === 0) {
+          voiceList.innerHTML =
+            "<li>No voices available yet. Try again shortly.</li>";
+          return;
+        }
+        voices.forEach((voice) => {
+          const listItem = document.createElement("li");
+          listItem.textContent = `${voice.name} (${voice.lang}) ${
+            voice.default ? "[Default]" : ""
+          }`;
+          voiceList.appendChild(listItem);
+        });
+      }
+
+      // Gọi listVoices sau một khoảng trễ hoặc khi sự kiện voiceschanged xảy ra
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = listVoices;
+      } else {
+        // Fallback nếu không có sự kiện
+        setTimeout(listVoices, 500);
+      }
+    </script>
+  </body>
+</html>
