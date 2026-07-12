@@ -135,6 +135,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             cd /opt/3t-edu-tech
             # Kéo image mới nhất về
             docker pull ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-backend:latest

@@ -1,10 +1,6 @@
-version: '3.8'
-
 services:
   backend:
-    build:
-      context: ./3t-edu-tech-backend
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/3t-edu-tech-backend:latest
     container_name: edutech-backend
     ports:
       - "5000:5000"
@@ -23,9 +19,7 @@ services:
       - edutech-net
 
   ai-service:
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/3t-edu-tech-ai-service:latest
     container_name: edutech-ai-service
     ports:
       - "2111:2111"
@@ -41,9 +35,7 @@ services:
       - ./ai-service/data:/app/data # Persist ChromaDB or document data if needed
 
   frontend:
-    build:
-      context: ./edu-ai-learning-hub
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/3t-edu-tech-frontend:latest
     container_name: edutech-frontend
     ports:
       - "80:80"
