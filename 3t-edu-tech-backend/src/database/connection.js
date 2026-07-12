@@ -27,31 +27,6 @@ let pool = null;
 // Thêm một biến cờ để quản lý trạng thái đang kết nối, giải quyết "race condition"
 let isConnecting = false;
 
-// Đóng pool kết nối
-const closeDB = async () => {
-  try {
-    if (pool) {
-      await pool.close();
-      pool = null;
-      logger.info('Database connection pool closed.');
-    }
-  } catch (err) {
-    logger.error('Error closing database pool:', err);
-    // Dù có lỗi khi đóng, vẫn reset pool để có thể thử lại
-    pool = null;
-  }
-};
-
-// Lấy kết nối từ pool
-const getConnection = async () => {
-  // Nếu không có pool hoặc pool đã bị đóng, hãy gọi connectDB
-  if (!pool || !pool.connected) {
-    // connectDB sẽ xử lý logic để tránh tạo nhiều pool cùng lúc
-    return connectDB();
-  }
-  return pool;
-};
-
 // Kết nối DB và tạo pool
 const connectDB = async () => {
   // Nếu đã có pool và đang kết nối tốt, trả về ngay
@@ -96,6 +71,31 @@ const connectDB = async () => {
     // Ném lỗi ra ngoài để hàm gọi nó biết mà xử lý, thay vì exit cả tiến trình
     throw err;
   }
+};
+
+// Đóng pool kết nối
+const closeDB = async () => {
+  try {
+    if (pool) {
+      await pool.close();
+      pool = null;
+      logger.info('Database connection pool closed.');
+    }
+  } catch (err) {
+    logger.error('Error closing database pool:', err);
+    // Dù có lỗi khi đóng, vẫn reset pool để có thể thử lại
+    pool = null;
+  }
+};
+
+// Lấy kết nối từ pool
+const getConnection = async () => {
+  // Nếu không có pool hoặc pool đã bị đóng, hãy gọi connectDB
+  if (!pool || !pool.connected) {
+    // connectDB sẽ xử lý logic để tránh tạo nhiều pool cùng lúc
+    return connectDB();
+  }
+  return pool;
 };
 
 // Thêm một hàm để khởi tạo khi server bắt đầu (khuyến khích sử dụng)

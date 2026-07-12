@@ -9,7 +9,7 @@ const extractYoutubeId = (url) => {
   if (!url || typeof url !== 'string') return null;
 
   const youtubeRegex =
-    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/ ]{11})/;
+    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?/ ]{11})/;
   const match = url.match(youtubeRegex);
 
   if (match && match[1]) {
@@ -52,7 +52,7 @@ const extractVimeoId = (url) => {
   if (!url || typeof url !== 'string') return null;
 
   const vimeoRegex =
-    /(?:vimeo\.com\/(?:[^\/]+\/videos\/|video\/|channels\/(?:[^\/]+\/)?|groups\/(?:[^\/]+\/videos\/)?)?|player\.vimeo\.com\/video\/)([0-9]+)/;
+    /(?:vimeo\.com\/(?:[^/]+\/videos\/|video\/|channels\/(?:[^/]+\/)?|groups\/(?:[^/]+\/videos\/)?)?|player\.vimeo\.com\/video\/)([0-9]+)/;
   const match = url.match(vimeoRegex);
 
   if (match && match[1]) {

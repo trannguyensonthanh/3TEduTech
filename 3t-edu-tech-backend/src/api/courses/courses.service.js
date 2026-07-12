@@ -91,11 +91,14 @@ const createCourse = async (courseData, instructorId) => {
  * Lấy danh sách khóa học (có thể lọc theo nhiều tiêu chí).
  */
 const getCourses = async (
-  filters = {},
-  options = {},
-  user = null,
+  filters,
+  options,
+  user,
   targetCurrency
 ) => {
+  filters = filters || {};
+  options = options || {};
+  user = user || null;
   const effectiveFilters = { ...filters };
   if (user) {
     if (user.role === Roles.INSTRUCTOR && effectiveFilters.userPage === false) {
@@ -156,10 +159,12 @@ const getCourses = async (
  * Hàm này không tự ý thêm filter, nó chỉ thực thi những gì được truyền vào.
  */
 const queryCourses = async (
-  filters = {},
-  options = {},
+  filters,
+  options,
   targetCurrency = 'VND'
 ) => {
+  filters = filters || {};
+  options = options || {};
   const { page = 1, limit = 10 } = options;
 
   // Gọi thẳng repository với filter đã được chuẩn bị sẵn từ service cha
@@ -191,7 +196,8 @@ const queryCourses = async (
 /**
  * Lấy chi tiết một khóa học bằng slug, bao gồm TOÀN BỘ curriculum.
  */
-const getCourseBySlug = async (slug, user = null, targetCurrency) => {
+const getCourseBySlug = async (slug, user, targetCurrency) => {
+  user = user || null;
   const isAdmin =
     user && (user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN);
   const isPotentiallyInstructor = user && user.role === Roles.INSTRUCTOR;

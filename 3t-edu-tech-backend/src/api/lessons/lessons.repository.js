@@ -293,11 +293,13 @@ const updateLessonById = async (lessonId, updateData, transaction = null) => {
           sqlType = sql.Bit;
           break;
         default:
-          continue;
+          break;
       }
 
-      executor.input(key, sqlType, value);
-      setClauses.push(`${dbKey} = @${key}`);
+      if (sqlType) {
+        executor.input(key, sqlType, value);
+        setClauses.push(`${dbKey} = @${key}`);
+      }
     }
   }
 
