@@ -142,5 +142,5 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-frontend:latest
             
             # Restart các services
-            docker-compose down
-            docker-compose up -d
+            docker compose down
+            docker compose up -d
