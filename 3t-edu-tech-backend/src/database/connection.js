@@ -28,7 +28,7 @@ let pool = null;
 let isConnecting = false;
 
 // Kết nối DB và tạo pool
-const connectDB = async () => {
+async function connectDB() {
   // Nếu đã có pool và đang kết nối tốt, trả về ngay
   if (pool && pool.connected) {
     return pool;
@@ -74,7 +74,7 @@ const connectDB = async () => {
 };
 
 // Đóng pool kết nối
-const closeDB = async () => {
+async function closeDB() {
   try {
     if (pool) {
       await pool.close();
@@ -89,7 +89,7 @@ const closeDB = async () => {
 };
 
 // Lấy kết nối từ pool
-const getConnection = async () => {
+async function getConnection() {
   // Nếu không có pool hoặc pool đã bị đóng, hãy gọi connectDB
   if (!pool || !pool.connected) {
     // connectDB sẽ xử lý logic để tránh tạo nhiều pool cùng lúc
@@ -99,7 +99,7 @@ const getConnection = async () => {
 };
 
 // Thêm một hàm để khởi tạo khi server bắt đầu (khuyến khích sử dụng)
-const initializeDatabase = async () => {
+async function initializeDatabase() {
   try {
     await getConnection();
   } catch (error) {

@@ -10,12 +10,12 @@ function sortObject(obj) {
   const str = [];
   let key;
   for (key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       str.push(encodeURIComponent(key));
     }
   }
   str.sort();
-  for (key = 0; key < str.length; key++) {
+  for (key = 0; key < str.length; key += 1) {
     sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
   }
   return sorted;
