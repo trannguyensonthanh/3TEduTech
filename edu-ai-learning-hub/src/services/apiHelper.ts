@@ -3,7 +3,7 @@
 import { logoutUserApi, refreshToken } from '@/services/auth.service';
 import TokenService from './token.service';
 
-const API_BASE_URL: string = 'http://localhost:5000/v1';
+const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
 
 // Định nghĩa kiểu dữ liệu cho lỗi API trả về (nếu backend có cấu trúc lỗi chuẩn)
 export class APIError extends Error {

@@ -76,7 +76,7 @@ export const addSubtitleByUpload = async (
 
   // Cần API endpoint riêng cho việc upload subtitle
   // Ví dụ: POST /v1/lessons/:lessonId/subtitles/upload
-  const API_BASE_URL: string = 'http://localhost:5000/v1'; // Nên lấy từ config
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`; // Nên lấy từ config
   const url = new URL(`${API_BASE_URL}/lessons/${lessonId}/subtitles/upload`); // *** Endpoint mới (cần tạo ở backend) ***
 
   return fetchWithAuth(url, {

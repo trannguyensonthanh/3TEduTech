@@ -1,6 +1,6 @@
 // src/services/ai.service.ts
 import { ChatHistoryPair } from '@/hooks/useChatbot';
-const AI_API_BASE_URL = 'http://localhost:2111'; // Thay bằng URL API thật của bạn
+const AI_API_BASE_URL = import.meta.env.VITE_AI_API_URL || `http://${window.location.hostname}:2111`; // Thay bằng URL API thật của bạn
 const MASTER_API_KEY = '4mrOXXBBZuxLcUw2j9SXrFrXfGSxIIxR';
 const COURSE_AI_API_KEY = 'AesHdAArx39flWyTKc74c5rP5SsF8Bz7';
 // --- Interfaces for AI Chat ---

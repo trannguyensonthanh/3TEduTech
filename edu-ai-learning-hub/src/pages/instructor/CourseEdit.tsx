@@ -114,7 +114,7 @@ const CourseEdit: React.FC = () => {
     if (!course?.courseId || !TokenService.getLocalAccessToken()) return;
 
     const ctrl = new AbortController();
-    const API_BASE_URL = 'http://localhost:5000/v1';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
 
     fetchEventSource(`${API_BASE_URL}/events/subscribe`, {
       method: 'GET',

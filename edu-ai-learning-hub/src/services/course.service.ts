@@ -352,7 +352,7 @@ export const updateCourseThumbnail = async (
   // Dùng fetch trực tiếp hoặc tạo hàm riêng trong apiHelper cho FormData
   // Giả sử apiHelper.patch có thể xử lý FormData (cần kiểm tra lại apiHelper)
   // return apiHelper.patch(`/courses/${courseId}/thumbnail`, formData, undefined, { 'Content-Type': undefined }); // Xóa content-type
-  const API_BASE_URL: string = 'http://localhost:5000/v1';
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
   const url = new URL(`${API_BASE_URL}/courses/${courseId}/thumbnail`);
   return fetchWithAuth(url, {
     // Sử dụng fetchWithAuth đã có
@@ -369,7 +369,7 @@ export const updateCourseIntroVideo = async (
 ): Promise<Course> => {
   const formData = new FormData();
   formData.append('introVideo', file); // Tên field phải khớp với Multer backend
-  const API_BASE_URL: string = 'http://localhost:5000/v1'; // Nên lấy từ config
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`; // Nên lấy từ config
   const url = new URL(`${API_BASE_URL}/courses/${courseId}/intro-video`);
   return fetchWithAuth(url, {
     method: 'PATCH',

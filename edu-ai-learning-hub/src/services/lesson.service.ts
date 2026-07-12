@@ -149,7 +149,7 @@ export const updateLessonVideo = async (
 ): Promise<Lesson> => {
   const formData = new FormData();
   formData.append('video', file);
-  const API_BASE_URL: string = 'http://localhost:5000/v1';
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
   const url = new URL(`${API_BASE_URL}/lessons/${lessonId}/video`);
   return fetchWithAuth(url, {
     method: 'PATCH',
@@ -173,7 +173,7 @@ export const addLessonAttachment = async (
 ): Promise<Attachment> => {
   const formData = new FormData();
   formData.append('attachment', file);
-  const API_BASE_URL: string = 'http://localhost:5000/v1';
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
   const url = new URL(`${API_BASE_URL}/lessons/${lessonId}/attachments`);
   return fetchWithAuth(url, {
     method: 'POST',

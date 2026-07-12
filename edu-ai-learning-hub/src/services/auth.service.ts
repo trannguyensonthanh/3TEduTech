@@ -142,7 +142,7 @@ export const refreshToken = async (
   data = {},
   tokenIgnored = ''
 ): Promise<{ accessToken: string }> => {
-  const API_BASE_URL: string = 'http://localhost:5000/v1';
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
   try {
     // Gọi fetch trực tiếp, KHÔNG qua fetchWithAuth
     const res = await fetch(API_BASE_URL + '/auth/refresh-tokens', {
@@ -195,7 +195,7 @@ export const logoutUser = async (): Promise<{ message: string }> => {
 };
 
 export const logoutUserApi = async (token = ''): Promise<any> => {
-  const API_BASE_URL: string = 'http://localhost:5000/v1';
+  const API_BASE_URL: string = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/v1`;
   try {
     const res = await fetch(API_BASE_URL + '/auth/logout', {
       method: 'POST',
