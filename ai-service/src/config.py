@@ -10,8 +10,8 @@ class Settings(BaseSettings):
 
     # Gemini AI
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
-    gemini_embedding_model: str = "text-embedding-004"
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_embedding_model: str = "gemini-embedding-2"
 
     # ChromaDB
     chroma_persist_dir: str = "./data/chroma_db"
