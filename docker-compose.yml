@@ -1,4 +1,19 @@
 services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: edutech-database
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=EduTech_DB_2026!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: always
+    networks:
+      - edutech-net
+
   backend:
     image: ${DOCKER_USERNAME}/3t-edu-tech-backend:latest
     container_name: edutech-backend
@@ -15,6 +30,8 @@ services:
     env_file:
       - ./3t-edu-tech-backend/.env
     restart: always
+    depends_on:
+      - database
     networks:
       - edutech-net
 
@@ -48,3 +65,6 @@ services:
 networks:
   edutech-net:
     driver: bridge
+
+volumes:
+  mssql-data:
