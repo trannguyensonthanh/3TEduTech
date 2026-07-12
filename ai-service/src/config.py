@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Server
     ai_service_host: str = "0.0.0.0"
     ai_service_port: int = 2111
-    cors_origins: str = "http://localhost:8080,http://localhost:5000,https://localhost:8080"
+    cors_origins: str = "*"
 
     # RAG
     rag_top_k: int = 10
