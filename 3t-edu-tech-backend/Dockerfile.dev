@@ -1,0 +1,14 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Cài đặt tất cả dependencies (bao gồm devDependencies để dùng nodemon)
+RUN npm install
+
+# Mở port 5000
+EXPOSE 5000
+
+# Chạy lệnh dev (nodemon server.js)
+CMD ["npm", "run", "dev"]

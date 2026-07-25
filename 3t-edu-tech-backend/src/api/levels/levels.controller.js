@@ -1,12 +1,14 @@
 const httpStatus = require('http-status').status;
 const levelService = require('./levels.service');
 const { catchAsync } = require('../../utils/catchAsync');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 /**
  * Create a new level
  */
 const createLevel = catchAsync(async (req, res) => {
   const level = await levelService.createLevel(req.body);
+  await clearCache('cache:/v1/levels*');
   res.status(httpStatus.CREATED).send(level);
 });
 
@@ -31,6 +33,7 @@ const getLevel = catchAsync(async (req, res) => {
  */
 const updateLevel = catchAsync(async (req, res) => {
   const level = await levelService.updateLevel(req.params.levelId, req.body);
+  await clearCache('cache:/v1/levels*');
   res.status(httpStatus.OK).send(level);
 });
 
@@ -39,6 +42,7 @@ const updateLevel = catchAsync(async (req, res) => {
  */
 const deleteLevel = catchAsync(async (req, res) => {
   await levelService.deleteLevel(req.params.levelId);
+  await clearCache('cache:/v1/levels*');
   res.status(httpStatus.NO_CONTENT).send();
 });
 

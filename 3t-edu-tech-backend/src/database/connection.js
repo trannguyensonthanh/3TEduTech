@@ -13,6 +13,7 @@ const dbConfig = {
   options: {
     ...config.options,
     enableArithAbort: true,
+    trustServerCertificate: true, // Quan trọng: Cho phép chứng chỉ tự ký của SQL Server 2022
   },
   pool: {
     max: 10,

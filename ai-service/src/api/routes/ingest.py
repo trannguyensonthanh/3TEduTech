@@ -2,11 +2,12 @@
 """Document ingestion routes — upload content to the vector store."""
 
 import logging
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks
 from src.models.schemas import (
     IngestTextRequest,
     IngestCourseRequest,
     IngestResponse,
+    TranscriptionRequest
 )
 from src.rag.loader import ingest_text, ingest_course_content
 from src.vectorstore.chroma import (
@@ -15,9 +16,26 @@ from src.vectorstore.chroma import (
     get_or_create_collection,
 )
 from src.config import get_settings
+from src.api.tasks import download_and_transcribe_task
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
+
+
+@router.post("/transcribe")
+async def transcribe_video_endpoint(request: TranscriptionRequest, background_tasks: BackgroundTasks):
+    """
+    Downloads a video, extracts audio, transcribes using faster-whisper,
+    and ingests the transcript into the course knowledge vector store.
+    Runs in the background.
+    """
+    background_tasks.add_task(
+        download_and_transcribe_task,
+        video_url=request.video_url,
+        course_name=request.course_name,
+        lesson_name=request.lesson_name,
+    )
+    return {"message": "Transcription task added to background queue."}
 
 
 @router.post("/text", response_model=IngestResponse)
@@ -127,5 +145,20 @@ async def delete_collection_endpoint(collection_name: str):
     try:
         delete_collection(collection_name)
         return {"message": f"Collection '{collection_name}' deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/collection/{collection_name}/source/{source_name}")
+async def delete_by_source_endpoint(collection_name: str, source_name: str):
+    """Delete all chunks belonging to a specific source from a collection."""
+    try:
+        from src.vectorstore.chroma import get_or_create_collection
+        collection = get_or_create_collection(collection_name)
+        
+        # We delete using metadata filtering
+        collection.delete(where={"source": source_name})
+        
+        return {"message": f"Deleted all chunks for source '{source_name}' in '{collection_name}'"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

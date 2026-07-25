@@ -3,6 +3,7 @@ const httpStatus = require('http-status').status;
 const languageService = require('./languages.service');
 const { catchAsync } = require('../../utils/catchAsync');
 const { pick } = require('../../utils/pick');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 // Lấy danh sách ngôn ngữ
 const getLanguages = catchAsync(async (req, res) => {
@@ -22,6 +23,7 @@ const getLanguage = catchAsync(async (req, res) => {
 // Tạo ngôn ngữ mới
 const createLanguage = catchAsync(async (req, res) => {
   const language = await languageService.createLanguage(req.body);
+  await clearCache('cache:/v1/languages*');
   res.status(httpStatus.CREATED).send(language);
 });
 
@@ -31,12 +33,14 @@ const updateLanguage = catchAsync(async (req, res) => {
     req.params.languageCode,
     req.body
   );
+  await clearCache('cache:/v1/languages*');
   res.status(httpStatus.OK).send(language);
 });
 
 // Xóa ngôn ngữ
 const deleteLanguage = catchAsync(async (req, res) => {
   await languageService.deleteLanguage(req.params.languageCode);
+  await clearCache('cache:/v1/languages*');
   res.status(httpStatus.NO_CONTENT).send();
 });
 

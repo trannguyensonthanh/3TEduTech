@@ -17,6 +17,8 @@ export interface ChatMessage {
   sources?: { file_name: string; content: string }[];
   suggestedQuestions?: string[];
   voice?: string; // Dữ liệu audio base64, nếu có
+  isFallbackPrompt?: boolean;
+  originalQuery?: string;
 }
 
 // Interface cho một cặp Q&A trong lịch sử chat gửi lên API
@@ -77,6 +79,8 @@ export const useChatbot = ({
         sources: data.sources,
         suggestedQuestions: [],
         voice: data.voice,
+        isFallbackPrompt: data.is_fallback_prompt,
+        originalQuery: variables.query,
       };
       // Thêm tin nhắn của bot vào trước
       setMessages((prev) => [...prev, botMessage]);
@@ -98,25 +102,27 @@ export const useChatbot = ({
   });
 
   const addUserMessage = useCallback(
-    (text: string) => {
+    (text: string, use_general_knowledge: boolean = false) => {
       if (!text.trim()) return;
 
       // Khi người dùng gửi tin nhắn mới, xóa gợi ý của tin nhắn cũ
       setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, suggestedQuestions: [] }))
+        prev.map((msg) => ({ ...msg, suggestedQuestions: [], isFallbackPrompt: false }))
       );
 
-      const userMessage: ChatMessage = {
-        id: `user-${Date.now()}`,
-        text: text,
-        sender: 'user',
-      };
+      // Nếu không phải là confirm fallback (người dùng tự gõ)
+      if (!use_general_knowledge) {
+        const userMessage: ChatMessage = {
+          id: `user-${Date.now()}`,
+          text: text,
+          sender: 'user',
+        };
+        // Cần cập nhật state messages ngay lập tức để có context cho API
+        setMessages((prev) => [...prev, userMessage]);
+      }
 
-      // Cần cập nhật state messages ngay lập tức để có context cho API
-      const currentMessages = [...messages, userMessage];
-      setMessages(currentMessages);
-
-      // Tạo chat_history từ state `currentMessages` mới nhất
+      // Tạo chat_history từ state messages mới nhất
+      const currentMessages = use_general_knowledge ? messages : [...messages, { id: '', text, sender: 'user' as const }];
       const chat_history: ChatHistoryPair[] = [];
       for (let i = 0; i < currentMessages.length - 1; i++) {
         // Bỏ qua tin nhắn cuối cùng của user
@@ -137,14 +143,23 @@ export const useChatbot = ({
       sendMessage({
         query: text,
         chat_history: recent_history,
+        use_general_knowledge, // Pass this to the queryFn
         ...queryContext, // Thêm context nếu có
       });
     },
     [messages, sendMessage, getSuggestions, queryContext]
   );
+  
+  const confirmFallback = useCallback((originalQuery: string) => {
+    // Xóa tin nhắn bot cuối cùng (chứa fallback prompt) để thay thế bằng câu trả lời mới
+    setMessages((prev) => prev.filter(msg => !msg.isFallbackPrompt));
+    addUserMessage(originalQuery, true);
+  }, [addUserMessage]);
+
   return {
     messages,
     isTyping,
     addUserMessage,
+    confirmFallback,
   };
 };

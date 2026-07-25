@@ -9,6 +9,7 @@ const {
   authorize,
 } = require('../../middlewares/auth.middleware');
 const Roles = require('../../core/enums/Roles');
+const { cache } = require('../../middlewares/cache.middleware');
 
 const router = express.Router();
 const courseValidation = require('../courses/courses.validation');
@@ -20,6 +21,7 @@ const courseController = require('../courses/courses.controller');
 router.get(
   '/',
   validate(categoryValidation.getCategories),
+  cache(86400),
   categoryController.getCategories
 );
 
@@ -39,7 +41,7 @@ router.post(
  */
 router
   .route('/:categoryId')
-  .get(validate(categoryValidation.getCategory), categoryController.getCategory)
+  .get(validate(categoryValidation.getCategory), cache(86400), categoryController.getCategory)
   .patch(
     authenticate,
     authorize([Roles.ADMIN, Roles.SUPERADMIN]),
@@ -59,6 +61,7 @@ router
 router.get(
   '/slug/:categorySlug',
   validate(categoryValidation.getCategoryBySlug),
+  cache(86400),
   categoryController.getCategoryBySlug
 );
 

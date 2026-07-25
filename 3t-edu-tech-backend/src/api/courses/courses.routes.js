@@ -13,6 +13,7 @@ const {
   authenticate,
   authorize,
 } = require('../../middlewares/auth.middleware');
+const { cache } = require('../../middlewares/cache.middleware');
 const { courseScopedReviewRouter } = require('../reviews/reviews.routes');
 const Roles = require('../../core/enums/Roles');
 const passUserIfAuthenticated = require('../../middlewares/passUserIfAuthenticated');
@@ -28,6 +29,7 @@ router.get(
   '/',
   passUserIfAuthenticated,
   validate(courseValidation.getCourses),
+  cache(1800),
   courseController.getCourses
 );
 
@@ -38,6 +40,7 @@ router.get(
   '/:slug',
   passUserIfAuthenticated,
   validate(courseValidation.getCourse),
+  cache(1800),
   courseController.getCourse
 );
 

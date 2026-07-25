@@ -672,6 +672,7 @@ const loginWithGoogle = async (idToken) => {
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: config.googleAuth.clientID,
+      clockTolerance: 300, // Dung sai 5 phút cho sai lệch thời gian (phổ biến khi chạy Docker trên Windows)
     });
     const payload = ticket.getPayload();
     if (!payload) {

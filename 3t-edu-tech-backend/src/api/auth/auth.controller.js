@@ -137,6 +137,10 @@ const changePassword = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send({ message: 'Đổi mật khẩu thành công.' });
 });
 
+const getGoogleClientId = catchAsync(async (req, res) => {
+  res.status(httpStatus.OK).send({ clientId: config.googleAuth.clientID });
+});
+
 module.exports = {
   register,
   login,
@@ -150,4 +154,5 @@ module.exports = {
   loginWithFacebook,
   completeFacebookRegistration,
   changePassword,
+  getGoogleClientId,
 };

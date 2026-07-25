@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => ({
     // },
     port: 8080,
     watch: {
+      usePolling: true,
       // Watch all files in the project
       ignored: ['!**/node_modules/@react-pdf/renderer/**'],
       // Hoặc thử một pattern khác nếu cần

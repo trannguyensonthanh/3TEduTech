@@ -5,12 +5,14 @@ const categoryService = require('./categories.service');
 const { catchAsync } = require('../../utils/catchAsync');
 const { pick } = require('../../utils/pick');
 const ApiError = require('../../core/errors/ApiError');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 /**
  * Create a new category
  */
 const createCategory = catchAsync(async (req, res) => {
   const category = await categoryService.createCategory(req.body);
+  await clearCache('cache:/v1/categories*');
   res.status(httpStatus.CREATED).send(category);
 });
 
@@ -52,6 +54,7 @@ const updateCategory = catchAsync(async (req, res) => {
     req.params.categoryId,
     req.body
   );
+  await clearCache('cache:/v1/categories*');
   res.status(httpStatus.OK).send(category);
 });
 
@@ -60,6 +63,7 @@ const updateCategory = catchAsync(async (req, res) => {
  */
 const deleteCategory = catchAsync(async (req, res) => {
   await categoryService.deleteCategory(req.params.categoryId);
+  await clearCache('cache:/v1/categories*');
   res.status(httpStatus.NO_CONTENT).send();
 });
 

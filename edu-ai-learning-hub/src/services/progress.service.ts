@@ -33,7 +33,7 @@ export const updateLastWatchedPosition = async (
   lessonId: number,
   position: number
 ): Promise<LessonProgress> => {
-  const positionNumber = Number(position);
+  const positionNumber = Math.floor(Number(position));
   console.log('Updating last watched position:', {
     lessonId,
     positionNumber,

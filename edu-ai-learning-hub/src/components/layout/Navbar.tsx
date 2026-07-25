@@ -156,10 +156,10 @@ const Navbar = () => {
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 w-full border-b transition-all duration-300 ease-out',
+          'sticky top-0 z-50 w-full transition-all duration-500 ease-out',
           isScrolled
-            ? 'shadow-md border-border/70 bg-background/95 backdrop-blur-md dark:bg-slate-900/95'
-            : 'border-transparent bg-background/80 dark:bg-slate-900/80'
+            ? 'shadow-lg shadow-black/5 dark:shadow-black/20 navbar-glass border-b border-slate-200/50 dark:border-slate-700/30'
+            : 'border-b border-transparent bg-transparent'
         )}
       >
         <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
@@ -191,25 +191,27 @@ const Navbar = () => {
                 </span>
               </Link>
               <nav className='hidden lg:flex items-center space-x-0.5 xl:space-x-1'>
-                {navLinks.map((link) => (
-                  <Button
-                    key={link.label}
-                    variant='ghost'
-                    asChild
-                    className={cn(
-                      'text-sm font-medium px-3 py-2 xl:px-3.5 rounded-md transition-colors duration-200 h-9',
-                      location.pathname === link.href ||
-                        (link.href !== '/' &&
-                          location.pathname.startsWith(link.href))
-                        ? 'text-primary bg-primary/10 dark:bg-primary/20'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent dark:hover:bg-accent/70'
-                    )}
-                  >
-                    <Link to={link.href}>
-                      {t(`navbar.links.${link.label}`)}
+                {navLinks.map((link) => {
+                  const isActive = location.pathname === link.href ||
+                    (link.href !== '/' && location.pathname.startsWith(link.href));
+                  return (
+                    <Link
+                      key={link.label}
+                      to={link.href}
+                      className={cn(
+                        'nav-link-premium relative flex items-center gap-1 px-3.5 py-2 text-sm font-medium rounded-lg transition-colors duration-200 h-9',
+                        isActive
+                          ? 'text-primary'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <span className='relative z-10'>
+                        {t(`navbar.links.${link.label}`)}
+                      </span>
+                      <span className='absolute inset-0 rounded-lg bg-primary/0 hover:bg-primary/5 transition-colors' />
                     </Link>
-                  </Button>
-                ))}
+                  );
+                })}
               </nav>
             </div>
 

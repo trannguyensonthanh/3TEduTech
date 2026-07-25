@@ -16,6 +16,7 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, description="The user's question")
     chat_history: list[ChatHistoryPair] = Field(default=[], description="Previous Q&A pairs")
     top_k: int = Field(default=10, ge=1, le=50, description="Number of documents to retrieve")
+    use_general_knowledge: bool = Field(default=False, description="Bypass RAG if no context found")
 
 
 class CourseQueryRequest(BaseModel):
@@ -24,6 +25,7 @@ class CourseQueryRequest(BaseModel):
     course_name: str = Field(..., min_length=1, description="Name of the course")
     chat_history: list[ChatHistoryPair] = Field(default=[], description="Previous Q&A pairs")
     top_k: int = Field(default=10, ge=1, le=50)
+    use_general_knowledge: bool = Field(default=False, description="Bypass RAG if no context found")
 
 
 class SourceInfo(BaseModel):
@@ -36,6 +38,7 @@ class QueryResponse(BaseModel):
     answer: str
     sources: list[SourceInfo] = []
     suggested_questions: list[str] = []
+    is_fallback_prompt: bool = Field(default=False, description="True if no context was found and user needs to confirm fallback")
 
 
 # --- Suggestion Request/Response ---
@@ -57,6 +60,13 @@ class IngestTextRequest(BaseModel):
     source_name: str = Field(..., description="Name/identifier for this content")
     collection: str = Field(default="master_knowledge", description="Target collection")
     metadata: dict = Field(default={}, description="Additional metadata")
+
+
+class TranscriptionRequest(BaseModel):
+    """Request body for background transcription task."""
+    video_url: str = Field(..., description="URL of the video to transcribe")
+    course_name: str = Field(..., description="Name of the course")
+    lesson_name: str = Field(default="Unknown Lesson", description="Name of the lesson")
 
 
 class IngestCourseRequest(BaseModel):

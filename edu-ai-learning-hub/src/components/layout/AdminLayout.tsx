@@ -98,6 +98,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       notifications: 0,
     },
     {
+      name: 'FAQ (AI Knowledge)',
+      icon: Code,
+      href: '/admin/faqs',
+      notifications: 0,
+    },
+    {
       name: t('adminLayout.navigation.currencies'),
       icon: Coins,
       href: '/admin/currencies',

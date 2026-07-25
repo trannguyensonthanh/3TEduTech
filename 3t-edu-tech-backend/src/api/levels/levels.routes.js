@@ -7,11 +7,12 @@ const {
   authorize,
 } = require('../../middlewares/auth.middleware');
 const Roles = require('../../core/enums/Roles');
+const { cache } = require('../../middlewares/cache.middleware');
 
 const router = express.Router();
 
 // Public route to get all levels
-router.get('/', levelController.getLevels);
+router.get('/', cache(86400), levelController.getLevels);
 
 router.post(
   '/',

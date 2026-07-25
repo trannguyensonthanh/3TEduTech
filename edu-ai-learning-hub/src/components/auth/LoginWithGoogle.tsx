@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GoogleOAuthProvider,
   GoogleLogin,
@@ -7,21 +7,41 @@ import {
 import { useGoogleLoginMutation } from '@/hooks/queries/auth.queries'; // Import hook
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-
-const GOOGLE_CLIENT_ID =
-  '842841125748-m1iqnlla8aifbfpfj3fpfandvh33n5vc.apps.googleusercontent.com'; // Lấy Client ID từ biến môi trường frontend
+import apiHelper from '@/services/apiHelper';
 
 const LoginWithGoogle: React.FC = () => {
   const { t } = useTranslation();
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await apiHelper.get('/auth/google/client-id');
+        if (response?.clientId) {
+          setGoogleClientId(response.clientId);
+        } else {
+          console.error('No Google Client ID returned from server');
+        }
+      } catch (err) {
+        console.error('Failed to fetch Google Client ID from backend:', err);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   const googleLoginMutation = useGoogleLoginMutation({
     onSuccess: (data) => {
       console.log('Google login successful:', data);
       toast.success(t('loginWithGoogle.success'));
       window.location.href = '/'; // Chuyển hướng về trang chính sau khi đăng nhập thành công
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Google login error:', error);
-      toast.error(t('loginWithGoogle.error'));
+      const errorMessage = error?.body?.message || error?.message || t('loginWithGoogle.error');
+      toast.error(errorMessage);
     },
   });
 
@@ -41,16 +61,20 @@ const LoginWithGoogle: React.FC = () => {
     toast.error(t('loginWithGoogle.error'));
   };
 
-  if (!GOOGLE_CLIENT_ID) {
+  if (loadingConfig) {
+    return <p>{t('loginWithGoogle.processing')}</p>;
+  }
+
+  if (!googleClientId) {
     console.error(
-      'Google Client ID is not configured in frontend environment variables.'
+      'Google Client ID is not configured on the server.'
     );
     return <p>{t('loginWithGoogle.configError')}</p>;
   }
 
   return (
     <div className='flex flex-col items-center justify-center space-y-4'>
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <GoogleOAuthProvider clientId={googleClientId}>
         <GoogleLogin
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}

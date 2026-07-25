@@ -7,6 +7,7 @@ const {
   authorize,
 } = require('../../middlewares/auth.middleware');
 const Roles = require('../../core/enums/Roles');
+const { cache } = require('../../middlewares/cache.middleware');
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get(
   '/',
   validate(skillsValidation.getSkills),
+  cache(86400),
   skillsController.getSkills
 );
 

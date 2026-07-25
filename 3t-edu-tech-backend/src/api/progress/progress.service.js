@@ -24,7 +24,14 @@ const markLessonCompletion = async (user, lessonId, isCompleted) => {
     accountId,
     lesson.CourseID
   );
-  if (!enrolled && !isAdmin) {
+  if (!enrolled) {
+    if (isAdmin) {
+      return {
+        LessonID: lessonId,
+        IsCompleted: isCompleted,
+        message: 'Admin preview mode (completion not saved)'
+      };
+    }
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'Bạn cần đăng ký khóa học để cập nhật tiến độ.'
@@ -63,19 +70,34 @@ const markLessonCompletion = async (user, lessonId, isCompleted) => {
  * @returns {Promise<object>} - Bản ghi progress đã cập nhật.
  */
 const updateLastWatchedPosition = async (
-  accountId,
+  user,
   lessonId,
   positionSeconds
 ) => {
+  const accountId = user.id;
   const lesson = await lessonRepository.findLessonById(lessonId);
   if (!lesson) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Bài học không tồn tại.');
   }
+  
   const enrolled = await enrollmentService.isUserEnrolled(
     accountId,
     lesson.CourseID
   );
+  
+  const isAdmin = user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN || user.role === 'SA';
+  
+  // Nếu chưa đăng ký khóa học
   if (!enrolled) {
+    // Nếu là Admin, trả về một object giả lập để Frontend không báo lỗi (không ghi vào Database để tránh nhiễu thống kê)
+    if (isAdmin) {
+      return { 
+        LessonID: lessonId, 
+        LastWatchedPosition: positionSeconds, 
+        message: 'Admin preview mode (progress not saved)' 
+      };
+    }
+    // Nếu là User thường, báo lỗi 403
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'Bạn cần đăng ký khóa học để cập nhật tiến độ.'

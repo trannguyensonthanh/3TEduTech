@@ -18,17 +18,19 @@ async def query_master(
     query: str,
     chat_history: list[dict] | None = None,
     top_k: int | None = None,
+    use_general_knowledge: bool = False,
 ) -> dict:
     """
-    Master AI query — searches the general knowledge base and answers.
-
+    Master AI query — searches all collections and answers general questions.
+    
     Args:
-        query: User's question.
-        chat_history: Previous Q&A pairs.
+        query: The user's question.
+        chat_history: List of previous Q&A dicts.
         top_k: Number of documents to retrieve.
+        use_general_knowledge: If True, bypass context checks.
 
     Returns:
-        Dict with 'answer', 'sources', and 'suggested_questions'.
+        Dict with 'answer', 'sources', 'suggested_questions', and 'is_fallback_prompt'.
     """
     settings = get_settings()
     k = top_k or settings.rag_top_k
@@ -39,6 +41,14 @@ async def query_master(
         query=query,
         top_k=k,
     )
+
+    if not results and not use_general_knowledge:
+        return {
+            "answer": "Xin lỗi, hiện tại tôi chưa được cung cấp tài liệu nội bộ liên quan đến vấn đề này. Bạn có muốn tôi sử dụng kiến thức chung (General Knowledge) để giải đáp không? Lưu ý rằng kiến thức chung có thể không bám sát 100% với hệ thống.",
+            "sources": [],
+            "suggested_questions": [],
+            "is_fallback_prompt": True,
+        }
 
     # 2. Build context from retrieved documents
     context = ""
@@ -79,18 +89,20 @@ async def query_course(
     course_name: str,
     chat_history: list[dict] | None = None,
     top_k: int | None = None,
+    use_general_knowledge: bool = False,
 ) -> dict:
     """
     Course-specific AI query — searches course content and answers.
 
     Args:
-        query: User's question about the course.
-        course_name: Name of the course for context filtering.
+        query: User's question.
+        course_name: Course name for filtering.
         chat_history: Previous Q&A pairs.
         top_k: Number of documents to retrieve.
+        use_general_knowledge: If True, bypass context checks.
 
     Returns:
-        Dict with 'answer', 'sources', and 'suggested_questions'.
+        Dict with 'answer', 'sources', 'suggested_questions', and 'is_fallback_prompt'.
     """
     settings = get_settings()
     k = top_k or settings.rag_top_k
@@ -111,6 +123,14 @@ async def query_course(
             top_k=max(3, k - len(results)),
         )
         results.extend(master_results)
+        
+    if not results and not use_general_knowledge:
+        return {
+            "answer": "Xin lỗi, hiện tại tôi chưa tìm thấy tài liệu liên quan đến phần này trong giáo trình. Bạn có muốn tôi sử dụng kiến thức bên ngoài (General Knowledge) để giải đáp không? Lưu ý rằng kiến thức này có thể không bám sát 100% nội dung khóa học.",
+            "sources": [],
+            "suggested_questions": [],
+            "is_fallback_prompt": True,
+        }
 
     # 2. Build context
     context = ""

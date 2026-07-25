@@ -1,6 +1,7 @@
 const httpStatus = require('http-status').status;
 const axios = require('axios');
 const lessonRepository = require('./lessons.repository');
+const courseRepository = require('../courses/courses.repository');
 const sectionRepository = require('../sections/sections.repository');
 const { checkCourseAccess } = require('../sections/sections.service');
 const ApiError = require('../../core/errors/ApiError');
@@ -525,9 +526,36 @@ const updateLessonVideo = async (lessonId, file, user) => {
     }
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Có lỗi xảy ra khi cập nhật thông tin bài học.'
+      'Lỗi khi cập nhật database, đã rollback upload.'
     );
   }
+
+  // Trigger transcription background job
+  try {
+    const course = await courseRepository.findCourseById(lesson.CourseID);
+    const courseName = course ? course.CourseName : "Unknown Course";
+    const lessonName = lesson.LessonName;
+
+    const signedUrl = cloudinaryUtil.generateSignedUrl(uploadResult.public_id, {
+      resource_type: 'video',
+      type: 'private'
+    });
+    
+    const aiUrl = `http://edutech-ai-service-dev:${process.env.AI_SERVICE_PORT || 2111}/ingest/transcribe`;
+    
+    axios.post(aiUrl, {
+      video_url: signedUrl,
+      course_name: courseName,
+      lesson_name: lessonName
+    }).then(() => {
+      logger.info(`Triggered transcription for lesson ${lessonId}`);
+    }).catch(err => {
+      logger.error(`Failed to trigger transcription for lesson ${lessonId}:`, err.message);
+    });
+  } catch (e) {
+    logger.error("Error generating signed URL or triggering AI service:", e);
+  }
+
   return toCamelCaseObject(updatedLesson);
 };
 

@@ -2,10 +2,12 @@ services:
   database:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: edutech-database
+    mem_limit: 1536m
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=EduTech_DB_2026!
       - MSSQL_PID=Developer
+      - MSSQL_MEMORY_LIMIT_MB=1200
     ports:
       - "1433:1433"
     volumes:
@@ -17,6 +19,7 @@ services:
   backend:
     image: ${DOCKER_USERNAME}/3t-edu-tech-backend:latest
     container_name: edutech-backend
+    mem_limit: 768m
     ports:
       - "5000:5000"
     environment:
@@ -26,18 +29,21 @@ services:
       # - DB_PASSWORD=${DB_PASSWORD}
       # - DB_NAME=${DB_NAME}
       - AI_SERVICE_PORT=2111
+      - REDIS_URL=redis://edutech-redis:6379
       # Thêm các biến môi trường khác cần thiết ở đây, hoặc dùng env_file
     env_file:
       - ./3t-edu-tech-backend/.env
     restart: always
     depends_on:
       - database
+      - redis
     networks:
       - edutech-net
 
   ai-service:
     image: ${DOCKER_USERNAME}/3t-edu-tech-ai-service:latest
     container_name: edutech-ai-service
+    mem_limit: 2048m
     ports:
       - "2111:2111"
     environment:
@@ -51,9 +57,23 @@ services:
     volumes:
       - ./ai-service/data:/app/data # Persist ChromaDB or document data if needed
 
+  redis:
+    image: redis:7-alpine
+    container_name: edutech-redis
+    mem_limit: 256m
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    restart: always
+    networks:
+      - edutech-net
+
   frontend:
     image: ${DOCKER_USERNAME}/3t-edu-tech-frontend:latest
     container_name: edutech-frontend
+    mem_limit: 512m
     ports:
       - "80:80"
     restart: always
@@ -68,3 +88,4 @@ networks:
 
 volumes:
   mssql-data:
+  redis-data:

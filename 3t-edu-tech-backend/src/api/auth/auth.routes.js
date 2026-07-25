@@ -84,6 +84,11 @@ router.post(
 );
 
 /**
+ * Get Google Client ID
+ */
+router.get('/google/client-id', authController.getGoogleClientId);
+
+/**
  * Login with Google
  */
 router.post(

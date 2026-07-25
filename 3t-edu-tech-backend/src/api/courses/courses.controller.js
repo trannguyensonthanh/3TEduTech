@@ -6,12 +6,14 @@ const { catchAsync } = require('../../utils/catchAsync');
 const { pick } = require('../../utils/pick');
 const ApiError = require('../../core/errors/ApiError');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 /**
  * Tạo mới một khóa học
  */
 const createCourse = catchAsync(async (req, res) => {
   const course = await courseService.createCourse(req.body, req.user.id);
+  await clearCache('cache:/v1/courses*');
   res.status(httpStatus.CREATED).send(course);
 });
 
@@ -24,6 +26,7 @@ const updateCourse = catchAsync(async (req, res) => {
     req.body,
     req.user
   );
+  await clearCache('cache:/v1/courses*');
   res.status(httpStatus.OK).send(course);
 });
 
@@ -32,6 +35,7 @@ const updateCourse = catchAsync(async (req, res) => {
  */
 const deleteCourse = catchAsync(async (req, res) => {
   await courseService.deleteCourse(req.params.courseId, req.user);
+  await clearCache('cache:/v1/courses*');
   res.status(httpStatus.NO_CONTENT).send();
 });
 

@@ -1,0 +1,18 @@
+FROM python:3.12
+
+# Dùng pip để cài uv thay vì dùng curl + apt-get (tránh lỗi mạng)
+RUN pip install uv
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv pip install --system -r pyproject.toml
+
+ENV PYTHONUNBUFFERED=1
+ENV PORT=2111
+
+EXPOSE 2111
+
+# Run.py đã cấu hình reload=True, nên sẽ tự hot-reload
+CMD ["uv", "run", "run.py"]

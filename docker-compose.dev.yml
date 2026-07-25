@@ -1,0 +1,118 @@
+services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: edutech-database-dev
+    mem_limit: 1536m
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=EduTech_DB_2026!
+      - MSSQL_PID=Developer
+      - MSSQL_MEMORY_LIMIT_MB=1200
+    ports:
+      - "1434:1433"
+    volumes:
+      - mssql-data-dev:/var/opt/mssql
+    restart: always
+    networks:
+      - edutech-net-dev
+
+  # Dùng Flyway để quản lý Migration chuẩn Enterprise
+  database-init:
+    image: flyway/flyway:9-alpine
+    container_name: edutech-database-init
+    depends_on:
+      - database
+    volumes:
+      - ./db-init:/flyway/sql
+    command: -url="jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true" -user=sa -password=EduTech_DB_2026! -mixed=true -connectRetries=10 -placeholderReplacement=false migrate
+    networks:
+      - edutech-net-dev
+
+  backend:
+    build:
+      context: ./3t-edu-tech-backend
+      dockerfile: Dockerfile.dev
+    container_name: edutech-backend-dev
+    mem_limit: 768m
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - AI_SERVICE_PORT=2111
+      - REDIS_URL=redis://edutech-redis-dev:6379
+    env_file:
+      - ./3t-edu-tech-backend/.env
+    volumes:
+      # Mount mã nguồn vào container
+      - ./3t-edu-tech-backend:/app
+      # Bỏ qua node_modules để tránh xung đột giữa OS
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/faqs"] # Test 1 API bất kỳ (vd FAQs)
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: always
+    depends_on:
+      - database
+      - redis
+    networks:
+      - edutech-net-dev
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile.dev
+    container_name: edutech-ai-service-dev
+    mem_limit: 2048m
+    ports:
+      - "2111:2111"
+    environment:
+      - PORT=2111
+    env_file:
+      - ./ai-service/.env
+    restart: always
+    networks:
+      - edutech-net-dev
+    volumes:
+      - ./ai-service:/app
+      - /app/.venv
+
+  redis:
+    image: redis:7-alpine
+    container_name: edutech-redis-dev
+    mem_limit: 256m
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    command: redis-server --save 60 1 --loglevel warning
+    restart: always
+    networks:
+      - edutech-net-dev
+
+  frontend:
+    build:
+      context: ./edu-ai-learning-hub
+      dockerfile: Dockerfile.dev
+    container_name: edutech-frontend-dev
+    mem_limit: 1024m
+    ports:
+      - "5173:5173"
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - edutech-net-dev
+    volumes:
+      - ./edu-ai-learning-hub:/app
+      - /app/node_modules
+
+networks:
+  edutech-net-dev:
+    driver: bridge
+
+volumes:
+  mssql-data-dev:
+  redis-data-dev:

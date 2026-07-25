@@ -25,7 +25,7 @@ const updateLastWatchedPosition = catchAsync(async (req, res) => {
   const { lessonId } = req.params;
   const { position } = req.body;
   const progress = await progressService.updateLastWatchedPosition(
-    accountId,
+    req.user,
     lessonId,
     position
   );

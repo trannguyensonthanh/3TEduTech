@@ -31,12 +31,14 @@ async def master_query(request: QueryRequest):
             query=request.query,
             chat_history=history if history else None,
             top_k=request.top_k,
+            use_general_knowledge=request.use_general_knowledge,
         )
 
         return QueryResponse(
             answer=result["answer"],
             sources=[{"file_name": s["file_name"], "content": s["content"]} for s in result.get("sources", [])],
             suggested_questions=result.get("suggested_questions", []),
+            is_fallback_prompt=result.get("is_fallback_prompt", False),
         )
     except Exception as e:
         logger.error(f"Master query error: {e}", exc_info=True)
@@ -57,12 +59,14 @@ async def course_query(request: CourseQueryRequest):
             course_name=request.course_name,
             chat_history=history if history else None,
             top_k=request.top_k,
+            use_general_knowledge=request.use_general_knowledge,
         )
 
         return QueryResponse(
             answer=result["answer"],
             sources=[{"file_name": s["file_name"], "content": s["content"]} for s in result.get("sources", [])],
             suggested_questions=result.get("suggested_questions", []),
+            is_fallback_prompt=result.get("is_fallback_prompt", False),
         )
     except Exception as e:
         logger.error(f"Course query error: {e}", exc_info=True)

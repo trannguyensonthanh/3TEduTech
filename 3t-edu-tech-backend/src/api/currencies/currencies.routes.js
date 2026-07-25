@@ -9,6 +9,7 @@ const {
   authorize,
 } = require('../../middlewares/auth.middleware');
 const Roles = require('../../core/enums/Roles');
+const { cache } = require('../../middlewares/cache.middleware');
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router
   )
   .get(
     validate(currencyValidation.getCurrencies),
+    cache(86400),
     currencyController.getCurrencies
   );
 

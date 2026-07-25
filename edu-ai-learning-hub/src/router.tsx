@@ -1,84 +1,104 @@
 // src/router.tsx
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import các component bảo vệ và tiện ích
+// Import các component bảo vệ và tiện ích (giữ nguyên tĩnh để không bị chớp màn hình)
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ScrollToTopHandler from '@/utils/ScrollToTopHandler';
 import IntroHandler from '@/components/auth/IntroHandler'; // Component xử lý logic intro
 
-// --- Import Pages ---
+// --- Import Pages (Tối ưu hóa Code Splitting / Lazy Loading) ---
 
 // Public Pages
-import Index from './pages/Index';
-import Courses from './pages/Courses';
-import CourseDetail from './pages/CourseDetail';
-import Categories from './pages/Categories';
-import CategoryDetail from './pages/CategoryDetailPage';
-import Instructors from './pages/AllInstructorsPage';
-import InstructorDetail from './pages/InstructorProfilePage';
-import About from './pages/AboutPage';
-import Privacy from '@/pages/Privacy';
-import TermsInstructor from '@/pages/TermsInstructor';
+const Index = lazy(() => import('./pages/Index'));
+const Courses = lazy(() => import('./pages/Courses'));
+const CourseDetail = lazy(() => import('./pages/CourseDetail'));
+const Categories = lazy(() => import('./pages/Categories'));
+const CategoryDetail = lazy(() => import('./pages/CategoryDetailPage'));
+const Instructors = lazy(() => import('./pages/AllInstructorsPage'));
+const InstructorDetail = lazy(() => import('./pages/InstructorProfilePage'));
+const About = lazy(() => import('./pages/AboutPage'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const TermsInstructor = lazy(() => import('@/pages/TermsInstructor'));
 
 // Auth Pages
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import ActivateAccount from './pages/auth/ActivateAccount';
-import SocialLoginCallback from './pages/auth/SocialLoginCallback';
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const ActivateAccount = lazy(() => import('./pages/auth/ActivateAccount'));
+const SocialLoginCallback = lazy(() => import('./pages/auth/SocialLoginCallback'));
 
 // Authenticated User Pages
-import MyCourses from './pages/MyCourses';
-import UserProfile from './pages/UserProfilePage';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import CheckoutReturn from './pages/CheckoutReturn';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCanceled from './pages/PaymentCanceled';
-import OrderHistory from '@/pages/OrderHistory';
-import Certificates from '@/pages/Certificates';
-import Notifications from '@/pages/user/Notifications';
-import CourseLearningPage from '@/pages/CourseLearningPage';
+const MyCourses = lazy(() => import('./pages/MyCourses'));
+const UserProfile = lazy(() => import('./pages/UserProfilePage'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentCanceled = lazy(() => import('./pages/PaymentCanceled'));
+const OrderHistory = lazy(() => import('@/pages/OrderHistory'));
+const Certificates = lazy(() => import('@/pages/Certificates'));
+const Notifications = lazy(() => import('@/pages/user/Notifications'));
+const CourseLearningPage = lazy(() => import('@/pages/CourseLearningPage'));
+const LearningReportPage = lazy(() => import('@/pages/LearningReportPage'));
 
 // Instructor Pages
-import InstructorRegister from './pages/instructor/InstructorRegister';
-import InstructorRegisterSuccess from './pages/instructor/InstructorRegisterSuccess';
-import InstructorDashboard from './pages/instructor/InstructorDashboard';
-import InstructorCourses from './pages/instructor/InstructorCourses';
-import CourseCreation from './pages/instructor/CourseCreation';
-import CourseEdit from '@/pages/instructor/CourseEdit';
-import InstructorStudents from './pages/instructor/InstructorStudents';
-import InstructorEarnings from './pages/instructor/InstructorEarnings';
-import InstructorProfile from './pages/instructor/InstructorProfile';
-import InstructorCourseApprovals from './pages/instructor/InstructorCourseApprovals';
-import InstructorAnalytics from '@/pages/instructor/InstructorAnalytics';
+const InstructorRegister = lazy(() => import('./pages/instructor/InstructorRegister'));
+const InstructorRegisterSuccess = lazy(() => import('./pages/instructor/InstructorRegisterSuccess'));
+const InstructorDashboard = lazy(() => import('./pages/instructor/InstructorDashboard'));
+const InstructorCourses = lazy(() => import('./pages/instructor/InstructorCourses'));
+const CourseCreation = lazy(() => import('./pages/instructor/CourseCreation'));
+const CourseEdit = lazy(() => import('@/pages/instructor/CourseEdit'));
+const InstructorStudents = lazy(() => import('./pages/instructor/InstructorStudents'));
+const InstructorEarnings = lazy(() => import('./pages/instructor/InstructorEarnings'));
+const InstructorProfile = lazy(() => import('./pages/instructor/InstructorProfile'));
+const InstructorCourseApprovals = lazy(() => import('./pages/instructor/InstructorCourseApprovals'));
+const InstructorAnalytics = lazy(() => import('@/pages/instructor/InstructorAnalytics'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UsersManagement from './pages/admin/UsersManagement';
-import CoursesManagement from './pages/admin/CoursesManagement';
-import CourseApprovals from './pages/admin/CourseApprovals';
-import CategoriesManagement from './pages/admin/CategoriesManagement';
-import PromotionsManagement from './pages/admin/PromotionsManagement';
-import SkillsManagement from '@/pages/admin/SkillsManagement';
-import LevelsManagement from './pages/admin/LevelsManagement';
-import CurrenciesManagement from './pages/admin/CurrenciesManagement';
-import PaymentMethodsManagement from './pages/admin/PaymentMethodsManagement';
-import ExchangeRatesManagement from './pages/admin/ExchangeRatesManagement';
-import AdminSettings from '@/pages/admin/AdminSettings';
-import AdminReports from '@/pages/admin/AdminReports';
-import PayoutManagement from '@/pages/admin/PayoutManagement';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const UsersManagement = lazy(() => import('./pages/admin/UsersManagement'));
+const CoursesManagement = lazy(() => import('./pages/admin/CoursesManagement'));
+const CourseApprovals = lazy(() => import('./pages/admin/CourseApprovals'));
+const CategoriesManagement = lazy(() => import('./pages/admin/CategoriesManagement'));
+const PromotionsManagement = lazy(() => import('./pages/admin/PromotionsManagement'));
+const SkillsManagement = lazy(() => import('@/pages/admin/SkillsManagement'));
+const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'));
+const CurrenciesManagement = lazy(() => import('./pages/admin/CurrenciesManagement'));
+const PaymentMethodsManagement = lazy(() => import('./pages/admin/PaymentMethodsManagement'));
+const ExchangeRatesManagement = lazy(() => import('./pages/admin/ExchangeRatesManagement'));
+const FaqsManagement = lazy(() => import('./pages/admin/FaqsManagement'));
+const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
+const AdminReports = lazy(() => import('@/pages/admin/AdminReports'));
+const PayoutManagement = lazy(() => import('./pages/admin/PayoutManagement'));
 
 // Utility Pages
-import IntroPage from '@/pages/IntroPage';
-import NotFound from './pages/NotFound';
-import Unauthorized from './pages/Unauthorized'; 
-import CryptoPaymentPage from '@/pages/CryptoPaymentPage';
+// === INTRO VERSION SWITCH ===
+// Uncomment dòng dưới để dùng Intro cũ (Cây Tri Thức):
+// const IntroPage = lazy(() => import('@/pages/IntroPage'));
+// Intro mới (Cuốn Sách Tri Thức):
+const IntroPage = lazy(() => import('@/pages/IntroPageV2'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Unauthorized = lazy(() => import('./pages/Unauthorized')); 
+const CryptoPaymentPage = lazy(() => import('@/pages/CryptoPaymentPage'));
+
+const PageLoader = () => (
+  <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 px-4 text-white">
+    <div className="relative mb-4 flex items-center justify-center">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+      <div className="absolute h-6 w-6 animate-pulse rounded-full bg-indigo-500/40 blur-sm"></div>
+    </div>
+    <p className="animate-pulse text-sm font-medium text-slate-400">
+      Đang chuẩn bị không gian học tập... ✨
+    </p>
+  </div>
+);
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <ScrollToTopHandler />
-      <Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* //======= 1. Public Routes (Ai cũng có thể truy cập) =======// */}
         <Route path='/' element={<IntroHandler />} />
         <Route path='/intro' element={<IntroPage />} />
@@ -122,6 +142,7 @@ const AppRouter = () => {
             path='/learn/:courseSlug/sections/:sectionId/lessons/:lessonId'
             element={<CourseLearningPage />}
           />
+          <Route path='/learning-report' element={<LearningReportPage />} />
         </Route>
 
         {/* //======= 3. Instructor Routes (Chỉ Instructor) =======// */}
@@ -180,6 +201,7 @@ const AppRouter = () => {
             element={<ExchangeRatesManagement />}
           />
           <Route path='/admin/settings' element={<AdminSettings />} />
+          <Route path='/admin/faqs' element={<FaqsManagement />} />
           <Route path='/admin/payouts' element={<PayoutManagement />} />
           <Route path='/admin/reports' element={<AdminReports />} />
         </Route>
@@ -188,6 +210,7 @@ const AppRouter = () => {
         <Route path='/unauthorized' element={<Unauthorized />} />
         <Route path='*' element={<NotFound />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };

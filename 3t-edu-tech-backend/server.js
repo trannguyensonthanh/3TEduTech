@@ -55,7 +55,7 @@ const shutdown = async (signal) => {
 };
 
 const unexpectedErrorHandler = (error) => {
-  logger.error('Unhandled Error:', error);
+  logger.error('Unhandled Error:', error.stack || error);
 };
 
 process.on('uncaughtException', unexpectedErrorHandler);

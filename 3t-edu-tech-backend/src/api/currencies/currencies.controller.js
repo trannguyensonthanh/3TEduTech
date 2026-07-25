@@ -4,12 +4,14 @@ const httpStatus = require('http-status').status;
 const currencyService = require('./currencies.service');
 const { catchAsync } = require('../../utils/catchAsync');
 const { pick } = require('../../utils/pick');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 /**
  * Tạo mới một currency
  */
 const createCurrency = catchAsync(async (req, res) => {
   const currency = await currencyService.createCurrency(req.body);
+  await clearCache('cache:/v1/currencies*');
   res.status(httpStatus.CREATED).send(currency);
 });
 
@@ -30,6 +32,7 @@ const updateCurrency = catchAsync(async (req, res) => {
     req.params.currencyId,
     req.body
   );
+  await clearCache('cache:/v1/currencies*');
   res.status(httpStatus.OK).send(currency);
 });
 
@@ -38,6 +41,7 @@ const updateCurrency = catchAsync(async (req, res) => {
  */
 const deleteCurrency = catchAsync(async (req, res) => {
   await currencyService.deleteCurrency(req.params.currencyId);
+  await clearCache('cache:/v1/currencies*');
   res.status(httpStatus.NO_CONTENT).send();
 });
 

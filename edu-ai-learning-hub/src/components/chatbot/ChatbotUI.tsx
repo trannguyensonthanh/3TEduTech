@@ -34,7 +34,7 @@ const ChatbotUI: React.FC = () => {
     voice: '', // Dữ liệu audio base64 nếu có
   };
 
-  const { messages, isTyping, addUserMessage } = useChatbot({
+  const { messages, isTyping, addUserMessage, confirmFallback } = useChatbot({
     initialMessages: [initialMessage],
     queryFn: queryMasterAI, // Hàm query từ AI service
     queryContext: {}, // Context bổ sung nếu cần
@@ -154,15 +154,27 @@ const ChatbotUI: React.FC = () => {
                     )}
                     <div
                       className={cn(
-                        'max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-full',
+                        'max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-full flex flex-col gap-2',
                         message.sender === 'user'
                           ? 'bg-primary text-primary-foreground rounded-br-none'
-                          : 'bg-muted text-card-foreground rounded-bl-none'
+                          : 'bg-muted text-card-foreground rounded-bl-none',
+                        message.isFallbackPrompt && 'border-2 border-yellow-500/50 bg-yellow-500/10'
                       )}
                     >
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.text}
                       </ReactMarkdown>
+                      {message.isFallbackPrompt && message.originalQuery && (
+                        <div className="mt-2 flex gap-2">
+                          <Button 
+                            size="sm" 
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white w-full shadow-md"
+                            onClick={() => confirmFallback(message.originalQuery!)}
+                          >
+                            Đồng ý dùng kiến thức chung
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
