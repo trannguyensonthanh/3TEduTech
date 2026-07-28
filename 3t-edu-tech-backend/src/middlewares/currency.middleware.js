@@ -13,7 +13,6 @@ const currencyHandler = (req, res, next) => {
     .toUpperCase();
 
   const supportedCurrencies = ['VND', 'USD'];
-
   const baseCurrency = config.settings.baseCurrency || 'VND';
 
   if (requestedCurrency && supportedCurrencies.includes(requestedCurrency)) {

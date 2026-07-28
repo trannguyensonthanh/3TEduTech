@@ -2,7 +2,7 @@ services:
   database:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: edutech-database
-    mem_limit: 1536m
+    mem_limit: 2048m
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=EduTech_DB_2026!

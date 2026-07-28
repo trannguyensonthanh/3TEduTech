@@ -29,10 +29,18 @@ def get_whisper_model():
     return _whisper_model
 
 
-def transcribe_video(video_path: str) -> str:
+def format_timestamp(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds - int(seconds)) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+def transcribe_video(video_path: str) -> dict:
     """
-    Extracts audio from video and transcribes it to text.
-    Returns a combined string of the transcribed text.
+    Extracts audio from video and transcribes it to text and subtitle format.
+    Returns a dict with 'full_text', 'srt_content', and 'language'.
     """
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -45,11 +53,21 @@ def transcribe_video(video_path: str) -> str:
     logger.info(f"Detected language '{info.language}' with probability {info.language_probability}")
     
     transcript = []
-    for segment in segments:
-        # segment.start, segment.end, segment.text
-        transcript.append(segment.text.strip())
+    srt_lines = []
+    for idx, segment in enumerate(segments, 1):
+        text_clean = segment.text.strip()
+        transcript.append(text_clean)
+        
+        start_str = format_timestamp(segment.start)
+        end_str = format_timestamp(segment.end)
+        srt_lines.append(f"{idx}\n{start_str} --> {end_str}\n{text_clean}\n")
         
     full_text = " ".join(transcript)
-    logger.info(f"Transcription completed. Length: {len(full_text)} chars.")
+    srt_content = "\n".join(srt_lines)
+    logger.info(f"Transcription completed. Length: {len(full_text)} chars, {len(srt_lines)} subtitle segments.")
     
-    return full_text
+    return {
+        "full_text": full_text,
+        "srt_content": srt_content,
+        "language": getattr(info, "language", "vi") or "vi"
+    }

@@ -63,9 +63,9 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> l
 
 
 def generate_chunk_id(text: str, source: str, index: int) -> str:
-    """Generate a deterministic ID for a chunk to avoid duplicates."""
-    content = f"{source}:{index}:{text[:100]}"
-    return hashlib.md5(content.encode()).hexdigest()
+    """Generate a deterministic ID based on exact full-text hash to enable smart deduplication."""
+    content = f"{source}:{index}:{text.strip()}"
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
 
 
 async def ingest_text(

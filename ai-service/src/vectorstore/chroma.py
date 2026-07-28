@@ -64,18 +64,36 @@ async def add_documents(
         existing_count = collection.count()
         ids = [f"doc_{existing_count + i}" for i in range(len(documents))]
 
-    # Generate embeddings using Gemini
-    embeddings = await embed_texts(documents)
+    # Smart RAG Deduplication: Check existing IDs in ChromaDB before calling Gemini Embedding API
+    existing = collection.get(ids=ids)
+    existing_ids_set = set(existing.get("ids", []))
+
+    new_docs = []
+    new_metadatas = []
+    new_ids = []
+    for doc, meta, doc_id in zip(documents, metadatas or [{}] * len(documents), ids):
+        if doc_id not in existing_ids_set:
+            new_docs.append(doc)
+            new_metadatas.append(meta)
+            new_ids.append(doc_id)
+
+    if not new_docs:
+        logger.info(f"⚡ [Smart Cache] All {len(documents)} chunks already exist in collection '{collection_name}'. Zero Gemini API calls used!")
+        return len(documents)
+
+    logger.info(f"💎 [Smart Cache] Generating embeddings for {len(new_docs)} new/changed chunks ({len(documents) - len(new_docs)} served from cache)...")
+    # Generate embeddings using Gemini ONLY for new/changed documents
+    embeddings = await embed_texts(new_docs)
 
     # Add to ChromaDB
     collection.add(
-        documents=documents,
+        documents=new_docs,
         embeddings=embeddings,
-        metadatas=metadatas or [{}] * len(documents),
-        ids=ids,
+        metadatas=new_metadatas,
+        ids=new_ids,
     )
 
-    logger.info(f"Added {len(documents)} documents to collection '{collection_name}'")
+    logger.info(f"Added {len(new_docs)} new documents to collection '{collection_name}' ({len(documents) - len(new_docs)} deduplicated)")
     return len(documents)
 
 

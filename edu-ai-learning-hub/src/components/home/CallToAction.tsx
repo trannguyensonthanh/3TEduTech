@@ -106,7 +106,7 @@ const CallToActionSection = () => {
                 size='default'
                 variant='outline'
                 onClick={() => navigate('/courses')}
-                className='border-white/30 text-white hover:bg-white/10 hover:border-white/50 hover:text-white font-semibold px-10 py-4 text-base sm:text-lg shadow-md transform transition-all duration-300 hover:scale-[1.03] w-full sm:w-auto backdrop-blur-sm'
+                className='bg-transparent border-white/50 text-white hover:bg-white hover:text-blue-700 dark:hover:text-blue-900 font-semibold px-10 py-4 text-base sm:text-lg shadow-md transform transition-all duration-300 hover:scale-[1.03] w-full sm:w-auto backdrop-blur-sm'
               >
                 {t('cta.browseCourses', 'Browse Courses')}
               </Button>

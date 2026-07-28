@@ -35,6 +35,7 @@ import {
   MAX_COURSE_PRICE,
 } from '@/components/courses/CourseFiltersSidebar'; // Import sidebar mới
 import CourseCardv2 from '@/components/courses/CourseCardv2'; // Hoặc CourseCard nếu bạn dùng tên đó
+import AICourseSearchBox from '@/components/courses/AICourseSearchBox';
 import { useCourses } from '@/hooks/queries/course.queries';
 import { useCategories } from '@/hooks/queries/category.queries';
 import { useLevels } from '@/hooks/queries/level.queries';
@@ -326,6 +327,13 @@ const CoursesPage: React.FC = () => {
           <div className='w-full lg:flex-1 min-w-0'>
             {' '}
             {/* min-w-0 quan trọng cho flex item */}
+            {/* AI Learning Advisor & RAG Search */}
+            <AICourseSearchBox
+              onSelectCourseKeyword={(keyword) => {
+                setSearchTerm(keyword);
+              }}
+            />
+
             {/* Search and Sort Controls */}
             <div className='flex flex-col md:flex-row gap-4 mb-6 md:mb-8 items-center'>
               <div className='relative flex-grow w-full'>

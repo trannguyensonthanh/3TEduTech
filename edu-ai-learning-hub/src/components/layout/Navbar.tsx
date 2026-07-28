@@ -212,6 +212,12 @@ const Navbar = () => {
                     </Link>
                   );
                 })}
+                <Link
+                  to="/ai-master"
+                  className="ml-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-xs shadow-md shadow-indigo-500/30 hover:opacity-95 transition-transform active:scale-95 flex items-center gap-1.5 animate-pulse"
+                >
+                  <span>✨ AI Master</span>
+                </Link>
               </nav>
             </div>
 
@@ -486,6 +492,14 @@ const Navbar = () => {
                           </Link>
                         </SheetClose>
                       ))}
+                      <SheetClose asChild>
+                        <Link
+                          to="/ai-master"
+                          className="flex items-center px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-base shadow-md mt-2"
+                        >
+                          ✨ AI Master Suite
+                        </Link>
+                      </SheetClose>
                     </nav>
                     {isAuthenticated && user && (
                       <Separator className='my-3 mx-4 dark:bg-slate-700/80' />

@@ -16,6 +16,7 @@ const enrollmentService = require('../enrollments/enrollments.service');
 const Roles = require('../../core/enums/Roles');
 const { youtubeApiKey } = require('../../config');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
+const aiSyncService = require('../../services/aiSync.service');
 
 const parseISO8601Duration = (duration) => {
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -388,6 +389,9 @@ const deleteLesson = async (lessonId, user) => {
   }
   await lessonRepository.deleteLessonById(lessonId);
   logger.info(`Lesson ${lessonId} deleted from DB by user ${user.id}`);
+  
+  // Real-time RAG removal
+  await aiSyncService.removeLessonFromAi(lesson.LessonName);
 };
 
 /**
@@ -541,14 +545,19 @@ const updateLessonVideo = async (lessonId, file, user) => {
       type: 'private'
     });
     
-    const aiUrl = `http://edutech-ai-service-dev:${process.env.AI_SERVICE_PORT || 2111}/ingest/transcribe`;
+    const aiBaseUrl = process.env.AI_SERVICE_URL || `http://127.0.0.1:${process.env.AI_SERVICE_PORT || 2111}`;
+    const aiUrl = `${aiBaseUrl}/api/ingest/transcribe`;
+    const backendPort = process.env.PORT || 8080;
+    const webhookUrl = `http://127.0.0.1:${backendPort}/v1/lessons/${lessonId}/subtitles/auto-webhook`;
     
     axios.post(aiUrl, {
       video_url: signedUrl,
       course_name: courseName,
-      lesson_name: lessonName
+      lesson_name: lessonName,
+      lesson_id: Number(lessonId),
+      webhook_url: webhookUrl
     }).then(() => {
-      logger.info(`Triggered transcription for lesson ${lessonId}`);
+      logger.info(`Triggered transcription and subtitle generator for lesson ${lessonId}`);
     }).catch(err => {
       logger.error(`Failed to trigger transcription for lesson ${lessonId}:`, err.message);
     });

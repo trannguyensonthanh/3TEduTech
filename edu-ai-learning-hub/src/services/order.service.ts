@@ -86,3 +86,8 @@ export const getMyOrders = async (
 export const getMyOrderDetails = async (orderId: number): Promise<Order> => {
   return apiHelper.get(`/orders/${orderId}`);
 };
+
+/** Hủy đơn hàng đang chờ thanh toán */
+export const cancelOrder = async (orderId: number): Promise<{ message: string; order: Order }> => {
+  return apiHelper.patch(`/orders/${orderId}/cancel`);
+};

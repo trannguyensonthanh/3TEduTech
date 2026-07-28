@@ -67,10 +67,18 @@ const handleStripeWebhook = catchAsync(async (req, res) => {
   res.json({ received: true });
 });
 
+const cancelOrder = catchAsync(async (req, res) => {
+  const accountId = req.user.id;
+  const { orderId } = req.params;
+  const order = await orderService.cancelPendingOrder(accountId, orderId);
+  res.status(httpStatus.OK).send({ message: 'Đã hủy đơn hàng thành công.', order });
+});
+
 module.exports = {
   createOrder,
   getMyOrders,
   getMyOrderDetails,
+  cancelOrder,
   handlePaymentWebhook,
   handleStripeWebhook,
 };

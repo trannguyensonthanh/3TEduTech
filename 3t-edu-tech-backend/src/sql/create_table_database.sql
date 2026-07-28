@@ -1276,7 +1276,8 @@ CREATE TABLE
       RequestType IN (
         'INITIAL_SUBMISSION',
         'UPDATE_SUBMISSION',
-        'RE_SUBMISSION'
+        'RE_SUBMISSION',
+        'ARCHIVE_SUBMISSION'
       )
     ),
     CONSTRAINT CK_CourseApprovalRequests_Status CHECK (

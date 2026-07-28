@@ -72,7 +72,8 @@ const findCourseById = async (courseId, includeDraft = false) => {
 
     let query = `
             SELECT c.*, cat.CategoryName, lvl.LevelName, cs.StatusName,
-                   acc.Email as InstructorEmail, up.FullName as InstructorName, up.AvatarUrl as InstructorAvatar
+                   acc.Email as InstructorEmail, up.FullName as InstructorName, up.AvatarUrl as InstructorAvatar,
+                   (SELECT COUNT(*) FROM Enrollments WHERE CourseID = c.CourseID) AS studentCount
             FROM Courses c
             JOIN Categories cat ON c.CategoryID = cat.CategoryID
             JOIN Levels lvl ON c.LevelID = lvl.LevelID
@@ -106,7 +107,8 @@ const findCourseBySlug = async (slug, includeDraft = false) => {
 
     let query = `
             SELECT c.*, cat.CategoryName, lvl.LevelName, cs.StatusName,
-                   acc.Email as InstructorEmail, up.FullName as InstructorName, up.AvatarUrl as InstructorAvatar
+                   acc.Email as InstructorEmail, up.FullName as InstructorName, up.AvatarUrl as InstructorAvatar,
+                   (SELECT COUNT(*) FROM Enrollments WHERE CourseID = c.CourseID) AS studentCount
             FROM Courses c
             JOIN Categories cat ON c.CategoryID = cat.CategoryID
             JOIN Levels lvl ON c.LevelID = lvl.LevelID

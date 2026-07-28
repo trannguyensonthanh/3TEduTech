@@ -164,3 +164,167 @@ export const fetchSuggestedQuestions = async (
   }
   return response.json();
 };
+
+// --- Interfaces & Functions for AI Course Search (RAG + Gemini) ---
+export interface CourseSearchPayload {
+  query: string;
+  top_k?: number;
+}
+
+export interface CourseSearchResponse {
+  answer: string;
+  sources: { file_name: string; content: string }[];
+}
+
+/**
+ * Tìm kiếm & Tư vấn lộ trình học tập bằng Trí Tuệ Nhân Tạo (RAG + Gemini AI).
+ */
+export const searchCoursesWithAI = async (
+  payload: CourseSearchPayload
+): Promise<CourseSearchResponse> => {
+  console.log('Sending AI course search query:', payload);
+  const response = await fetch(`${AI_API_BASE_URL}/api/search/courses`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': MASTER_API_KEY,
+    },
+    body: JSON.stringify({
+      query: payload.query,
+      top_k: payload.top_k || 5,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    try {
+      const errJson = JSON.parse(errorText);
+      throw new Error(errJson.detail || errJson.message || 'AI Course Search failed.');
+    } catch {
+      throw new Error(errorText || 'Error connecting to AI search service.');
+    }
+  }
+  return response.json();
+};
+
+// --- AI Agent: Unified Endpoint (Intent Router + Hybrid Search + Commerce) ---
+export interface UIWidgetData {
+  type: 'COURSE_CAROUSEL' | 'PAYMENT_SELECTOR' | 'CHECKOUT_REDIRECT' | 'ENROLLMENT_SUCCESS';
+  data: Record<string, unknown>;
+}
+
+export interface AgentResponse {
+  answer: string;
+  intent: string;
+  sources: { file_name: string; content: string }[];
+  suggested_questions: string[];
+  ui_widget?: UIWidgetData | null;
+  voice?: string;
+}
+
+/**
+ * Gửi tin nhắn đến AI Agent thống nhất.
+ * Agent tự động nhận diện ý định (Intent) và định tuyến xử lý phù hợp:
+ * - SEARCH_COURSE: Hybrid Search (BM25 + Dense RAG + RRF Fusion)
+ * - FAQ_QUERY: RAG Knowledge Base
+ * - BUY_COURSE: Conversational Commerce widgets
+ * - GENERAL_CHAT: Friendly conversation
+ */
+export const queryAgentAI = async (
+  payload: QueryPayload
+): Promise<AgentResponse> => {
+  const response = await fetch(`${AI_API_BASE_URL}/api/chat/agent-action`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': MASTER_API_KEY,
+    },
+    body: JSON.stringify({
+      query: payload.query,
+      chat_history: payload.chat_history || [],
+      top_k: payload.top_k || 10,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    try {
+      const errJson = JSON.parse(errorText);
+      throw new Error(errJson.detail || errJson.message || 'AI Agent failed.');
+    } catch {
+      throw new Error(errorText || 'Error connecting to AI Agent.');
+    }
+  }
+  return response.json();
+};
+
+/**
+ * Gửi tin nhắn đến AI Agent dưới dạng Realtime SSE Token Streaming (Nhả từng chữ theo thời gian thực).
+ */
+export const streamAgentAI = async (
+  payload: QueryPayload,
+  callbacks: {
+    onMetadata?: (data: { intent: string; ui_widget?: UIWidgetData | null; sources: any[] }) => void;
+    onToken?: (text: string) => void;
+    onDone?: (data: { suggested_questions: string[] }) => void;
+    onError?: (err: string) => void;
+  }
+): Promise<void> => {
+  try {
+    const response = await fetch(`${AI_API_BASE_URL}/api/chat/agent-action-stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': MASTER_API_KEY,
+      },
+      body: JSON.stringify({
+        query: payload.query,
+        chat_history: payload.chat_history || [],
+        top_k: payload.top_k || 10,
+      }),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error('Không thể kết nối máy chủ streaming AI.');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let currentEvent = 'message';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete trailing line
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('event:')) {
+          currentEvent = trimmed.replace('event:', '').trim();
+        } else if (trimmed.startsWith('data:')) {
+          const dataStr = trimmed.replace('data:', '').trim();
+          if (!dataStr) continue;
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (currentEvent === 'metadata') {
+              callbacks.onMetadata?.(parsed);
+            } else if (currentEvent === 'token') {
+              callbacks.onToken?.(parsed.text || '');
+            } else if (currentEvent === 'done') {
+              callbacks.onDone?.(parsed);
+            }
+          } catch (e) {
+            console.warn('Lỗi phân tích cú pháp stream JSON:', e, dataStr);
+          }
+          currentEvent = 'message';
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('Lỗi Stream AI Agent:', error);
+    callbacks.onError?.(error.message || 'Gián đoạn kết nối tới dịch vụ AI.');
+  }
+};

@@ -28,6 +28,12 @@ router.get(
   orderController.getMyOrderDetails
 );
 
+router.patch(
+  '/:orderId/cancel',
+  validate(orderValidation.cancelOrder),
+  orderController.cancelOrder
+);
+
 // Route cho Webhook từ cổng thanh toán
 const webhookRouter = express.Router();
 

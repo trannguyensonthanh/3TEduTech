@@ -1,3 +1,4 @@
+// Load environment variables from .env file
 require('dotenv').config();
 
 const app = require('./src/app');
@@ -12,6 +13,11 @@ const {
 const {
   scheduleProgressReminders,
 } = require('./src/jobs/progressReminderJob');
+const {
+  startCourseSyncWorker,
+  closeCourseSyncQueue,
+} = require('./src/queues/courseSync.queue');
+const { syncInitialDataToAi } = require('./src/services/aiSync.service');
 
 const PORT = process.env.PORT || 5000;
 
@@ -30,6 +36,12 @@ const startServer = async () => {
         schedulePendingOrderCancellation();
         scheduleExchangeRateUpdate();
         scheduleProgressReminders();
+
+        // 🔧 Khởi động BullMQ Worker cho Course Sync Queue
+        startCourseSyncWorker();
+
+        // 🤖 Đồng bộ dữ liệu Khóa học & FAQ sang AI RAG Vector Store
+        setTimeout(() => syncInitialDataToAi(), 3000);
       }
     });
   } catch (error) {
@@ -40,6 +52,12 @@ const startServer = async () => {
 
 const shutdown = async (signal) => {
   logger.info(`${signal} received. Closing http server...`);
+  // Graceful shutdown: đóng Worker và Queue trước khi tắt server
+  try {
+    await closeCourseSyncQueue();
+  } catch (err) {
+    logger.error('Error closing course sync queue:', err);
+  }
   if (server) {
     server.close(async () => {
       logger.info('Http server closed.');

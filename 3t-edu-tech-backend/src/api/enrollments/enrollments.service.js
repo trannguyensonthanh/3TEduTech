@@ -114,6 +114,16 @@ const getMyEnrollments = async (accountId, options) => {
     });
 
   const enriched = enrollments.map((enrollment) => {
+    // 🛡️ PROGRESS PROTECTION: Nếu đã tốt nghiệp → luôn 100%
+    if (enrollment.IsCompleted) {
+      return {
+        ...toCamelCaseObject(enrollment),
+        progressPercentage: 100,
+        completionDate: enrollment.CompletedAt,
+        isCompleted: true,
+      };
+    }
+
     const progressPercentage = enrollment.TotalLessons
       ? Math.round(
           (enrollment.CompletedLessons / enrollment.TotalLessons) * 100
@@ -129,6 +139,7 @@ const getMyEnrollments = async (accountId, options) => {
       ...toCamelCaseObject(enrollment),
       progressPercentage,
       completionDate,
+      isCompleted: false,
     };
   });
 

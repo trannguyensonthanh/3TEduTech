@@ -6,7 +6,7 @@ const logger = require('../../utils/logger');
 const { toCamelCaseObject, toCamelCaseArray } = require('../../utils/caseConverter');
 
 const getAiServiceUrl = () => {
-  return `http://edutech-ai-service-dev:${process.env.AI_SERVICE_PORT || 2111}`;
+  return process.env.AI_SERVICE_URL || `http://127.0.0.1:${process.env.AI_SERVICE_PORT || 2111}`;
 };
 
 const syncFaqToAi = async (faq) => {
@@ -16,7 +16,7 @@ const syncFaqToAi = async (faq) => {
   const sourceName = `FAQ-${faq.FaqID}`;
   
   try {
-    const url = `${getAiServiceUrl()}/ingest/text`;
+    const url = `${getAiServiceUrl()}/api/ingest/text`;
     await axios.post(url, {
       text,
       source_name: sourceName,
@@ -32,7 +32,7 @@ const syncFaqToAi = async (faq) => {
 const removeFaqFromAi = async (faqId) => {
   const sourceName = `FAQ-${faqId}`;
   try {
-    const url = `${getAiServiceUrl()}/ingest/collection/master_knowledge/source/${sourceName}`;
+    const url = `${getAiServiceUrl()}/api/ingest/collection/master_knowledge/source/${sourceName}`;
     await axios.delete(url);
     logger.info(`Removed FAQ-${faqId} from AI Service`);
   } catch (error) {

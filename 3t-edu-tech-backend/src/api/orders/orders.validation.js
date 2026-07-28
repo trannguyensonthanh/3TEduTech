@@ -30,4 +30,5 @@ module.exports = {
   createOrder,
   getMyOrders,
   getMyOrderDetails,
+  cancelOrder: getMyOrderDetails,
 };

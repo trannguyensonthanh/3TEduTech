@@ -13,8 +13,9 @@ const cache = (ttlSeconds = 1800) => {
       return next();
     }
 
-    // Tạo khóa duy nhất dựa trên URL + query params
-    const key = `cache:${req.originalUrl}`;
+    // Tạo khóa duy nhất dựa trên URL + query params + tiền tệ (X-Currency)
+    const currency = (req.header('X-Currency') || 'VND').trim().toUpperCase();
+    const key = `cache:${req.originalUrl}:curr:${currency}`;
 
     try {
       const cachedData = await redisClient.get(key);

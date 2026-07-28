@@ -89,6 +89,17 @@ router.post(
 );
 
 /**
+ * Ngừng xuất bản hoặc Gửi yêu cầu ngừng xuất bản khóa học
+ */
+router.patch(
+  '/:courseId/archive',
+  authenticate,
+  authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),
+  validate(courseValidation.archiveCourse),
+  courseController.archiveCourse
+);
+
+/**
  * Duyệt/từ chối khóa học (Admin/Superadmin)
  */
 router.patch(

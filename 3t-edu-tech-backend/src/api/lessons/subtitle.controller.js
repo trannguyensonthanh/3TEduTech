@@ -56,9 +56,21 @@ const deleteSubtitle = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+/**
+ * Webhook nhận phụ đề tự động (.srt) từ AI Service
+ */
+const handleAiSubtitleWebhook = catchAsync(async (req, res) => {
+  const result = await subtitleService.saveAiGeneratedSubtitle(
+    Number(req.params.lessonId),
+    req.body
+  );
+  res.status(httpStatus.CREATED).send(result || { status: 'processed' });
+});
+
 module.exports = {
   getSubtitles,
   addSubtitle,
   setPrimarySubtitle,
   deleteSubtitle,
+  handleAiSubtitleWebhook,
 };

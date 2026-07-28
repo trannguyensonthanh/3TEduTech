@@ -9,7 +9,8 @@ const stripe = require('../../config/stripe');
 
 // Để sử dụng Stripe SDK
 const createVnpayUrl = catchAsync(async (req, res) => {
-  const { orderId, bankCode, locale } = req.body;
+  const { orderId, bankCode = 'VNBANK', locale = 'vn' } = req.body;
+  const targetBankCode = bankCode || 'VNBANK'; // Đảm bảo luôn có VNBANK (Thẻ ATM nội địa) để tránh lỗi 'Ngân hàng không được hỗ trợ' từ VNPAY Sandbox
   const ipAddr =
     req.headers['x-forwarded-for'] ||
     req.connection.remoteAddress ||
@@ -27,7 +28,7 @@ const createVnpayUrl = catchAsync(async (req, res) => {
   const paymentUrl = await paymentService.createVnpayUrl(
     orderId,
     clientIp,
-    bankCode,
+    targetBankCode,
     locale
   );
   res.status(httpStatus.OK).send({ paymentUrl });
@@ -39,7 +40,7 @@ const handleVnpayReturn = catchAsync(async (req, res) => {
   const result = await paymentService.processVnpayReturn(vnpParams);
 
   const frontendResultUrl = `${
-    config.frontendUrl || 'http://localhost:8080'
+    config.frontendUrl || 'http://localhost:5173'
   }/payment/result`;
   const queryResult = {
     vnp_ResponseCode: result.code,

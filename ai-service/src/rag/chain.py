@@ -14,6 +14,40 @@ from src.rag.prompts import (
 logger = logging.getLogger(__name__)
 
 
+async def get_master_context(
+    query: str,
+    top_k: int | None = None,
+) -> tuple[str, list[dict]]:
+    """Retrieve relevant documents and build context & sources for SSE streaming."""
+    settings = get_settings()
+    k = top_k or settings.rag_top_k
+    master_results = await search_documents(
+        collection_name=settings.chroma_collection_master,
+        query=query,
+        top_k=k,
+    )
+    course_results = await search_documents(
+        collection_name=settings.chroma_collection_courses,
+        query=query,
+        top_k=k,
+        where={"type": "course_overview"},
+    )
+    results = sorted(master_results + course_results, key=lambda x: x.get("distance", 1.0))[:k]
+    if not results:
+        return "", []
+    context = ""
+    sources = []
+    for r in results:
+        context += f"\n---\n{r['content']}\n"
+        source_info = {
+            "file_name": r["metadata"].get("source", r["metadata"].get("file_name", "Unknown")),
+            "content": r["content"][:200] + "..." if len(r["content"]) > 200 else r["content"],
+        }
+        if source_info["file_name"] not in [s["file_name"] for s in sources]:
+            sources.append(source_info)
+    return context, sources
+
+
 async def query_master(
     query: str,
     chat_history: list[dict] | None = None,
@@ -35,19 +69,30 @@ async def query_master(
     settings = get_settings()
     k = top_k or settings.rag_top_k
 
-    # 1. Retrieve relevant documents
-    results = await search_documents(
+    # 1. Retrieve relevant documents from both master and course collections
+    master_results = await search_documents(
         collection_name=settings.chroma_collection_master,
         query=query,
         top_k=k,
     )
+    course_results = await search_documents(
+        collection_name=settings.chroma_collection_courses,
+        query=query,
+        top_k=k,
+        where={"type": "course_overview"},
+    )
+    results = sorted(master_results + course_results, key=lambda x: x.get("distance", 1.0))[:k]
 
-    if not results and not use_general_knowledge:
+    if not results:
         return {
-            "answer": "Xin lỗi, hiện tại tôi chưa được cung cấp tài liệu nội bộ liên quan đến vấn đề này. Bạn có muốn tôi sử dụng kiến thức chung (General Knowledge) để giải đáp không? Lưu ý rằng kiến thức chung có thể không bám sát 100% với hệ thống.",
+            "answer": "Xin lỗi bạn, tôi không tìm thấy thông tin phù hợp trong cơ sở tri thức (FAQ, chính sách, giới thiệu khóa học) của hệ thống **3TEduTech** để giải đáp cho câu hỏi này.\n\nNhằm đảm bảo tính chính xác tuyệt đối và uy tín của nền tảng, tôi chỉ phản hồi dựa trên dữ liệu chính thức đã được xác thực từ 3TEduTech. Bạn vui lòng liên hệ bộ phận Tư vấn & CSKH hoặc tham gia cộng đồng giải đáp để được hỗ trợ chi tiết nhất nhé!",
             "sources": [],
-            "suggested_questions": [],
-            "is_fallback_prompt": True,
+            "suggested_questions": [
+                "Bên mình có những khóa học lập trình nào?",
+                "Chính sách bảo vệ tiến độ học tập hoạt động thế nào?",
+                "Tôi có thể thanh toán khóa học bằng những phương thức nào?"
+            ],
+            "is_fallback_prompt": False,
         }
 
     # 2. Build context from retrieved documents
@@ -124,12 +169,12 @@ async def query_course(
         )
         results.extend(master_results)
         
-    if not results and not use_general_knowledge:
+    if not results:
         return {
-            "answer": "Xin lỗi, hiện tại tôi chưa tìm thấy tài liệu liên quan đến phần này trong giáo trình. Bạn có muốn tôi sử dụng kiến thức bên ngoài (General Knowledge) để giải đáp không? Lưu ý rằng kiến thức này có thể không bám sát 100% nội dung khóa học.",
+            "answer": f"Xin lỗi bạn, tôi không tìm thấy nội dung hoặc bài giảng phù hợp với câu hỏi này trong giáo trình khóa học **{course_name or 'này'}**.\n\nNhằm bảo vệ tính kiên định và chuẩn xác về kiến thức chuyên môn, tôi chỉ trả lời dựa trên tài liệu bài giảng chính thức. Bạn vui lòng đặt câu hỏi sát với nội dung bài học hoặc vào mục **Thảo luận** để trao đổi trực tiếp với Giảng viên nhé!",
             "sources": [],
             "suggested_questions": [],
-            "is_fallback_prompt": True,
+            "is_fallback_prompt": False,
         }
 
     # 2. Build context

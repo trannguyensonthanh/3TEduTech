@@ -34,6 +34,8 @@ async def transcribe_video_endpoint(request: TranscriptionRequest, background_ta
         video_url=request.video_url,
         course_name=request.course_name,
         lesson_name=request.lesson_name,
+        lesson_id=request.lesson_id,
+        webhook_url=request.webhook_url,
     )
     return {"message": "Transcription task added to background queue."}
 
@@ -161,4 +163,32 @@ async def delete_by_source_endpoint(collection_name: str, source_name: str):
         
         return {"message": f"Deleted all chunks for source '{source_name}' in '{collection_name}'"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/course/{course_name}")
+async def delete_course_knowledge_endpoint(course_name: str):
+    """Delete all knowledge chunks associated with a specific course."""
+    try:
+        from src.vectorstore.chroma import get_or_create_collection
+        settings = get_settings()
+        collection = get_or_create_collection(settings.chroma_collection_courses)
+        collection.delete(where={"course_name": course_name})
+        return {"message": f"Deleted all RAG knowledge for course '{course_name}'"}
+    except Exception as e:
+        logger.error(f"Failed to delete course knowledge for {course_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/lesson/{lesson_name}")
+async def delete_lesson_knowledge_endpoint(lesson_name: str):
+    """Delete all knowledge chunks associated with a specific lesson."""
+    try:
+        from src.vectorstore.chroma import get_or_create_collection
+        settings = get_settings()
+        collection = get_or_create_collection(settings.chroma_collection_courses)
+        collection.delete(where={"lesson_name": lesson_name})
+        return {"message": f"Deleted all RAG knowledge for lesson '{lesson_name}'"}
+    except Exception as e:
+        logger.error(f"Failed to delete lesson knowledge for {lesson_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

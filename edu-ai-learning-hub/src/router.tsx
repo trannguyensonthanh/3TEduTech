@@ -80,6 +80,7 @@ const IntroPage = lazy(() => import('@/pages/IntroPageV2'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized')); 
 const CryptoPaymentPage = lazy(() => import('@/pages/CryptoPaymentPage'));
+const AiMasterChat = lazy(() => import('@/pages/AiMasterChat'));
 
 const PageLoader = () => (
   <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 px-4 text-white">
@@ -111,6 +112,8 @@ const AppRouter = () => {
         <Route path='/about' element={<About />} />
         <Route path='/privacy' element={<Privacy />} />
         <Route path='/terms-instructor' element={<TermsInstructor />} />
+        <Route path='/ai-master' element={<AiMasterChat />} />
+        <Route path='/ai-chat' element={<AiMasterChat />} />
 
         {/* Auth-related public routes */}
         <Route path='/instructor/register' element={<InstructorRegister />} />

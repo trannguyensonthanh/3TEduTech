@@ -5,17 +5,20 @@ import fs from 'fs';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: '::',
-    // https: {
-    //   key: fs.readFileSync('./localhost.key'),
-    //   cert: fs.readFileSync('./localhost.crt'),
-    // },
-    port: 8080,
+    host: '0.0.0.0', // Lắng nghe ổn định trên mọi IPv4 & IPv6 (localhost, 127.0.0.1) cho Windows/Opera
+    port: 5173,
+    strictPort: true,
+    allowedHosts: [
+      'guided-wallaby-measured.ngrok-free.app',
+      '.ngrok-free.app',
+      '.ngrok.io',
+      '.ngrok.app',
+      '.trycloudflare.com',
+      'localhost',
+    ],
     watch: {
-      usePolling: true,
-      // Watch all files in the project
-      ignored: ['!**/node_modules/@react-pdf/renderer/**'],
-      // Hoặc thử một pattern khác nếu cần
+      usePolling: false, // Tắt polling: Tránh lỗi rò rỉ RAM, xung đột EBUSY/EPERM khi chỉnh sửa code nhanh trên Windows
+      ignored: ['**/node_modules/**', '**/.git/**'], // Bỏ qua theo dõi node_modules để giải phóng tài nguyên CPU/RAM
     },
   },
 

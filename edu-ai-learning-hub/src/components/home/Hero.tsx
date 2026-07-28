@@ -8,6 +8,7 @@ import { AbstractParticles } from '@/components/home/AbstractParticles';
 import HeroVeins from '@/components/home/HeroVeins';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import WebGLErrorBoundary from '@/components/common/WebGLErrorBoundary';
 
 const Hero = () => {
   const { t } = useTranslation();
@@ -70,26 +71,34 @@ const Hero = () => {
       {/* Animated Wire/Vein Background */}
       <HeroVeins />
 
-      {/* Three.js Particle System */}
+      {/* Three.js Particle System wrapped in WebGL Error Boundary */}
       <div className='absolute inset-0 z-[2]'>
-        <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
-          <ambientLight intensity={0.3} />
-          <pointLight position={[10, 10, 10]} intensity={0.6} />
-          <Suspense fallback={null}>
-            <AbstractParticles
-              count={200}
-              color='#60a5fa'
-              size={0.06}
-              speed={0.04}
-            />
-            <AbstractParticles
-              count={120}
-              color='#818cf8'
-              size={0.09}
-              speed={0.025}
-            />
-          </Suspense>
-        </Canvas>
+        <WebGLErrorBoundary>
+          <Canvas
+            camera={{ position: [0, 0, 5], fov: 75 }}
+            gl={{ powerPreference: 'default', failIfMajorPerformanceCaveat: false }}
+            onCreated={({ gl }) => {
+              gl.domElement.addEventListener('webglcontextlost', (e) => e.preventDefault(), false);
+            }}
+          >
+            <ambientLight intensity={0.3} />
+            <pointLight position={[10, 10, 10]} intensity={0.6} />
+            <Suspense fallback={null}>
+              <AbstractParticles
+                count={200}
+                color='#60a5fa'
+                size={0.06}
+                speed={0.04}
+              />
+              <AbstractParticles
+                count={120}
+                color='#818cf8'
+                size={0.09}
+                speed={0.025}
+              />
+            </Suspense>
+          </Canvas>
+        </WebGLErrorBoundary>
       </div>
 
       {/* Content */}
@@ -140,7 +149,7 @@ const Hero = () => {
                 size='lg'
                 variant='outline'
                 onClick={() => navigate('/instructor/register')}
-                className='border-slate-500/50 text-slate-200 hover:bg-white/5 hover:border-slate-400/70 hover:text-white font-semibold px-8 py-3.5 text-base transition-all duration-300 transform hover:scale-[1.03] backdrop-blur-sm'
+                className='bg-transparent border-slate-500/50 text-white hover:bg-white hover:text-slate-900 font-semibold px-8 py-3.5 text-base transition-all duration-300 transform hover:scale-[1.03] backdrop-blur-sm'
               >
                 {t('hero.ctaInstructor')}
               </Button>

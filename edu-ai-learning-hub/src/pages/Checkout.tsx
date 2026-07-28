@@ -121,67 +121,63 @@ const CheckoutPage: React.FC = () => {
   const [selectedCrypto, setSelectedCrypto] = useState<string>('usdttrc20');
   const [createdOrder, setCreatedOrder] = useState<boolean>(true);
   const availablePaymentMethods = useMemo(() => {
-    const methods = [];
-    if (currency === 'VND') {
-      methods.push(
-        {
-          id: 'VNPAY',
-          name: 'VNPAY Gateway',
-          icon: (
-            <img
-              src='/images/payment/vnpay_logo.jpg'
-              alt='VNPAY'
-              className='h-6 w-auto'
-            />
-          ),
-          description: 'ATM, Visa/Master, QR Code.',
-          // disabled: true,
-        },
-        {
-          id: 'MOMO',
-          name: 'MoMo E-Wallet',
-          icon: (
-            <img
-              src='/images/payment/momo_logo.png'
-              alt='MoMo'
-              className='h-6 w-auto'
-            />
-          ),
-          description: 'Pay with your MoMo wallet.',
-          // disabled: true, // Disable MoMo for now
-        }
-      );
-    }
-    if (currency === 'USD') {
-      methods.push(
-        {
-          id: 'STRIPE',
-          name: 'Stripe',
-          icon: <CreditCard size={22} />,
-          description: 'Pay with your Credit/Debit Card.',
-        },
-        {
-          id: 'PAYPAL',
-          name: 'PayPal',
-          icon: <Icons.paypal className='h-6 w-6 text-blue-600' />,
-          description: 'Pay with your PayPal account.',
-        }
-      );
-    }
-    methods.push({
-      id: 'CRYPTO',
-      name: 'Pay with Crypto',
-      icon: <Icons.bitcoin size={22} className='text-amber-500' />,
-      description: 'BTC, ETH, USDT, and more.',
-    });
-    return methods;
-  }, [currency]);
+    return [
+      {
+        id: 'VNPAY',
+        name: 'VNPAY Gateway',
+        icon: (
+          <img
+            src='/images/payment/vnpay_logo.jpg'
+            alt='VNPAY'
+            className='h-6 w-auto'
+          />
+        ),
+        description: 'Thanh toán thẻ ATM / Visa / Master / QR Code (VNĐ).',
+      },
+      {
+        id: 'MOMO',
+        name: 'MoMo E-Wallet',
+        icon: (
+          <img
+            src='/images/payment/momo_logo.png'
+            alt='MoMo'
+            className='h-6 w-auto'
+          />
+        ),
+        description: 'Thanh toán siêu tốc qua ví điện tử MoMo.',
+      },
+      {
+        id: 'STRIPE',
+        name: 'Stripe (Thẻ Quốc Tế)',
+        icon: <CreditCard size={22} className='text-purple-600 dark:text-purple-400' />,
+        description: 'Thẻ Visa / Master / Amex (Hỗ trợ quy đổi tỷ giá song song).',
+      },
+      {
+        id: 'PAYPAL',
+        name: 'PayPal',
+        icon: <Icons.paypal className='h-6 w-6 text-blue-600 dark:text-blue-400' />,
+        description: 'Thanh toán bảo mật qua tài khoản PayPal (Quy đổi song song).',
+      },
+      {
+        id: 'CRYPTO',
+        name: 'Pay with Crypto (Web3)',
+        icon: <Icons.bitcoin size={22} className='text-amber-500' />,
+        description: 'Thanh toán tiền điện tử BTC, ETH, USDT (TRC20).',
+      },
+    ];
+  }, []);
 
   useEffect(() => {
     if (availablePaymentMethods.length > 0) {
-      setSelectedPaymentMethodId(availablePaymentMethods[0].id);
+      const preferred = location.state?.preferredMethod?.toUpperCase();
+      const match = availablePaymentMethods.find((m) => m.id === preferred);
+      if (match) {
+        setSelectedPaymentMethodId(match.id);
+      } else {
+        setSelectedPaymentMethodId(availablePaymentMethods[0].id);
+      }
     }
-  }, [availablePaymentMethods]);
+  }, [availablePaymentMethods, location.state]);
 
   const { mutateAsync: createOrderMutateAsync, isPending: isCreatingOrder } =
     useCreateOrderFromCart();

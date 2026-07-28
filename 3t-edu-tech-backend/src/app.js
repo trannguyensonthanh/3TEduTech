@@ -36,6 +36,9 @@ const allowedOrigins = [
   'http://192.168.87.105:8080',
   'https://localhost:8080',
   'http://localhost:8080',
+  'http://localhost:5173',
+  'https://localhost:5173',
+  'https://guided-wallaby-measured.ngrok-free.app'
 ];
 
 const corsOptions = {

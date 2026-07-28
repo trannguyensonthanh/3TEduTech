@@ -8,6 +8,7 @@ import {
   useCallback,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 const supportedCurrencies = z.enum(['VND', 'USD']);
@@ -33,6 +34,7 @@ interface SettingsProviderProps {
 const CURRENCY_STORAGE_KEY = 'app-currency';
 export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const { i18n } = useTranslation();
+  const queryClient = useQueryClient();
 
   // Hàm khởi tạo state, đọc từ localStorage hoặc i18next một lần duy nhất
   const getInitialLanguage = (): Language => {
@@ -54,11 +56,19 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
   const [currency, setCurrencyState] = useState<Currency>(getInitialCurrency);
 
-  // Hàm private để set currency và lưu vào storage
-  const updateCurrency = (newCurrency: Currency) => {
-    setCurrencyState(newCurrency);
-    localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
-  };
+  // Hàm private để set currency, lưu vào storage và lập tức làm mới data từ API
+  const updateCurrency = useCallback(
+    (newCurrency: Currency) => {
+      setCurrencyState((prev) => {
+        if (prev !== newCurrency) {
+          localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
+          queryClient.invalidateQueries({ refetchType: 'active' });
+        }
+        return newCurrency;
+      });
+    },
+    [queryClient]
+  );
 
   const setLanguage = useCallback(
     (lang: Language) => {
@@ -69,7 +79,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
       const newCurrency = lang === 'vi' ? 'VND' : 'USD';
       updateCurrency(newCurrency);
     },
-    [i18n]
+    [i18n, updateCurrency]
   );
 
   useEffect(() => {
@@ -87,7 +97,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
     return () => {
       i18n.off('languageChanged', handleLanguageChanged);
     };
-  }, [i18n]);
+  }, [i18n, updateCurrency]);
 
   const formatPrice = useCallback(
     (price: number): string => {

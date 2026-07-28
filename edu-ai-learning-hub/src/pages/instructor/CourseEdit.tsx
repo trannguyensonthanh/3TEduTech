@@ -30,6 +30,7 @@ import {
   useUpdateCourse,
   useSubmitCourseForApproval,
   useDeleteCourse,
+  useArchiveCourse,
   useCreateCourseUpdateSession,
   useCancelCourseUpdateSession,
   useUpdateCourseThumbnail,
@@ -58,6 +59,7 @@ const CourseEdit: React.FC = () => {
   // Dialog states
   const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   // State cho media files (không thuộc form)
@@ -87,12 +89,13 @@ const CourseEdit: React.FC = () => {
   const { mutate: submitForApproval, isPending: isSubmitting } =
     useSubmitCourseForApproval();
   const { mutate: deleteCourse, isPending: isDeleting } = useDeleteCourse();
+  const { mutate: archiveCourse, isPending: isArchiving } = useArchiveCourse();
   const { mutate: createUpdateSession, isPending: isCreatingUpdate } =
     useCreateCourseUpdateSession();
   const { mutate: cancelUpdateSession, isPending: isCancellingUpdate } =
     useCancelCourseUpdateSession();
   const isProcessing =
-    isUpdatingCourse || isUploadingThumb || isSubmitting || isDeleting;
+    isUpdatingCourse || isUploadingThumb || isSubmitting || isDeleting || isArchiving;
   const [liveNotification, setLiveNotification] = useState<{
     isOpen: boolean;
     title: string;
@@ -348,6 +351,23 @@ const CourseEdit: React.FC = () => {
         toast.error((err as Error).message || 'Could not delete course.'),
     });
   };
+  const confirmArchive = () => {
+    if (!course) return;
+    archiveCourse(
+      { courseId: course.courseId },
+      {
+        onSuccess: (data) => {
+          toast.success(data.message, { duration: 5000 });
+          setIsArchiveConfirmOpen(false);
+          if (!data.requiresApproval) {
+            navigate('/instructor/courses');
+          }
+        },
+        onError: (err) =>
+          toast.error(err.message || 'Could not archive course.'),
+      }
+    );
+  };
   const confirmCancelUpdate = () => {
     if (course?.courseId) {
       cancelUpdateSession(course.courseId, {
@@ -519,15 +539,27 @@ const CourseEdit: React.FC = () => {
             </Tabs>
           </fieldset>
 
-          <div className='flex justify-start pt-6 border-t mt-6'>
+          <div className='flex items-center gap-4 pt-6 border-t mt-6 flex-wrap'>
             <Button
               type='button'
               variant='destructive'
               onClick={() => setIsDeleteConfirmOpen(true)}
-              disabled={isDeleting || course.statusId === 'PUBLISHED'}
+              disabled={isDeleting || (course.statusId === 'PUBLISHED' && (course.studentCount || 0) > 0)}
+              title={course.statusId === 'PUBLISHED' && (course.studentCount || 0) > 0 ? 'Cannot delete published course with active students' : 'Delete course permanently'}
             >
-              {isDeleting ? <Icons.spinner /> : <Icons.trash />} Delete Course
+              {isDeleting ? <Icons.spinner /> : <Icons.trash className='mr-2 h-4 w-4' />} Delete Course
             </Button>
+            {course.statusId === 'PUBLISHED' && (
+              <Button
+                type='button'
+                variant='outline'
+                className='border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20'
+                onClick={() => setIsArchiveConfirmOpen(true)}
+                disabled={isArchiving || isDeleting}
+              >
+                {isArchiving ? <Icons.spinner /> : <Icons.archive className='mr-2 h-4 w-4' />} Unpublish / Archive Course
+              </Button>
+            )}
           </div>
         </form>
       </FormProvider>
@@ -560,6 +592,17 @@ const CourseEdit: React.FC = () => {
         title='Cancel Update?'
         description='All changes in this update session will be discarded. The live version of your course will remain unchanged.'
         confirmText='Yes, Cancel'
+      />
+      <ConfirmationDialog
+        open={isArchiveConfirmOpen}
+        onOpenChange={setIsArchiveConfirmOpen}
+        onConfirm={confirmArchive}
+        isConfirming={isArchiving}
+        title={(course.studentCount || 0) === 0 ? 'Unpublish This Course?' : 'Submit Unpublish (Archive) Request?'}
+        description={(course.studentCount || 0) === 0 
+          ? `Since there are currently no students enrolled in "${course.courseName}", this course will be immediately unpublished and taken off the marketplace.`
+          : `Because "${course.courseName}" currently has ${course.studentCount} enrolled student(s), an unpublish request will be sent to System Administrators for approval to ensure active marketing campaigns and student access are properly transitioned.`}
+        confirmText={(course.studentCount || 0) === 0 ? 'Yes, Unpublish Now' : 'Submit Archive Request'}
       />
       <LiveNotification
         isOpen={liveNotification.isOpen}

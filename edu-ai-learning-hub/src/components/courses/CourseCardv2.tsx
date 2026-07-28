@@ -69,6 +69,26 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
               onError={(e) => (e.currentTarget.src = placeholderImage)}
             />
             {/* Các badge trên ảnh */}
+            {isOwner && course.statusId && (
+              <div className='absolute top-2 left-2 z-10'>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider shadow backdrop-blur-md transition-all inline-block',
+                    course.statusId === 'PUBLISHED'
+                      ? 'bg-emerald-600/90 text-white border border-emerald-400/30'
+                      : course.statusId === 'DRAFT'
+                        ? 'bg-slate-700/90 text-slate-100 border border-slate-500/40'
+                        : course.statusId === 'PENDING' || course.statusId === 'PENDING_APPROVAL'
+                          ? 'bg-amber-500/90 text-white border border-amber-300/30'
+                          : course.statusId === 'REJECTED'
+                            ? 'bg-rose-600/90 text-white border border-rose-400/30'
+                            : 'bg-primary/90 text-white'
+                  )}
+                >
+                  {course.statusId.replace(/_/g, ' ')}
+                </span>
+              </div>
+            )}
             {discountPercentage > 0 && originalPrice > 0 && (
               <div className='absolute top-2 right-2 bg-red-600 text-white rounded-md px-1.5 py-0.5 text-xs font-semibold shadow'>
                 -{discountPercentage}%

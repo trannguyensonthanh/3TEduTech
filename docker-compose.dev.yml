@@ -2,7 +2,7 @@ services:
   database:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: edutech-database-dev
-    mem_limit: 1536m
+    mem_limit: 2048m
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=EduTech_DB_2026!
@@ -38,6 +38,8 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=development
+      - DB_HOST=database
+      - DB_PORT=1433
       - AI_SERVICE_PORT=2111
       - REDIS_URL=redis://edutech-redis-dev:6379
     env_file:
@@ -84,7 +86,7 @@ services:
     container_name: edutech-redis-dev
     mem_limit: 256m
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - redis-data-dev:/data
     command: redis-server --save 60 1 --loglevel warning

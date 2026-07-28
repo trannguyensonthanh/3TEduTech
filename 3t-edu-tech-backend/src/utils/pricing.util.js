@@ -10,7 +10,7 @@ const logger = require('./logger');
  * @returns {Promise<object>} - Cấu trúc pricing { base, display }.
  */
 const createPricingObject = async (item, targetCurrency) => {
-  const baseCurrency = config.settings.baseCurrency || 'VND';
+  const baseCurrency = config.settings.baseCurrency || 'VND'; // Giá gốc của khóa học lưu trong DB (199000, 1299000...) là VND
 
   const originalPrice = new Decimal(item.OriginalPrice || 0);
   const discountedPrice =

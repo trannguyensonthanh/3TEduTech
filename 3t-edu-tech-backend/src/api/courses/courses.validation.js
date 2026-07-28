@@ -152,6 +152,18 @@ const submitCourse = {
 };
 
 /**
+ * Validate archive course payload
+ */
+const archiveCourse = {
+  params: Joi.object().keys({
+    courseId: Joi.number().integer().required(),
+  }),
+  body: Joi.object().keys({
+    notes: Joi.string().allow(null, ''),
+  }),
+};
+
+/**
  * Validate review course payload
  */
 const reviewCourse = {
@@ -366,4 +378,5 @@ module.exports = {
 
   cancelUpdateCourse,
   findPendingApprovalRequestByCourseId,
+  archiveCourse,
 };

@@ -12,6 +12,7 @@ import {
   getCourseBySlug,
   updateCourse,
   deleteCourse,
+  archiveCourse,
   updateCourseThumbnail,
   submitCourseForApproval,
   reviewCourseApproval,
@@ -130,19 +131,17 @@ export const useCreateCourse = (
 ) => {
   const queryClient = useQueryClient();
   return useMutation<Course, Error, CreateCourseData>({
-    mutationFn: createCourse,
-    onSuccess: () => {
-      // Invalidate danh sách khóa học (chung và của instructor nếu có filter)
-      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
-      console.log('Course created successfully.');
-      // toast.success('Tạo khóa học thành công!');
-      // Có thể chuyển hướng đến trang chỉnh sửa khóa học mới tạo
-    },
-    onError: (error) => {
-      console.error('Course creation failed:', error.message);
-      // toast.error(error.message || 'Tạo khóa học thất bại.');
-    },
     ...options,
+    mutationFn: createCourse,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: courseKeys.all });
+      console.log('Course created successfully.');
+      options?.onSuccess?.(data, variables, context);
+    },
+    onError: (error, variables, context) => {
+      console.error('Course creation failed:', error.message);
+      options?.onError?.(error, variables, context);
+    },
   });
 };
 
@@ -160,9 +159,9 @@ export const useUpdateCourse = (
     Error,
     { courseId: number; data: UpdateCourseData }
   >({
+    ...options,
     mutationFn: ({ courseId, data }) => updateCourse(courseId, data),
-    onSuccess: (updatedCourse) => {
-      // Cập nhật cache chi tiết theo ID và Slug
+    onSuccess: (updatedCourse, variables, context) => {
       queryClient.setQueryData(
         courseKeys.detailById(updatedCourse.courseId),
         updatedCourse
@@ -171,16 +170,14 @@ export const useUpdateCourse = (
         courseKeys.detailBySlug(updatedCourse.slug),
         updatedCourse
       );
-      // Invalidate cache danh sách
-      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: courseKeys.all });
       console.log('Course updated successfully.');
-      // toast.success('Cập nhật khóa học thành công!');
+      options?.onSuccess?.(updatedCourse, variables, context);
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
       console.error('Course update failed:', error.message);
-      // toast.error(error.message || 'Cập nhật khóa học thất bại.');
+      options?.onError?.(error, variables, context);
     },
-    ...options,
   });
 };
 
@@ -190,23 +187,36 @@ export const useDeleteCourse = (
 ) => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, number>({
-    mutationFn: deleteCourse,
-    onSuccess: (_, courseId) => {
-      // Xóa cache chi tiết
-      queryClient.removeQueries({ queryKey: courseKeys.detailById(courseId) });
-      // Cần lấy slug trước khi xóa để remove cache theo slug? Hơi phức tạp.
-      // Cách đơn giản hơn là invalidate tất cả chi tiết
-      queryClient.invalidateQueries({ queryKey: courseKeys.details() });
-      // Invalidate cache danh sách
-      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
-      console.log('Course deleted successfully.');
-      // toast.success('Xóa khóa học thành công!');
-    },
-    onError: (error) => {
-      console.error('Course deletion failed:', error.message);
-      // toast.error(error.message || 'Xóa khóa học thất bại.');
-    },
     ...options,
+    mutationFn: deleteCourse,
+    onSuccess: (data, courseId, context) => {
+      queryClient.removeQueries({ queryKey: courseKeys.detailById(courseId) });
+      queryClient.invalidateQueries({ queryKey: courseKeys.all });
+      console.log('Course deleted successfully.');
+      options?.onSuccess?.(data, courseId, context);
+    },
+    onError: (error, courseId, context) => {
+      console.error('Course deletion failed:', error.message);
+      options?.onError?.(error, courseId, context);
+    },
+  });
+};
+
+/** Hook Tạm ngừng xuất bản / Yêu cầu Archive khóa học */
+export const useArchiveCourse = (
+  options?: UseMutationOptions<{ status: string; requiresApproval: boolean; message: string }, Error, { courseId: number; notes?: string }>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<{ status: string; requiresApproval: boolean; message: string }, Error, { courseId: number; notes?: string }>({
+    ...options,
+    mutationFn: ({ courseId, notes }) => archiveCourse(courseId, notes),
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: courseKeys.all });
+      options?.onSuccess?.(data, variables, context);
+    },
+    onError: (error, variables, context) => {
+      options?.onError?.(error, variables, context);
+    },
   });
 };
 

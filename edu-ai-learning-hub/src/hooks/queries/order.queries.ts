@@ -10,6 +10,7 @@ import {
   createOrderFromCart,
   getMyOrders,
   getMyOrderDetails,
+  cancelOrder,
   Order,
   OrderListResponse,
   OrderQueryParams,
@@ -66,23 +67,38 @@ export const useCreateOrderFromCart = (
 ) => {
   const queryClient = useQueryClient();
   return useMutation<Order, Error, string | null | undefined>({
-    // Input là promotionCode (string | null | undefined)
     mutationFn: createOrderFromCart,
-    onSuccess: (data) => {
-      // Invalidate giỏ hàng (đã bị xóa)
+    ...options,
+    onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: cartKeys.myCart });
-      // Invalidate danh sách đơn hàng
-      queryClient.invalidateQueries({ queryKey: orderKeys.myLists() });
-      // Có thể set cache cho đơn hàng mới tạo
+      queryClient.invalidateQueries({ queryKey: ['orders'], refetchType: 'active' });
       queryClient.setQueryData(orderKeys.myDetail(data.orderId), data);
       console.log(`Order ${data.orderId} created successfully.`);
-      // toast.success('Tạo đơn hàng thành công!');
-      // Thường sẽ chuyển hướng đến trang thanh toán hoặc chi tiết đơn hàng
+      options?.onSuccess?.(data, variables, context);
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
       console.error('Create order failed:', error.message);
-      // toast.error(error.message || 'Tạo đơn hàng thất bại.');
+      options?.onError?.(error, variables, context);
     },
+  });
+};
+
+/** Hook hủy đơn hàng */
+export const useCancelOrder = (
+  options?: UseMutationOptions<{ message: string; order: Order }, Error, number>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string; order: Order }, Error, number>({
+    mutationFn: cancelOrder,
     ...options,
+    onSuccess: async (data, orderId, context) => {
+      queryClient.setQueryData(orderKeys.myDetail(orderId), data.order);
+      await queryClient.invalidateQueries({ queryKey: ['orders'], refetchType: 'active' });
+      console.log(`Order ${orderId} cancelled successfully.`);
+      options?.onSuccess?.(data, orderId, context);
+    },
+    onError: (error, orderId, context) => {
+      options?.onError?.(error, orderId, context);
+    },
   });
 };

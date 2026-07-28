@@ -67,6 +67,8 @@ class TranscriptionRequest(BaseModel):
     video_url: str = Field(..., description="URL of the video to transcribe")
     course_name: str = Field(..., description="Name of the course")
     lesson_name: str = Field(default="Unknown Lesson", description="Name of the lesson")
+    lesson_id: int | None = Field(default=None, description="Optional ID of the lesson for subtitle auto-sync")
+    webhook_url: str | None = Field(default=None, description="Optional callback URL to deliver generated SRT subtitle")
 
 
 class IngestCourseRequest(BaseModel):
@@ -93,6 +95,30 @@ class SearchRequest(BaseModel):
 class SearchResponse(BaseModel):
     answer: str
     sources: list[SourceInfo] = []
+
+
+# --- AI Agent (Conversational Commerce & Hybrid Search) ---
+class AgentRequest(BaseModel):
+    """Request body for the unified AI Agent endpoint."""
+    query: str = Field(..., min_length=1, description="The user's message")
+    chat_history: list[ChatHistoryPair] = Field(default=[], description="Previous Q&A pairs")
+    top_k: int = Field(default=10, ge=1, le=50)
+    course_context: str | None = Field(default=None, description="Optional course name for context")
+
+
+class UIWidget(BaseModel):
+    """UI widget data to render in the chatbot frontend."""
+    type: str = Field(..., description="Widget type: COURSE_CAROUSEL, PAYMENT_SELECTOR, QR_CHECKOUT_VIEW, ENROLLMENT_SUCCESS, CHECKOUT_REDIRECT")
+    data: dict = Field(default={}, description="Widget-specific data payload")
+
+
+class AgentResponse(BaseModel):
+    """Response from the AI Agent with optional UI widget."""
+    answer: str
+    intent: str = Field(default="GENERAL_CHAT", description="Detected user intent")
+    sources: list[SourceInfo] = []
+    suggested_questions: list[str] = []
+    ui_widget: UIWidget | None = Field(default=None, description="Optional rich UI widget for the frontend")
 
 
 # --- Collection Stats ---

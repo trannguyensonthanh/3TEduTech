@@ -10,6 +10,7 @@ const { getConnection, sql } = require('../../database/connection');
 
 const courseRepository = require('../courses/courses.repository');
 const promotionService = require('../promotions/promotions.service');
+const promotionRepository = require('../promotions/promotions.repository');
 const notificationService = require('../notifications/notifications.service');
 
 const balanceTransactionRepository = require('../financials/balanceTransaction.repository');
@@ -244,6 +245,47 @@ const createOrderFromCart = async (accountId, options = {}) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Giỏ hàng của bạn đang trống.');
   }
 
+  // 🛡️ CHUẨN ENTERPRISE PRODUCTION (Anti-Spam & Smart Deduping):
+  // 1. Nếu có đơn hàng PENDING cùng danh sách khóa học -> Tái sử dụng đơn cũ (Deduping).
+  // 2. Nếu có đơn hàng PENDING khác khóa học -> Từ chối tạo thêm đơn để ngăn user spam, yêu cầu hủy đơn cũ trước.
+  const pendingOrders = await orderRepository.findOrdersByAccountId(
+    accountId,
+    { status: OrderStatus.PENDING_PAYMENT, limit: 5, page: 1 }
+  );
+  if (pendingOrders && pendingOrders.orders && pendingOrders.orders.length > 0) {
+    if (!promotionCode) {
+      const currentCartCourseIds = cartDetails.items
+        .map((item) => Number(item.courseId))
+        .sort()
+        .join(',');
+      for (const pOrder of pendingOrders.orders) {
+        const fullOrder = await orderRepository.findOrderByIdWithDetails(pOrder.OrderID);
+        if (
+          fullOrder &&
+          fullOrder.items &&
+          fullOrder.items.length === cartDetails.items.length
+        ) {
+          const orderCourseIds = fullOrder.items
+            .map((i) => Number(i.CourseID))
+            .sort()
+            .join(',');
+          if (orderCourseIds === currentCartCourseIds) {
+            logger.info(
+              `♻️ [Smart Deduping] Reusing existing PENDING order #${fullOrder.OrderID} for account ${accountId} instead of creating duplicate spam order.`
+            );
+            await cartRepository.clearCart(cartDetails.cartId);
+            return toCamelCaseObject(fullOrder);
+          }
+        }
+      }
+    }
+    // Nếu có đơn hàng PENDING nhưng không trùng khớp -> Chặn tuyệt đối hành vi spam tạo đơn
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Bạn đang có một đơn hàng chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng cũ trong mục "Đơn hàng" trước khi đặt mua khóa mới!'
+    );
+  }
+
   const originalTotalPrice = cartDetails.summary.totalOriginalPrice;
   const basePriceBeforePromo = cartDetails.summary.finalPrice;
   let calculatedPromoDiscountAmount = 0;
@@ -418,9 +460,58 @@ const getMyOrderDetails = async (accountId, orderId) => {
   return toCamelCaseObject(order);
 };
 
+/**
+ * Người dùng tự hủy đơn hàng đang chờ thanh toán.
+ * @param {number} accountId
+ * @param {number} orderId
+ * @returns {Promise<object>}
+ */
+const cancelPendingOrder = async (accountId, orderId) => {
+  const order = await orderRepository.findOrderByIdWithDetails(orderId);
+  if (!order) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy đơn hàng.');
+  }
+  if (Number(order.AccountID) !== Number(accountId)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'Bạn không có quyền hủy đơn hàng này.');
+  }
+  if (order.OrderStatus !== OrderStatus.PENDING_PAYMENT) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Chỉ có thể hủy đơn hàng đang ở trạng thái chờ thanh toán.'
+    );
+  }
+
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+  try {
+    await transaction.begin();
+
+    await orderRepository.updateOrderStatusAndPayment(
+      orderId,
+      { OrderStatus: OrderStatus.CANCELLED },
+      transaction
+    );
+
+    if (order.PromotionID) {
+      await promotionRepository.decrementUsageCount(order.PromotionID, transaction);
+    }
+
+    await transaction.commit();
+    logger.info(`Order ${orderId} successfully cancelled by user ${accountId}.`);
+
+    const updatedOrder = await orderRepository.findOrderByIdWithDetails(orderId);
+    return toCamelCaseObject(updatedOrder);
+  } catch (error) {
+    await transaction.rollback();
+    logger.error(`Error cancelling order ${orderId}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   createOrderFromCart,
   processSuccessfulOrder,
   getMyOrders,
   getMyOrderDetails,
+  cancelPendingOrder,
 };

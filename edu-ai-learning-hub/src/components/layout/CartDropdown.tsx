@@ -127,7 +127,7 @@ const CartDropdown: React.FC = () => {
           <Button
             variant='secondary'
             size='sm'
-            className='w-full'
+            className='w-full text-black'
             onClick={() => {
               navigate('/courses');
             }}

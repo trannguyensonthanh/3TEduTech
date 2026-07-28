@@ -32,6 +32,7 @@ const pricingUtil = require('../../utils/pricing.util');
 const quizRepository = require('../quizzes/quizzes.repository');
 const subtitleRepository = require('../lessons/subtitle.repository');
 const LessonType = require('../../core/enums/LessonType');
+const aiSyncService = require('../../services/aiSync.service');
 
 /**
  * Tạo khóa học mới với payload tối giản (bởi Instructor).
@@ -497,13 +498,17 @@ const deleteCourse = async (courseId, user) => {
     isOwnerInstructor &&
     ![CourseStatus.DRAFT, CourseStatus.REJECTED].includes(course.StatusID)
   ) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Bạn chỉ có thể xóa khóa học nháp hoặc bị từ chối.'
-    );
+    if (course.studentCount > 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Khóa học đã có học viên tham gia, không thể xóa vĩnh viễn nhằm bảo vệ quyền lợi học viên. Vui lòng gửi yêu cầu Tạm Ngừng Xuất Bản (Archive).'
+      );
+    }
+    // Nếu studentCount === 0 (chưa có ai học/mua), được phép xóa vĩnh viễn
   }
   await courseRepository.deleteCourseById(courseId);
   logger.info(`Course ${courseId} deleted by user ${user.id}`);
+  await aiSyncService.removeCourseFromAi(course.CourseName);
 };
 
 /**
@@ -1106,7 +1111,6 @@ const reviewCourseApproval = async (
   adminNotes = null
 ) => {
   let updatedRequest;
-  const cloudFilesToDeleteAfterCommit = [];
   const approvalRequest =
     await courseRepository.findCourseApprovalRequestById(requestId);
   if (!approvalRequest) {
@@ -1122,6 +1126,8 @@ const reviewCourseApproval = async (
   let newCourseStatus;
   const publishedAt = null;
   let courseData;
+  // Biến lưu thông tin để enqueue job BullMQ sau khi commit
+  let syncJobData = null;
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
   try {
@@ -1130,6 +1136,10 @@ const reviewCourseApproval = async (
       decision === ApprovalStatus.APPROVED &&
       approvalRequest.RequestType === ApprovalRequestType.UPDATE_SUBMISSION
     ) {
+      // ============================================================
+      // 🚀 BULLMQ ASYNC QUEUE: Không sync trực tiếp trong request nữa!
+      // Chỉ cập nhật trạng thái approval → Enqueue job cho Worker xử lý ngầm
+      // ============================================================
       const updateCourseId = approvalRequest.CourseID;
       const liveCourse = await courseRepository.findCourseById(
         updateCourseId,
@@ -1143,15 +1153,7 @@ const reviewCourseApproval = async (
           'Cannot find live course to apply update.'
         );
       }
-      const filesFromSync = await syncLiveCourseFromUpdate(
-        updateCourseId,
-        liveCourseId,
-        transaction
-      );
-      cloudFilesToDeleteAfterCommit.push(...filesFromSync);
-      logger.info(
-        `Sync complete. Deleting update draft course ${updateCourseId} from database.`
-      );
+      // Cập nhật trạng thái approval thành APPROVED ngay lập tức
       updatedRequest = await courseRepository.updateApprovalRequestStatus(
         requestId,
         {
@@ -1162,9 +1164,17 @@ const reviewCourseApproval = async (
         transaction
       );
       courseData = await courseRepository.findCourseById(courseId);
-      await courseRepository.deleteCourseById(updateCourseId, transaction);
+      // Lưu thông tin để enqueue job SAU KHI commit thành công
+      syncJobData = {
+        updateCourseId,
+        liveCourseId,
+        requestId,
+        adminId: user.id,
+        courseName: courseData?.CourseName,
+        instructorId: approvalRequest.InstructorID,
+      };
       logger.info(
-        `Update from course ${updateCourseId} successfully synced and applied to live course ${liveCourseId}.`
+        `Approval APPROVED for update course ${updateCourseId}. Sync job will be enqueued after commit.`
       );
     } else {
       if (decision === ApprovalStatus.REJECTED) {
@@ -1181,6 +1191,11 @@ const reviewCourseApproval = async (
         approvalRequest.RequestType === ApprovalRequestType.RE_SUBMISSION
       ) {
         newCourseStatus = CourseStatus.PUBLISHED;
+      } else if (
+        decision === ApprovalStatus.APPROVED &&
+        approvalRequest.RequestType === ApprovalRequestType.ARCHIVE_SUBMISSION
+      ) {
+        newCourseStatus = CourseStatus.ARCHIVED;
       } else {
         console.log(
           `Decision: ${decision}, RequestType: ${approvalRequest.RequestType}`
@@ -1208,50 +1223,59 @@ const reviewCourseApproval = async (
       );
     }
     await transaction.commit();
-    try {
-      const instructorId = approvalRequest.InstructorID;
-      let notifyMessage = '';
-      let notifyType = '';
-      if (decision === ApprovalStatus.APPROVED) {
-        notifyMessage = `Khóa học "${
-          courseData?.CourseName || 'của bạn'
-        }" đã được phê duyệt và xuất bản!`;
-        notifyType = 'COURSE_APPROVED';
-      } else if (decision === ApprovalStatus.REJECTED) {
-        notifyMessage = `Khóa học "${
-          courseData?.CourseName || 'của bạn'
-        }" đã bị từ chối.${adminNotes ? ` Lý do: ${adminNotes}` : ''}`;
-        notifyType = 'COURSE_REJECTED';
-      }
-      if (notifyType) {
-        await notificationService.createNotification(
-          instructorId,
-          notifyType,
-          notifyMessage,
-          { type: 'Course', id: courseId }
-        );
-      }
-    } catch (notifyError) {
-      logger.error(
-        `Failed to send notification for course review ${requestId}:`,
-        notifyError
-      );
-    }
-    for (const file of cloudFilesToDeleteAfterCommit) {
+
+    // ============================================================
+    // 📮 ENQUEUE BULLMQ JOB (sau khi commit thành công)
+    // Worker sẽ xử lý: Sync → Xóa Draft → Notify → Cleanup Cloudinary
+    // ============================================================
+    if (syncJobData) {
       try {
-        await cloudinaryUtil.deleteAsset(file.publicId, {
-          resource_type: file.resourceType || 'raw',
-        });
+        const { addCourseSyncJob } = require('../../queues/courseSync.queue');
+        await addCourseSyncJob(syncJobData);
         logger.info(
-          `Deleted cloud file ${file.publicId} of type ${file.resourceType}`
+          `📮 Course sync job enqueued for approval request ${requestId}.`
         );
-      } catch (deleteError) {
+      } catch (queueError) {
         logger.error(
-          `Failed to delete cloud file ${file.publicId}:`,
-          deleteError
+          `Failed to enqueue sync job for request ${requestId}. Manual sync may be needed:`,
+          queueError
         );
       }
     }
+
+    // Gửi thông báo cho instructor (cho các trường hợp không phải UPDATE_SUBMISSION)
+    if (!syncJobData) {
+      try {
+        const instructorId = approvalRequest.InstructorID;
+        let notifyMessage = '';
+        let notifyType = '';
+        if (decision === ApprovalStatus.APPROVED) {
+          notifyMessage = `Khóa học "${
+            courseData?.CourseName || 'của bạn'
+          }" đã được phê duyệt và xuất bản!`;
+          notifyType = 'COURSE_APPROVED';
+        } else if (decision === ApprovalStatus.REJECTED) {
+          notifyMessage = `Khóa học "${
+            courseData?.CourseName || 'của bạn'
+          }" đã bị từ chối.${adminNotes ? ` Lý do: ${adminNotes}` : ''}`;
+          notifyType = 'COURSE_REJECTED';
+        }
+        if (notifyType) {
+          await notificationService.createNotification(
+            instructorId,
+            notifyType,
+            notifyMessage,
+            { type: 'Course', id: courseId }
+          );
+        }
+      } catch (notifyError) {
+        logger.error(
+          `Failed to send notification for course review ${requestId}:`,
+          notifyError
+        );
+      }
+    }
+
     return toCamelCaseObject(updatedRequest);
   } catch (error) {
     logger.error(`Error reviewing approval request ${requestId}:`, error);
@@ -1511,12 +1535,97 @@ const getPublicCourses = async (filters, options, targetCurrency) => {
   return queryCourses(effectiveFilters, options, targetCurrency);
 };
 
+const archiveCourse = async (courseId, user, notes) => {
+  const course = await courseRepository.findCourseById(courseId, true);
+  if (!course) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy khóa học.');
+  }
+  const isAdmin = user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN;
+  const isOwnerInstructor =
+    user.role === Roles.INSTRUCTOR && course.InstructorID === user.id;
+  if (!isAdmin && !isOwnerInstructor) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Bạn không có quyền thực hiện thao tác này trên khóa học.'
+    );
+  }
+  if (course.StatusID !== CourseStatus.PUBLISHED) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Chỉ có thể tạm ngừng xuất bản (Archive) đối với khóa học đang ở trạng thái PUBLISHED.'
+    );
+  }
+
+  const studentCount = course.studentCount || 0;
+
+  if (studentCount === 0) {
+    // Chưa có học viên -> Ngừng xuất bản lập tức
+    await courseRepository.updateCourseById(courseId, {
+      StatusID: CourseStatus.ARCHIVED,
+    });
+    await aiSyncService.removeCourseFromAi(course.CourseName);
+    logger.info(`Course ${courseId} directly archived by user ${user.id} (studentCount: ${studentCount})`);
+    return {
+      status: CourseStatus.ARCHIVED,
+      requiresApproval: false,
+      message: 'Khóa học đã được ngừng xuất bản thành công do chưa có học viên đăng ký.',
+    };
+  } else {
+    // Đã có học viên (studentCount > 0) -> Luôn gửi yêu cầu duyệt cho Ban Quản Trị (đảm bảo quy trình chuẩn, kể cả khi admin tự tạo khóa học)
+    const pendingReq = await courseRepository.findCourseApprovalRequests(
+      { courseId, status: ApprovalStatus.PENDING },
+      {}
+    );
+    if (pendingReq && pendingReq.length > 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Khóa học này đang có một yêu cầu chờ duyệt. Vui lòng đợi xử lý trước khi gửi yêu cầu mới.'
+      );
+    }
+    await courseRepository.createCourseApprovalRequest({
+      courseId,
+      instructorId: user.id,
+      requestType: ApprovalRequestType.ARCHIVE_SUBMISSION,
+      instructorNotes: notes || 'Giảng viên yêu cầu tạm ngừng xuất bản khóa học.',
+    });
+    try {
+      const adminIds = await authRepository.findAccountIdsByRoles([
+        Roles.ADMIN,
+        Roles.SUPERADMIN,
+      ]);
+      const message = `Giảng viên ${user.fullName || user.email} gửi yêu cầu Ngừng Xuất Bản khóa học "${course.CourseName}" (đang có ${studentCount} học viên).`;
+      for (const adminIdObj of adminIds) {
+        const adminId =
+          typeof adminIdObj === 'object' && adminIdObj.AccountID
+            ? adminIdObj.AccountID
+            : adminIdObj;
+        await notificationService.createNotification(
+          adminId,
+          user.id,
+          'COURSE_APPROVAL_SUBMITTED',
+          message,
+          `/admin/courses/${course.Slug}`
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to notify admins for ARCHIVE_SUBMISSION:', err);
+    }
+    logger.info(`Course ${courseId} submitted ARCHIVE_SUBMISSION request by instructor ${user.id}`);
+    return {
+      status: CourseStatus.PUBLISHED,
+      requiresApproval: true,
+      message: `Khóa học đang có ${studentCount} học viên tham gia. Yêu cầu Ngừng Xuất Bản đã được gởi tới Ban Quản Trị để kiểm tra rủi ro Marketing và quyền lợi học viên.`,
+    };
+  }
+};
+
 module.exports = {
   createCourse,
   getCourses,
   getCourseBySlug,
   updateCourse,
   deleteCourse,
+  archiveCourse,
   updateCourseThumbnail,
   updateCourseIntroVideo,
   submitCourseForApproval,
@@ -1532,4 +1641,7 @@ module.exports = {
   cancelUpdate,
   getMyCourses,
   getPublicCourses,
+
+  // Export cho BullMQ Worker sử dụng
+  syncLiveCourseFromUpdate,
 };

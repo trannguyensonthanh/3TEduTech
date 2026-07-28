@@ -140,6 +140,9 @@ import {
   Reply,
   SendHorizonal,
   Bell,
+  Maximize2,
+  Minimize2,
+  Archive,
 } from 'lucide-react';
 import { Laptop as Google } from 'lucide-react';
 
@@ -149,6 +152,9 @@ export type Icon = React.ForwardRefExoticComponent<
 >;
 
 export const Icons = {
+  archive: Archive,
+  maximize: Maximize2,
+  minimize: Minimize2,
   logo: Zap, // Hoặc logo khác nếu bạn có
   bell: Bell, // Thêm icon Bell
   reply: Reply, // Thêm icon Reply

@@ -16,6 +16,12 @@ router.get(
   subtitleController.getSubtitles
 );
 
+// Webhook tự động từ AI Service gửi phụ đề .srt
+router.post(
+  '/auto-webhook',
+  subtitleController.handleAiSubtitleWebhook
+);
+
 // Các thao tác quản lý cần authenticate và quyền Instructor/Admin
 router.use(
   authenticate,

@@ -30,7 +30,7 @@ const settingsService = require('../settings/settings.service');
 const createVnpayUrl = async (
   orderId,
   ipAddr,
-  bankCode = '',
+  bankCode = 'VNBANK',
   locale = 'vn'
 ) => {
   const isEnabled = await settingsService.getSettingValue(
@@ -66,7 +66,7 @@ const createVnpayUrl = async (
   const clientIp = ipAddr.split(',')[0].trim();
   console.log('--- IP ĐƯỢC GỬI ĐẾN SERVICE ---', clientIp);
   const paymentUrl = vnpayUtil.createPaymentUrl(
-    ipAddr,
+    clientIp,
     amount,
     orderInfo,
     txnRef,

@@ -178,7 +178,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
     request.input('Offset', sql.Int, offset);
     const dataResult = await request.query(`
   SELECT
-    e.EnrollmentID, e.EnrolledAt, e.PurchasePrice,
+    e.EnrollmentID, e.EnrolledAt, e.PurchasePrice, e.IsCompleted, e.CompletedAt,
     c.CourseID, c.CourseName, c.Slug, c.ThumbnailUrl, c.ShortDescription,
     up.FullName as InstructorName,
     (
@@ -244,9 +244,72 @@ const countTotalUniqueStudentsForInstructor = async (
   }
 };
 
+/**
+ * Khóa cứng trạng thái hoàn thành khóa học cho học viên.
+ * Chỉ cập nhật nếu chưa completed (IsCompleted = 0).
+ * @param {number} accountId
+ * @param {number} courseId
+ * @param {object} [transaction=null]
+ * @returns {Promise<object|null>}
+ */
+const markEnrollmentCompleted = async (
+  accountId,
+  courseId,
+  transaction = null
+) => {
+  const executor = transaction
+    ? transaction.request()
+    : (await getConnection()).request();
+  executor.input('AccountID', sql.BigInt, accountId);
+  executor.input('CourseID', sql.BigInt, courseId);
+  try {
+    const result = await executor.query(`
+      UPDATE Enrollments
+      SET IsCompleted = 1, CompletedAt = GETDATE()
+      OUTPUT Inserted.*
+      WHERE AccountID = @AccountID AND CourseID = @CourseID AND IsCompleted = 0;
+    `);
+    return result.recordset[0] || null;
+  } catch (error) {
+    logger.error(
+      `Error marking enrollment completed for user ${accountId}, course ${courseId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+/**
+ * Lấy danh sách tất cả học viên đã enrolled vào một khóa học.
+ * Dùng để gửi thông báo hàng loạt khi khóa học được cập nhật.
+ * @param {number} courseId
+ * @returns {Promise<object[]>} - [{ AccountID, IsCompleted }]
+ */
+const findEnrolledStudentsByCourseId = async (courseId) => {
+  try {
+    const pool = await getConnection();
+    const request = pool.request();
+    request.input('CourseID', sql.BigInt, courseId);
+    const result = await request.query(`
+      SELECT AccountID, IsCompleted, CompletedAt
+      FROM Enrollments
+      WHERE CourseID = @CourseID;
+    `);
+    return result.recordset;
+  } catch (error) {
+    logger.error(
+      `Error finding enrolled students for course ${courseId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 module.exports = {
   createEnrollment,
   findEnrollmentByUserAndCourse,
   findEnrollmentsByAccountId,
   countTotalUniqueStudentsForInstructor,
+  markEnrollmentCompleted,
+  findEnrolledStudentsByCourseId,
 };

@@ -332,6 +332,11 @@ export const deleteCourse = async (courseId: number): Promise<void> => {
   await apiHelper.delete(`/courses/${courseId}`);
 };
 
+/** Instructor/Admin: Tạm ngừng xuất bản / Gửi yêu cầu archive khóa học */
+export const archiveCourse = async (courseId: number, notes?: string): Promise<{ status: string; requiresApproval: boolean; message: string }> => {
+  return apiHelper.patch(`/courses/${courseId}/archive`, { notes });
+};
+
 export interface CreateUpdateSessionResponse {
   message: string;
   updateCourse: Course; // Trả về thông tin của bản sao

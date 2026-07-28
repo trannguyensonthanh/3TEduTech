@@ -7,6 +7,7 @@ const logger = require('../../utils/logger');
 const { getConnection, sql } = require('../../database/connection');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
 const languageRepository = require('../languages/languages.repository');
+const cloudinaryUtil = require('../../utils/cloudinary.util');
 
 /**
  * Lấy danh sách phụ đề cho một bài học.
@@ -189,9 +190,57 @@ const deleteSubtitle = async (lessonId, subtitleId, user) => {
   logger.info(`Subtitle ${subtitleId} deleted for lesson ${lessonId}`);
 };
 
+/**
+ * Lưu tệp phụ đề .SRT do AI tự động tạo và tải lên Cloudinary.
+ */
+const saveAiGeneratedSubtitle = async (lessonId, { srtContent, languageCode }) => {
+  const lesson = await lessonRepository.findLessonById(lessonId);
+  if (!lesson) {
+    logger.warn(`🤖 [AI Subtitle Webhook] Lesson ${lessonId} không tồn tại.`);
+    return;
+  }
+  const code = (languageCode || 'vi').toLowerCase();
+  
+  try {
+    const buffer = Buffer.from(srtContent, 'utf-8');
+    const publicId = `lesson_${lessonId}_${code}_${Date.now()}.srt`;
+    const uploadResult = await cloudinaryUtil.uploadStream(buffer, {
+      folder: 'edutech/subtitles',
+      resource_type: 'raw',
+      public_id: publicId
+    });
+
+    const subtitleUrl = uploadResult.secure_url || uploadResult.url;
+    
+    // Kiểm tra xem đã có phụ đề ngôn ngữ này chưa
+    const existingSubtitles = await subtitleRepository.findSubtitlesByLessonId(lessonId);
+    const existingForLang = existingSubtitles.find(s => s.LanguageCode && s.LanguageCode.toLowerCase() === code);
+    if (existingForLang) {
+      await subtitleRepository.deleteSubtitleById(existingForLang.SubtitleID);
+      logger.info(`🤖 [AI Subtitle] Đã thay thế phụ đề cũ ngôn ngữ '${code}' của lesson #${lessonId}`);
+    }
+
+    const dataToSave = {
+      LessonID: lessonId,
+      LanguageCode: code,
+      LanguageName: 'Vietnamese',
+      SubtitleUrl: subtitleUrl,
+      IsDefault: 1,
+    };
+
+    const newSubtitle = await subtitleRepository.addSubtitle(dataToSave);
+    logger.info(`✅ [AI Subtitle] Đã lưu thành công phụ đề tự động .SRT cho lesson #${lessonId} tại: ${subtitleUrl}`);
+    return toCamelCaseObject(newSubtitle);
+  } catch (error) {
+    logger.error(`🤖 [AI Subtitle] Lỗi khi tải lên và lưu phụ đề .SRT cho lesson #${lessonId}: ${error.message}`);
+    throw error;
+  }
+};
+
 module.exports = {
   getSubtitles,
   addSubtitle,
   setPrimarySubtitle,
   deleteSubtitle,
+  saveAiGeneratedSubtitle,
 };

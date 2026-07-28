@@ -1,0 +1,17 @@
+{
+  "name": "3t-edu-tech-workspace",
+  "version": "1.0.0",
+  "description": "Root workspace to manage all services",
+  "scripts": {
+    "postinstall": "npm run install:all",
+    "install:all": "npm install --prefix 3t-edu-tech-backend && npm install --prefix edu-ai-learning-hub && cd ai-service && uv sync",
+    "dev:docker": "docker-compose -f docker-compose.dev.yml up -d redis database database-init",
+    "dev:backend": "npm run dev --prefix 3t-edu-tech-backend",
+    "dev:frontend": "npm run dev --prefix edu-ai-learning-hub",
+    "dev:ai": "cd ai-service && uv run uvicorn src.main:app --host 0.0.0.0 --port 2111 --reload",
+    "dev": "npm run dev:docker && concurrently -n \"BACKEND,FRONTEND,AI\" -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:ai\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

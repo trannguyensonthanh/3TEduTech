@@ -16,7 +16,7 @@ import { Icons } from '@/components/common/Icons'; // FileText, ShoppingCart, Ch
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Order, OrderItem, OrderStatus } from '@/services/order.service';
-import { useMyOrderDetail } from '@/hooks/queries/order.queries';
+import { useMyOrderDetail, useCancelOrder } from '@/hooks/queries/order.queries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +42,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const { toast } = useToast();
   const { formatPrice, currency } = useSettings(); // Giả sử bạn có hook này để định dạng giá, v.v.
+  const { mutateAsync: cancelOrderMutate, isPending: isCancelling } = useCancelOrder({
+    onSuccess: (data) => {
+      toast({
+        title: 'Thành công',
+        description: data.message || 'Đã hủy đơn hàng chờ thanh toán.',
+        variant: 'default',
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Lỗi',
+        description: err?.message || 'Không thể hủy đơn hàng lúc này.',
+        variant: 'destructive',
+      });
+    },
+  });
   const {
     data: detailedOrderData,
     isLoading: isLoadingDetails,
@@ -323,6 +339,31 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 className='h-9 text-xs sm:text-sm'
               >
                 My Learning <Icons.arrowRight className='ml-1.5 h-4 w-4' />
+              </Button>
+            )}
+            {fullOrderDataForActions.orderStatus === 'PENDING_PAYMENT' && (
+              <Button
+                size='sm'
+                variant='outline'
+                disabled={isCancelling}
+                onClick={async () => {
+                  if (!fullOrderDataForActions.orderId) return;
+                  if (
+                    window.confirm(
+                      'Bạn có chắc chắn muốn hủy đơn hàng chờ thanh toán này để dọn dẹp danh sách không?'
+                    )
+                  ) {
+                    await cancelOrderMutate(fullOrderDataForActions.orderId);
+                  }
+                }}
+                className='h-9 border-destructive text-destructive hover:bg-destructive hover:text-white text-xs sm:text-sm transition-colors'
+              >
+                {isCancelling ? (
+                  <Icons.spinner className='mr-1.5 h-4 w-4 animate-spin' />
+                ) : (
+                  <Icons.trash2 className='mr-1.5 h-4 w-4' />
+                )}
+                Hủy đơn hàng
               </Button>
             )}
             {(fullOrderDataForActions.orderStatus === 'FAILED' ||

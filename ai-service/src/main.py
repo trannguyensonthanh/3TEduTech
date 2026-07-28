@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import get_settings
-from src.api.routes import chat, ingest, search
+from src.api.routes import chat, ingest, search, agent
 from src.vectorstore.chroma import get_chroma_client
 
 
@@ -33,20 +33,21 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info("=" * 60)
     logger.info("🚀 3TEduTech AI Service starting up...")
-    logger.info(f"   Model: {settings.gemini_model}")
-    logger.info(f"   Embedding: {settings.gemini_embedding_model}")
-    logger.info(f"   ChromaDB: {settings.chroma_persist_dir}")
+    logger.info(f"   Router Model : {settings.gemini_routing_model}")
+    logger.info(f"   Chat Model   : {settings.gemini_chat_model}")
+    logger.info(f"   Embedding    : {settings.gemini_embedding_model}")
+    logger.info(f"   ChromaDB     : {settings.chroma_persist_dir}")
     logger.info("=" * 60)
 
     # Initialize ChromaDB on startup
     get_chroma_client()
     logger.info("✅ ChromaDB initialized")
 
-    # Verify Gemini API key
-    if not settings.gemini_api_key:
-        logger.warning("⚠️  GEMINI_API_KEY not set! AI features will fail.")
+    # Verify Gemini API keys
+    if not settings.get_chat_api_key():
+        logger.warning("⚠️  No Gemini API key configured! AI features will fail.")
     else:
-        logger.info("✅ Gemini API key configured")
+        logger.info("✅ Gemini API keys configured (Router + Chat + Embedding)")
 
     yield
 
@@ -64,9 +65,10 @@ def create_app() -> FastAPI:
         description=(
             "AI-powered microservice for the 3TEduTech online learning platform. "
             "Provides RAG-based Q&A, course-specific AI tutoring, "
-            "document ingestion, and intelligent course search."
+            "document ingestion, intelligent course search, "
+            "and a unified AI Agent with Hybrid Search & Conversational Commerce."
         ),
-        version="1.0.0",
+        version="2.0.0",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
@@ -87,8 +89,12 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "service": "3TEduTech AI Service",
-            "model": settings.gemini_model,
-            "version": "1.0.0",
+            "version": "2.0.0",
+            "models": {
+                "router": settings.gemini_routing_model,
+                "chat": settings.gemini_chat_model,
+                "embedding": settings.gemini_embedding_model,
+            },
         }
 
     @app.get("/health", tags=["Health"])
@@ -96,8 +102,11 @@ def create_app() -> FastAPI:
         from src.vectorstore.chroma import get_collection_stats
         return {
             "status": "healthy",
-            "model": settings.gemini_model,
-            "embedding_model": settings.gemini_embedding_model,
+            "models": {
+                "router": settings.gemini_routing_model,
+                "chat": settings.gemini_chat_model,
+                "embedding": settings.gemini_embedding_model,
+            },
             "collections": {
                 "master": get_collection_stats(settings.chroma_collection_master),
                 "courses": get_collection_stats(settings.chroma_collection_courses),
@@ -109,6 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix=api_prefix)
     app.include_router(ingest.router, prefix=api_prefix)
     app.include_router(search.router, prefix=api_prefix)
+    app.include_router(agent.router, prefix=api_prefix)  # NEW: AI Agent endpoint
 
     return app
 

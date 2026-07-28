@@ -14,6 +14,7 @@ const { clearCache } = require('../../middlewares/cache.middleware');
 const createCourse = catchAsync(async (req, res) => {
   const course = await courseService.createCourse(req.body, req.user.id);
   await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.CREATED).send(course);
 });
 
@@ -27,6 +28,7 @@ const updateCourse = catchAsync(async (req, res) => {
     req.user
   );
   await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send(course);
 });
 
@@ -36,7 +38,19 @@ const updateCourse = catchAsync(async (req, res) => {
 const deleteCourse = catchAsync(async (req, res) => {
   await courseService.deleteCourse(req.params.courseId, req.user);
   await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.NO_CONTENT).send();
+});
+
+/**
+ * Ngừng xuất bản (Archive) hoặc gửi yêu cầu ngừng xuất bản khóa học
+ */
+const archiveCourse = catchAsync(async (req, res) => {
+  const { notes } = req.body || {};
+  const result = await courseService.archiveCourse(req.params.courseId, req.user, notes);
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
+  res.status(httpStatus.OK).send(result);
 });
 
 /**
@@ -276,4 +290,5 @@ module.exports = {
   getCoursesByCategorySlug,
   createUpdateSession,
   cancelUpdate,
+  archiveCourse,
 };
