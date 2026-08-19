@@ -1,0 +1,552 @@
+# =============================================================================
+# 3T EduTech — CI/CD
+# =============================================================================
+# ⚠️ CHÉP TỆP NÀY ĐÈ LÊN  .github/workflows/deploy.yml
+#
+# Nó nằm ở `ci-cd/` chứ không phải chỗ thật vì công cụ không được phép ghi
+# thẳng vào `.github/workflows/`. Chép tay một lần:
+#
+#     copy ci-cd\deploy.yml .github\workflows\deploy.yml     (Windows)
+#
+# =============================================================================
+# NHỮNG GÌ ĐÃ SỬA SO VỚI BẢN CŨ — mỗi mục là một lỗi thật, không phải dọn dẹp
+# =============================================================================
+#
+# 1. ẢNH AI SERVICE GẮN SAI TAG.
+#    Bản cũ đẩy `3t-edu-tech-ai-service:latest`, nhưng
+#    docker-compose.cpu-ec2.yml lại kéo `${AI_IMAGE_TAG:-cpu}`. Máy chủ đi tìm
+#    tag `cpu` — thứ chưa từng được đẩy lên — và `docker compose up` hỏng với
+#    "manifest unknown". Nay đẩy đúng tag `cpu`.
+#
+# 2. KHÔNG BAO GIỜ CẬP NHẬT AI SERVICE.
+#    Bước deploy chỉ `docker pull` backend và frontend. AI Service vẫn chạy ảnh
+#    từ lần đầu tiên, mãi mãi. Sửa mã AI xong, deploy xanh, mà hành vi không
+#    đổi — kiểu lỗi làm mất hàng giờ.
+#
+# 3. KHÔNG CÓ BƯỚC MIGRATION CƠ SỞ DỮ LIỆU.
+#    Đây là lỗ hổng lớn nhất: `docker-compose.cpu-ec2.yml` không có service
+#    `database-init` (khác hẳn bản dev), và workflow cũng không chạy Flyway.
+#    Lược đồ trên RDS KHÔNG BAO GIỜ được cập nhật. Thêm một migration, deploy
+#    thành công, container xanh hết — rồi backend đổ lúc chạy với "Invalid
+#    object name". Đúng thứ đã xảy ra với bảng FAQs.
+#
+# 4. `docker compose down` RỒI `up` — GIÁN ĐOẠN VÔ ÍCH.
+#    `down` hạ toàn bộ ngăn xếp rồi dựng lại: trang web chết ~30–60 giây mỗi
+#    lần deploy. `up -d` tự nhận ra service nào có ảnh mới và CHỈ tạo lại
+#    service đó; những cái không đổi giữ nguyên, không hề gián đoạn.
+#
+# 5. KHÔNG CÓ TAG THEO GIT-SHA → KHÔNG QUAY LUI ĐƯỢC.
+#    Chỉ có `:latest` nghĩa là khi bản mới hỏng, không còn cách nào trỏ ngược
+#    về bản trước ngoài việc build lại từ commit cũ. Nay mỗi ảnh mang hai tag.
+#
+# 6. KHÔNG KIỂM TRA SAU KHI DEPLOY.
+#    Workflow báo "✨ Deployment Completed Successfully!" ngay cả khi container
+#    vừa dựng lên đã chết. Nay có bước chờ healthcheck và ĐỔ nếu không xanh.
+#
+# 7. ĐĨA ĐẦY DẦN.
+#    Mỗi lần deploy kéo về ảnh mới, ảnh cũ nằm lại. Trên EBS 20–30GB thì vài
+#    chục lần deploy là hết chỗ. Nay có bước dọn.
+#
+# 8. TỆP .env.production PHẢI TẠO TAY TRÊN MÁY CHỦ.
+#    Nay sinh ra từ GitHub Secrets ở mỗi lần deploy, nên máy chủ dựng lại là
+#    có ngay cấu hình đúng.
+# =============================================================================
+
+name: 3T EduTech CI/CD
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Ép deploy lên server ngay (kể cả khi DEPLOY_ENABLED chưa bật)'
+        required: false
+        default: 'true'
+      chay_migration:
+        description: 'Chạy migration cơ sở dữ liệu trong lần deploy này'
+        required: false
+        default: 'true'
+
+# Hủy lần chạy cũ khi có commit mới trên cùng nhánh.
+#
+# Không có phần này, hai lần push cách nhau một phút sẽ sinh hai tiến trình
+# deploy chạy CHỒNG LÊN NHAU trên cùng máy chủ — cái sau có thể ghi đè cấu hình
+# giữa lúc cái trước đang khởi động container.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Ghim một chỗ để backend/frontend/ai-service không bao giờ lệch tag nhau.
+  AI_IMAGE_TAG: cpu
+
+jobs:
+  # ===========================================================================
+  # TẦNG 1 — KIỂM TRA MÃ NGUỒN
+  # ===========================================================================
+  ci-backend:
+    name: CI · Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./3t-edu-tech-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './3t-edu-tech-backend/package-lock.json'
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+        continue-on-error: true
+
+      # [THÊM] Kiểm tra mọi tệp có nạp được không.
+      #
+      # ESLint KHÔNG bắt được lỗi kiểu `require('./khong-ton-tai')` hay
+      # `const { hamKhongTonTai } = require(...)`. Đúng loại lỗi vừa làm
+      # GET /v1/faqs trả 500 suốt (`toCamelCaseArray` không hề được export).
+      # `node --check` chỉ kiểm tra cú pháp, nên phải NẠP THẬT từng module.
+      - name: Kiểm tra nạp module
+        run: |
+          set -e
+          for f in $(find src -name '*.js' -not -path '*/node_modules/*'); do
+            node --check "$f"
+          done
+          echo "✅ Toàn bộ tệp .js hợp lệ về cú pháp"
+
+  ci-ai-service:
+    name: CI · AI Service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Không cài `--extra whisper`: bản chạy trên EC2 CPU cũng không có nó.
+      # CI phải kiểm tra đúng cấu hình sẽ chạy thật, nếu không thì lỗi kiểu
+      # "thiếu faster-whisper làm sập lúc khởi động" sẽ lọt qua CI.
+      - run: uv pip install --system -r pyproject.toml
+
+      - name: Nạp thử ứng dụng (không có whisper)
+        run: |
+          python -c "
+          from src.main import create_app
+          app = create_app()
+          print('✅ Nạp được FastAPI app mà không cần faster-whisper')
+          from src.core.transcription import is_transcription_available
+          print('   phiên âm khả dụng:', is_transcription_available())
+          "
+
+  ci-frontend:
+    name: CI · Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./edu-ai-learning-hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './edu-ai-learning-hub/package-lock.json'
+      - run: npm ci
+      # [SỬA 19/08/2026] Chú thích cũ ở đây SAI: `npm run build` chỉ là
+      # `vite build`, mà Vite dùng esbuild — esbuild XÓA kiểu chứ không KIỂM TRA
+      # kiểu. Đó là lý do 1288 lỗi kiểu nằm im mà CI vẫn xanh.
+      #
+      # Nay tách làm hai bước riêng, để khi hỏng thì log nói thẳng hỏng ở đâu:
+      # lỗi KIỂU hay lỗi ĐÓNG GÓI.
+      #
+      # Dùng `tsc -b` (build mode) chứ KHÔNG phải `tsc --noEmit -p tsconfig.json`:
+      # tsconfig.json gốc là kiểu "solution" ("files": [] + references), chạy
+      # --noEmit với nó thì không kiểm tra tệp nào cả mà vẫn báo thành công.
+      - name: Kiểm tra kiểu TypeScript
+        run: npm run typecheck
+
+      - name: Đóng gói bản production bằng Vite
+        run: npm run build
+
+  # ===========================================================================
+  # TẦNG 2 — ĐÓNG GÓI ẢNH DOCKER
+  # ===========================================================================
+  dockerize:
+    name: Đóng gói ảnh Docker
+    runs-on: ubuntu-latest
+    needs: [ci-backend, ci-ai-service, ci-frontend]
+    if: >
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+      || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cần cho cache theo lớp (`cache-from`/`cache-to`) bên dưới.
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./3t-edu-tech-backend
+          push: true
+          # Hai tag: `latest` để deploy thường, `<git-sha>` để quay lui được.
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-backend:${{ github.sha }}
+          # Cache trên GitHub Actions: lần build sau chỉ dựng lại lớp đã đổi.
+          # `npm ci` là lớp nặng nhất và hiếm khi đổi.
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: AI Service (bản CPU — KHÔNG kèm whisper)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai-service
+          push: true
+          # ★ TAG PHẢI KHỚP `AI_IMAGE_TAG` trong docker-compose.cpu-ec2.yml.
+          #   Bản cũ đẩy `:latest` còn compose kéo `:cpu` → "manifest unknown".
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-ai-service:${{ env.AI_IMAGE_TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-ai-service:${{ github.sha }}
+          # KHÔNG truyền INSTALL_EXTRAS → mặc định rỗng → bản CPU ~500MB.
+          # Ảnh cho máy GPU được build riêng, xem job `dockerize-gpu` bên dưới.
+          cache-from: type=gha,scope=ai-cpu
+          cache-to: type=gha,scope=ai-cpu,mode=max
+
+      - name: Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./edu-ai-learning-hub
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-frontend:${{ github.sha }}
+          # ⚠️ Vite nhúng các biến này VÀO BUNDLE LÚC BUILD. Đổi VITE_API_URL
+          #    thì PHẢI build lại ảnh — sửa biến môi trường trên máy chủ không
+          #    có tác dụng gì cả. Đây là khác biệt căn bản so với backend.
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_AI_API_URL=${{ secrets.VITE_AI_API_URL }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  # ===========================================================================
+  # TẦNG 3 — TRIỂN KHAI
+  # ===========================================================================
+  deploy:
+    name: Triển khai lên EC2
+    runs-on: ubuntu-latest
+    needs: [dockerize]
+    if: >
+      vars.DEPLOY_ENABLED == 'true'
+      || (github.event_name == 'workflow_dispatch' && inputs.force_deploy == 'true')
+    steps:
+      - uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 3.1 — Chép tệp cấu hình lên máy chủ
+      # -----------------------------------------------------------------------
+      # Chỉ chép thứ máy chủ CẦN. Không chép cả kho: mã nguồn đã nằm trong ảnh
+      # Docker rồi, chép thêm chỉ tốn thời gian và tạo nhầm lẫn về "bản nào
+      # đang chạy".
+      - name: Chép cấu hình lên máy chủ
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # `db-init/` cần cho bước migration; `scripts/` chứa script chạy nó.
+          source: "docker-compose.cpu-ec2.yml,nginx/,db-init/,scripts/"
+          target: "/opt/3t-edu-tech"
+          # Xóa tệp thừa ở đích để migration đã gỡ bỏ không nằm lại — quan
+          # trọng vì Flyway quét thư mục THEO CHIỀU SÂU.
+          rm: false
+          overwrite: true
+
+      # -----------------------------------------------------------------------
+      # 3.2 — Sinh tệp biến môi trường từ GitHub Secrets
+      # -----------------------------------------------------------------------
+      # ★ Vì sao không chép `.env.production` từ kho: nó chứa khóa thanh toán,
+      #   khóa Gemini, mật khẩu CSDL. Những thứ đó KHÔNG được nằm trong Git.
+      #
+      # ★ Vì sao không tạo tay một lần trên máy chủ: máy chủ dựng lại (đổi
+      #   instance, khôi phục từ snapshot) là mất, và không ai nhớ đã đặt gì.
+      #
+      # Cách làm: cả nội dung tệp nằm trong MỘT secret. Xem Phần 4 của
+      # docs/HUONG_DAN_TRIEN_KHAI_AWS.md.
+      - name: Ghi tệp .env.production
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          BACKEND_ENV: ${{ secrets.BACKEND_ENV_PRODUCTION }}
+          AI_ENV: ${{ secrets.AI_ENV_PRODUCTION }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: BACKEND_ENV,AI_ENV
+          script: |
+            set -euo pipefail
+            cd /opt/3t-edu-tech
+            mkdir -p 3t-edu-tech-backend ai-service
+
+            if [ -z "${BACKEND_ENV:-}" ]; then
+              echo "❌ Thiếu secret BACKEND_ENV_PRODUCTION"; exit 1
+            fi
+            if [ -z "${AI_ENV:-}" ]; then
+              echo "❌ Thiếu secret AI_ENV_PRODUCTION"; exit 1
+            fi
+
+            # `umask 077` TRƯỚC khi ghi, không phải chmod sau.
+            # Giữa lúc tạo tệp và lúc chmod có một khoảng thời gian tệp mang
+            # quyền mặc định 644 — bất kỳ tiến trình nào trên máy cũng đọc được
+            # toàn bộ khóa thanh toán trong khoảnh khắc đó.
+            ( umask 077
+              printf '%s\n' "$BACKEND_ENV" > 3t-edu-tech-backend/.env.production
+              printf '%s\n' "$AI_ENV"      > ai-service/.env.production )
+
+            echo "✅ Đã ghi tệp môi trường ($(wc -l < 3t-edu-tech-backend/.env.production) dòng backend, $(wc -l < ai-service/.env.production) dòng AI)"
+
+      # -----------------------------------------------------------------------
+      # 3.3 — Migration cơ sở dữ liệu (CHẠY TRƯỚC KHI ĐỔI ẢNH)
+      # -----------------------------------------------------------------------
+      # ★ THỨ TỰ QUAN TRỌNG: migration đi TRƯỚC khi backend mới lên.
+      #
+      # Nếu đảo lại, sẽ có một khoảng thời gian mã nguồn mới chạy trên lược đồ
+      # cũ — nó truy vấn cột chưa tồn tại và đổ với "Invalid column name" cho
+      # mọi request. Với migration chỉ THÊM (thêm bảng, thêm cột cho phép NULL)
+      # thì chạy trước là an toàn tuyệt đối: mã cũ không biết tới thứ mới nên
+      # không bị ảnh hưởng.
+      #
+      # ⚠️ Với migration XÓA hoặc ĐỔI TÊN cột, không thứ tự nào an toàn cả —
+      #    phải làm hai bước qua hai lần deploy (thêm cột mới → deploy mã dùng
+      #    cột mới → deploy sau mới xóa cột cũ).
+      - name: Chạy migration cơ sở dữ liệu
+        if: github.event_name != 'workflow_dispatch' || inputs.chay_migration == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # Migration trên CSDL lớn có thể chạy lâu; mặc định 10 phút là quá ít.
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd /opt/3t-edu-tech
+            sudo bash scripts/02-chay-migration.sh
+
+      # -----------------------------------------------------------------------
+      # 3.4 — Kéo ảnh mới và khởi động lại
+      # -----------------------------------------------------------------------
+      - name: Kéo ảnh và khởi động lại
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          AI_IMAGE_TAG: ${{ env.AI_IMAGE_TAG }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: DOCKER_USERNAME,REDIS_PASSWORD,AI_IMAGE_TAG
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            cd /opt/3t-edu-tech
+
+            # Ghi biến vào `.env` ở gốc — Docker Compose tự đọc tệp này.
+            # Nhờ vậy chạy `docker compose` BẰNG TAY trên máy chủ lúc chẩn đoán
+            # cũng ra đúng kết quả, không phải nhớ export biến nào.
+            ( umask 077
+              cat > .env <<EOF
+            DOCKER_USERNAME=${DOCKER_USERNAME}
+            REDIS_PASSWORD=${REDIS_PASSWORD}
+            AI_IMAGE_TAG=${AI_IMAGE_TAG}
+            EOF
+            )
+
+            echo "📥 Kéo ảnh mới…"
+            # `pull` cho TOÀN BỘ service — bản cũ bỏ sót ai-service nên nó
+            # không bao giờ được cập nhật.
+            docker compose -f docker-compose.cpu-ec2.yml pull
+
+            echo "🔄 Khởi động lại các service có thay đổi…"
+            # `up -d` KHÔNG phải `down` rồi `up`: Compose so sánh cấu hình và
+            # ảnh, chỉ tạo lại service nào thực sự đổi. Service không đổi giữ
+            # nguyên, người dùng không thấy gián đoạn.
+            #
+            # `--remove-orphans` dọn container của service đã bị gỡ khỏi tệp
+            # compose (ví dụ ai-service sau khi chuyển sang máy GPU).
+            docker compose -f docker-compose.cpu-ec2.yml up -d --remove-orphans
+
+            echo "🧹 Dọn ảnh cũ…"
+            # `-f` để không hỏi xác nhận; `--filter until=72h` giữ lại ảnh của
+            # ~3 ngày gần nhất để còn quay lui nhanh được.
+            docker image prune -f --filter "until=72h" || true
+
+      # -----------------------------------------------------------------------
+      # 3.5 — Kiểm tra sau khi deploy
+      # -----------------------------------------------------------------------
+      # ★ Bản cũ in "Deployment Completed Successfully!" ngay cả khi container
+      #   vừa dựng lên đã chết. Bước này ĐỔ nếu hệ thống không thật sự khỏe.
+      - name: Kiểm tra sau khi deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/3t-edu-tech
+
+            echo "⏳ Chờ các container báo healthy (tối đa 3 phút)…"
+            for i in $(seq 1 36); do
+              # Đếm container có healthcheck mà đang KHÔNG khỏe.
+              chua_on=$(docker compose -f docker-compose.cpu-ec2.yml ps \
+                          --format '{{.Service}} {{.Health}}' \
+                        | awk '$2 != "" && $2 != "healthy" { print $1 }')
+              if [ -z "$chua_on" ]; then
+                echo "✅ Tất cả container đã healthy."
+                break
+              fi
+              if [ "$i" -eq 36 ]; then
+                echo "❌ Hết thời gian chờ. Các service chưa healthy: $chua_on"
+                echo "--- 60 dòng log cuối ---"
+                docker compose -f docker-compose.cpu-ec2.yml logs --tail 60 $chua_on
+                exit 1
+              fi
+              sleep 5
+            done
+
+            echo "🔎 Kiểm tra từng đầu mối…"
+            # Backend: GET /v1/ kiểm tra sâu cả SQL Server lẫn Redis.
+            curl -fsS --max-time 15 http://localhost:5000/v1/ > /dev/null \
+              && echo "  ✅ Backend" \
+              || { echo "  ❌ Backend không phản hồi"; exit 1; }
+
+            # AI Service: chỉ nghe trên loopback, nên gọi từ chính máy chủ.
+            curl -fsS --max-time 15 http://localhost:2111/health > /dev/null \
+              && echo "  ✅ AI Service" \
+              || { echo "  ❌ AI Service không phản hồi"; exit 1; }
+
+            curl -fsS --max-time 15 http://localhost/nginx-health > /dev/null \
+              && echo "  ✅ Nginx" \
+              || { echo "  ❌ Nginx không phản hồi"; exit 1; }
+
+            echo ""
+            echo "🎉 Triển khai xong. Phiên bản đang chạy:"
+            docker compose -f docker-compose.cpu-ec2.yml images
+
+  # ===========================================================================
+  # TẦNG 4 — ẢNH CHO MÁY GPU (giai đoạn 2)
+  # ===========================================================================
+  # Chỉ chạy khi bấm tay hoặc khi đặt biến CO_GPU = true trong repo.
+  #
+  # ★ Vì sao TÁCH RIÊNG: ảnh này kèm faster-whisper + cuBLAS/cuDNN, nặng ~1.6GB
+  #   và mất nhiều phút để build. Bắt mọi lần push phải chờ nó là lãng phí,
+  #   nhất là khi máy GPU còn chưa tồn tại.
+  dockerize-gpu:
+    name: Đóng gói ảnh AI Service bản GPU
+    runs-on: ubuntu-latest
+    needs: [ci-ai-service]
+    if: vars.CO_GPU == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: AI Service (bản GPU)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai-service
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-ai-service:gpu
+            ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-ai-service:gpu-${{ github.sha }}
+          # ★ Đây là điểm KHÁC DUY NHẤT so với bản CPU. Cùng một Dockerfile.
+          build-args: |
+            INSTALL_EXTRAS=whisper,gpu
+          cache-from: type=gha,scope=ai-gpu
+          cache-to: type=gha,scope=ai-gpu,mode=max
+
+  deploy-gpu:
+    name: Triển khai lên máy GPU
+    runs-on: ubuntu-latest
+    needs: [dockerize-gpu]
+    if: vars.CO_GPU == 'true' && vars.DEPLOY_ENABLED == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chép cấu hình lên máy GPU
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GPU_SERVER_HOST }}
+          username: ${{ secrets.GPU_SERVER_USER }}
+          key: ${{ secrets.GPU_SERVER_SSH_KEY }}
+          source: "docker-compose.gpu-ec2-ai.yml"
+          target: "/opt/3t-edu-tech"
+
+      - name: Ghi env và khởi động lại
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          AI_ENV: ${{ secrets.AI_ENV_PRODUCTION_GPU }}
+        with:
+          host: ${{ secrets.GPU_SERVER_HOST }}
+          username: ${{ secrets.GPU_SERVER_USER }}
+          key: ${{ secrets.GPU_SERVER_SSH_KEY }}
+          envs: DOCKER_USERNAME,AI_ENV
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd /opt/3t-edu-tech
+            mkdir -p ai-service
+            ( umask 077
+              printf '%s\n' "$AI_ENV" > ai-service/.env.production
+              cat > .env <<EOF
+            DOCKER_USERNAME=${DOCKER_USERNAME}
+            AI_IMAGE_TAG=gpu
+            EOF
+            )
+            docker compose -f docker-compose.gpu-ec2-ai.yml pull
+            docker compose -f docker-compose.gpu-ec2-ai.yml up -d
+            docker image prune -f --filter "until=72h" || true
+
+            echo "⏳ Chờ AI Service (bản GPU nạp model Whisper nên lâu hơn)…"
+            for i in $(seq 1 60); do
+              if curl -fsS --max-time 10 http://localhost:2111/health > /dev/null; then
+                echo "✅ AI Service sống."
+                # Xác nhận ảnh GPU thật sự có whisper — nếu build thiếu
+                # `--build-arg INSTALL_EXTRAS`, dịch vụ VẪN chạy bình thường và
+                # chỉ lặng lẽ bỏ qua phiên âm. Không kiểm tra thì không ai biết.
+                if curl -fsS http://localhost:2111/health | grep -q '"available":true'; then
+                  echo "✅ Phiên âm Whisper đã bật."
+                else
+                  echo "❌ Ảnh này KHÔNG có faster-whisper — build thiếu INSTALL_EXTRAS."
+                  exit 1
+                fi
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "❌ AI Service không phản hồi sau 5 phút."
+            docker compose -f docker-compose.gpu-ec2-ai.yml logs --tail 60
+            exit 1

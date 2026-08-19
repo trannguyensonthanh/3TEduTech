@@ -252,10 +252,34 @@ const getCourseEffectiveness = async () => {
             c.ThumbnailUrl,
             up.FullName as InstructorName,
             (SELECT COUNT(*) FROM Enrollments e WHERE e.CourseID = c.CourseID) as TotalEnrollments,
-            (SELECT COUNT(*) FROM Enrollments e WHERE e.CourseID = c.CourseID AND e.CompletionPercentage >= 100) as CompletedStudents,
-            (SELECT ISNULL(AVG(CAST(e.CompletionPercentage AS FLOAT)), 0) FROM Enrollments e WHERE e.CourseID = c.CourseID) as AvgCompletionRate,
+            /* [SỬA 17/08/2026] e.CompletionPercentage KHÔNG TỒN TẠI trong bảng Enrollments.
+               Schema thật chỉ có: EnrollmentID, AccountID, CourseID, EnrolledAt,
+               PurchasePrice, IsCompleted, CompletedAt.
+               Truy vấn cũ khiến API /v1/admin/reports/course-effectiveness luôn trả lỗi 500. */
+            (SELECT COUNT(*) FROM Enrollments e WHERE e.CourseID = c.CourseID AND e.IsCompleted = 1) as CompletedStudents,
+            /* Tỷ lệ hoàn thành trung bình: tính thật từ LessonProgress.
+               Học viên đã được khóa cờ IsCompleted=1 luôn tính 100% để tôn trọng
+               cơ chế "Progress Protection". Bài/chương đã lưu trữ bị loại khỏi mẫu số. */
+            ISNULL((
+                SELECT AVG(
+                    CASE WHEN e2.IsCompleted = 1 THEN 100.0 ELSE ISNULL(
+                        CAST((SELECT COUNT(*) FROM LessonProgress lp
+                                JOIN Lessons lx  ON lp.LessonID = lx.LessonID
+                                JOIN Sections sx ON lx.SectionID = sx.SectionID
+                               WHERE lp.AccountID = e2.AccountID AND sx.CourseID = e2.CourseID
+                                 AND lp.IsCompleted = 1 AND lx.IsArchived = 0 AND sx.IsArchived = 0
+                             ) AS FLOAT) * 100.0
+                        / NULLIF((SELECT COUNT(*) FROM Lessons ly
+                                    JOIN Sections sy ON ly.SectionID = sy.SectionID
+                                   WHERE sy.CourseID = e2.CourseID
+                                     AND ly.IsArchived = 0 AND sy.IsArchived = 0), 0)
+                    , 0) END
+                )
+                FROM Enrollments e2 WHERE e2.CourseID = c.CourseID
+            ), 0) as AvgCompletionRate,
             ISNULL((SELECT SUM(oi.PriceAtOrder) FROM OrderItems oi JOIN Orders o ON oi.OrderID = o.OrderID WHERE oi.CourseID = c.CourseID AND o.OrderStatus = @CompletedStatus), 0) as TotalRevenue,
-            (SELECT COUNT(DISTINCT l.LessonID) FROM Lessons l JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID) as TotalLessons,
+            /* [SỬA] Loại bài/chương đã lưu trữ để khớp với giáo trình học viên thực sự nhìn thấy */
+            (SELECT COUNT(DISTINCT l.LessonID) FROM Lessons l JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND l.IsArchived = 0 AND s.IsArchived = 0) as TotalLessons,
             (SELECT ISNULL(AVG(CAST(qa.Score AS FLOAT)), 0) FROM QuizAttempts qa JOIN Lessons l ON qa.LessonID = l.LessonID JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND qa.CompletedAt IS NOT NULL) as AvgQuizScore
         FROM Courses c
         JOIN UserProfiles up ON c.InstructorID = up.AccountID
@@ -285,15 +309,17 @@ const getEnrollmentStats = async () => {
 
     request.input('StartDate', sql.DateTime, date);
 
+    /* [SỬA 17/08/2026] Cột đúng trong schema là EnrolledAt, KHÔNG phải EnrollmentDate.
+       Truy vấn cũ khiến API /v1/admin/reports/enrollment-stats luôn trả lỗi 500. */
     const query = `
         SELECT
-            FORMAT(e.EnrollmentDate, 'yyyy-MM') as Month,
+            FORMAT(e.EnrolledAt, 'yyyy-MM') as Month,
             COUNT(*) as NewEnrollments,
             COUNT(DISTINCT e.CourseID) as UniqueCourses,
             COUNT(DISTINCT e.AccountID) as UniqueStudents
         FROM Enrollments e
-        WHERE e.EnrollmentDate >= @StartDate
-        GROUP BY FORMAT(e.EnrollmentDate, 'yyyy-MM')
+        WHERE e.EnrolledAt >= @StartDate
+        GROUP BY FORMAT(e.EnrolledAt, 'yyyy-MM')
         ORDER BY Month ASC;
     `;
 
@@ -323,7 +349,9 @@ const getTopCoursesByEnrollment = async (limit = 10) => {
             up.FullName as InstructorName,
             COUNT(e.EnrollmentID) as TotalEnrollments,
             c.AverageRating,
-            ISNULL(AVG(CAST(e.CompletionPercentage AS FLOAT)), 0) as AvgCompletion
+            /* [SỬA 17/08/2026] e.CompletionPercentage không tồn tại.
+               Dùng tỷ lệ % học viên đã hoàn thành khóa (IsCompleted = 1). */
+            ISNULL(AVG(CAST(e.IsCompleted AS FLOAT)) * 100, 0) as AvgCompletion
         FROM Courses c
         JOIN Enrollments e ON c.CourseID = e.CourseID
         JOIN UserProfiles up ON c.InstructorID = up.AccountID
@@ -346,7 +374,7 @@ const getInstructorAnalytics = async (instructorId, period = 'monthly') => {
   try {
     const pool = await getConnection();
     const request = pool.request();
-    request.input('InstructorID', sql.Int, instructorId);
+    request.input('InstructorID', sql.BigInt, instructorId);
     request.input('CompletedStatus', sql.VarChar, OrderStatus.COMPLETED);
 
     const date = new Date();
@@ -357,37 +385,76 @@ const getInstructorAnalytics = async (instructorId, period = 'monthly') => {
 
     const dateFormat = period === 'weekly' ? 'yyyy-MM-dd' : 'yyyy-MM';
 
-    // Stats summary
+    // Stats summary - Tính chuẩn xác từng thông số độc lập, doanh thu lấy từ InstructorBalanceTransactions
     const statsQuery = `
+        DECLARE @TotalRevenue DECIMAL(18,2) = (
+            SELECT ISNULL(SUM(Amount), 0)
+            FROM InstructorBalanceTransactions
+            WHERE AccountID = @InstructorID AND Type = 'CREDIT_SALE'
+        );
+        IF @TotalRevenue = 0 OR @TotalRevenue IS NULL
+        BEGIN
+            SET @TotalRevenue = (
+                SELECT ISNULL(SUM(oi.PriceAtOrder), 0)
+                FROM OrderItems oi
+                JOIN Orders o ON oi.OrderID = o.OrderID
+                JOIN Courses c ON oi.CourseID = c.CourseID
+                WHERE c.InstructorID = @InstructorID AND o.OrderStatus = @CompletedStatus
+            );
+        END
+
+        DECLARE @TotalStudents INT = (
+            SELECT COUNT(DISTINCT e.AccountID)
+            FROM Enrollments e
+            JOIN Courses c ON e.CourseID = c.CourseID
+            WHERE c.InstructorID = @InstructorID
+        );
+
+        DECLARE @TotalCourses INT = (
+            SELECT COUNT(*)
+            FROM Courses
+            WHERE InstructorID = @InstructorID AND StatusID IN ('PUBLISHED', 'UPDATING')
+        );
+        IF @TotalCourses = 0
+        BEGIN
+            SET @TotalCourses = (
+                SELECT COUNT(*) FROM Courses WHERE InstructorID = @InstructorID
+            );
+        END
+
+        DECLARE @AvgRating FLOAT = (
+            SELECT ISNULL(AVG(CAST(AverageRating AS FLOAT)), 0)
+            FROM Courses
+            WHERE InstructorID = @InstructorID AND AverageRating IS NOT NULL AND AverageRating > 0
+        );
+
         SELECT
-            ISNULL(SUM(oi.PriceAtOrder), 0) as TotalRevenue,
-            (SELECT COUNT(DISTINCT e.AccountID) FROM Enrollments e JOIN Courses c2 ON e.CourseID = c2.CourseID WHERE c2.InstructorID = @InstructorID) as TotalStudents,
-            (SELECT COUNT(*) FROM Courses WHERE InstructorID = @InstructorID) as TotalCourses,
-            (SELECT ISNULL(AVG(CAST(c3.AverageRating AS FLOAT)), 0) FROM Courses c3 WHERE c3.InstructorID = @InstructorID AND c3.AverageRating IS NOT NULL) as AvgRating
-        FROM OrderItems oi
-        JOIN Orders o ON oi.OrderID = o.OrderID
-        JOIN Courses c ON oi.CourseID = c.CourseID
-        WHERE c.InstructorID = @InstructorID AND o.OrderStatus = @CompletedStatus;
+            ISNULL(@TotalRevenue, 0) as TotalRevenue,
+            ISNULL(@TotalStudents, 0) as TotalStudents,
+            ISNULL(@TotalCourses, 0) as TotalCourses,
+            ISNULL(@AvgRating, 0) as AvgRating;
     `;
 
     // Time-series data
+    /* [SỬA 17/08/2026] EnrollmentDate → EnrolledAt (4 vị trí trong truy vấn này).
+       Đây là nguyên nhân API /v1/instructors/me/analytics trả lỗi 500. */
     const timeSeriesQuery = `
         SELECT
-            FORMAT(e.EnrollmentDate, '${dateFormat}') as Period,
-            COUNT(*) as NewStudents,
+            FORMAT(e.EnrolledAt, '${dateFormat}') as Period,
+            COUNT(DISTINCT e.AccountID) as NewStudents,
             ISNULL((
                 SELECT SUM(oi.PriceAtOrder)
                 FROM OrderItems oi
                 JOIN Orders o ON oi.OrderID = o.OrderID
                 JOIN Courses c2 ON oi.CourseID = c2.CourseID
-                WHERE c2.InstructorID = @InstructorID 
+                WHERE c2.InstructorID = @InstructorID
                     AND o.OrderStatus = @CompletedStatus
-                    AND FORMAT(o.OrderDate, '${dateFormat}') = FORMAT(e.EnrollmentDate, '${dateFormat}')
+                    AND FORMAT(o.OrderDate, '${dateFormat}') = FORMAT(e.EnrolledAt, '${dateFormat}')
             ), 0) as Revenue
         FROM Enrollments e
         JOIN Courses c ON e.CourseID = c.CourseID
-        WHERE c.InstructorID = @InstructorID AND e.EnrollmentDate >= @StartDate
-        GROUP BY FORMAT(e.EnrollmentDate, '${dateFormat}')
+        WHERE c.InstructorID = @InstructorID AND e.EnrolledAt >= @StartDate
+        GROUP BY FORMAT(e.EnrolledAt, '${dateFormat}')
         ORDER BY Period ASC;
     `;
 
@@ -399,7 +466,8 @@ const getInstructorAnalytics = async (instructorId, period = 'monthly') => {
             c.Slug,
             c.AverageRating,
             COUNT(e.EnrollmentID) as Enrollments,
-            ISNULL(AVG(CAST(e.CompletionPercentage AS FLOAT)), 0) as AvgCompletion,
+            /* [SỬA 17/08/2026] e.CompletionPercentage không tồn tại → dùng IsCompleted */
+            ISNULL(AVG(CAST(e.IsCompleted AS FLOAT)) * 100, 0) as AvgCompletion,
             ISNULL((SELECT SUM(oi.PriceAtOrder) FROM OrderItems oi JOIN Orders o ON oi.OrderID = o.OrderID WHERE oi.CourseID = c.CourseID AND o.OrderStatus = @CompletedStatus), 0) as Revenue
         FROM Courses c
         LEFT JOIN Enrollments e ON c.CourseID = e.CourseID
@@ -411,12 +479,12 @@ const getInstructorAnalytics = async (instructorId, period = 'monthly') => {
     const [statsResult, timeSeriesResult, coursePerfResult] = await Promise.all([
       request.query(statsQuery),
       pool.request()
-        .input('InstructorID', sql.Int, instructorId)
+        .input('InstructorID', sql.BigInt, instructorId)
         .input('CompletedStatus', sql.VarChar, OrderStatus.COMPLETED)
         .input('StartDate', sql.DateTime, date)
         .query(timeSeriesQuery),
       pool.request()
-        .input('InstructorID', sql.Int, instructorId)
+        .input('InstructorID', sql.BigInt, instructorId)
         .input('CompletedStatus', sql.VarChar, OrderStatus.COMPLETED)
         .query(coursePerfQuery),
     ]);

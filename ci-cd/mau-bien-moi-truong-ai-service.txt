@@ -1,0 +1,122 @@
+##############################################################################
+# MẪU NỘI DUNG CHO GITHUB SECRET:  AI_ENV_PRODUCTION
+##############################################################################
+#
+# Chép toàn bộ (sau khi điền giá trị thật) vào secret `AI_ENV_PRODUCTION`.
+# CI/CD ghi nó thành /opt/3t-edu-tech/ai-service/.env.production mỗi lần deploy.
+#
+# Đây là bản cho GIAI ĐOẠN 1 — EC2 CPU tạm thời, chỉ dùng Gemini.
+# Bản cho máy GPU nằm ở cuối tệp này (secret AI_ENV_PRODUCTION_GPU).
+#
+##############################################################################
+# ★ BIẾN CÒN THIẾU TRONG .env.production HIỆN TẠI: INTERNAL_API_KEY
+#
+# Không có nó, AI Service chạy ở chế độ KHÔNG XÁC THỰC — và nó không hề báo lỗi
+# nào, chỉ ghi một dòng cảnh báo lúc khởi động rồi chạy tiếp. Bất kỳ ai chạm
+# được tới cổng 2111 đều gọi được và đốt hạn mức token Gemini của bạn.
+#
+# Ở giai đoạn 1, cổng 2111 chỉ bind loopback nên rủi ro thấp. Nhưng sang giai
+# đoạn 2 (AI Service ở máy GPU riêng, cổng mở trong VPC) thì đây là LỚP BẢO VỆ
+# DUY NHẤT.
+##############################################################################
+
+# ---- Nhà cung cấp mô hình ----
+# ⚠️ Dòng này SẼ BỊ GHI ĐÈ thành `gemini` bởi docker-compose.cpu-ec2.yml — cố ý.
+#    Máy này không có GPU; nếu để `auto` hay `qwen`, AI Service sẽ gọi vLLM ở
+#    127.0.0.1:8000 (tức gọi vào chính nó) rồi chờ hết timeout ở MỖI câu hỏi
+#    trước khi rơi về Gemini. Người dùng chỉ thấy "chatbot rất chậm".
+LLM_PROVIDER=gemini
+
+# Ba dòng dưới không dùng tới ở giai đoạn 1, giữ để sang giai đoạn 2 khỏi phải
+# nhớ lại tên biến.
+VLLM_BASE_URL=http://127.0.0.1:8000/v1
+VLLM_MODEL_NAME=Qwen/Qwen3.6-27B-AWQ
+VLLM_API_KEY=not-needed
+
+# ---- Gemini ----
+# ★ Ba khóa RIÊNG cho ba việc, không phải để cho đẹp: hạn mức miễn phí tính
+#   theo từng khóa. Tách ra thì một buổi chat nhiều không làm cạn hạn mức của
+#   việc lập chỉ mục (embedding) — mà lập chỉ mục hỏng thì chatbot mất tri thức
+#   chứ không chỉ chậm đi.
+#
+#   Nếu chỉ có một khóa, đặt cả ba bằng giá trị đó (hoặc chỉ đặt GEMINI_API_KEY,
+#   mã nguồn tự dùng nó làm phương án dự phòng — xem src/config.py).
+GEMINI_ROUTING_API_KEY=DOI-THANH
+GEMINI_ROUTING_MODEL=gemini-2.5-flash-lite
+
+GEMINI_CHAT_API_KEY=DOI-THANH
+GEMINI_CHAT_MODEL=gemini-3.1-flash-lite
+
+GEMINI_EMBEDDING_API_KEY=DOI-THANH
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+
+# Khóa dự phòng dùng chung khi ba khóa trên để trống.
+GEMINI_API_KEY=DOI-THANH
+GEMINI_MODEL=gemini-3.1-flash-lite
+
+# ---- ChromaDB ----
+# ⚠️ Đường dẫn này PHẢI khớp volume `ai-chroma-data:/app/data` trong
+#    docker-compose.cpu-ec2.yml. Lệch nhau thì ChromaDB ghi vào lớp ghi của
+#    container — và toàn bộ vector biến mất ở lần deploy kế tiếp, âm thầm.
+CHROMA_PERSIST_DIR=./data/chroma_db
+CHROMA_COLLECTION_MASTER=master_knowledge
+CHROMA_COLLECTION_COURSES=course_knowledge
+
+# ---- Máy chủ ----
+AI_SERVICE_HOST=0.0.0.0
+AI_SERVICE_PORT=2111
+
+# Chỉ backend gọi tới, và gọi qua mạng nội bộ Docker chứ không qua trình duyệt,
+# nên CORS ở đây gần như vô nghĩa. Để `*` cho khỏi vướng lúc chẩn đoán.
+CORS_ORIGINS=*
+
+# ---- RAG ----
+RAG_TOP_K=10
+RAG_CHUNK_SIZE=1000
+RAG_CHUNK_OVERLAP=200
+
+# ---- Xác thực nội bộ ----
+# ★ PHẢI TRÙNG KHỚP TỪNG KÝ TỰ với AI_SERVICE_INTERNAL_KEY bên backend.
+#   Sinh bằng: openssl rand -hex 24
+#
+#   Lệch nhau → backend nhận 401 ở mọi lời gọi AI. Triệu chứng: chatbot im
+#   lặng, RAG không đồng bộ, nhưng CẢ HAI dịch vụ đều báo "healthy".
+INTERNAL_API_KEY=DOI-THANH-KHOA-NOI-BO-32-KY-TU
+
+# ---- Ghi log ----
+# ⚠️ Giá trị này quyết định chế độ chạy trong run.py: WARNING hoặc ERROR =
+#    production (tắt hot-reload). Đặt INFO ở production sẽ bật hot-reload của
+#    uvicorn — theo dõi tệp một cách vô ích và tốn RAM.
+LOG_LEVEL=WARNING
+
+# Số tiến trình uvicorn. Xem `ai_service_workers` trong src/config.py.
+# Nhiều hơn 1 = nhiều tiến trình cùng mở một ChromaDB nhúng = lỗi khóa ngẫu nhiên.
+AI_SERVICE_WORKERS=1
+
+
+##############################################################################
+# GIAI ĐOẠN 2 — SECRET RIÊNG:  AI_ENV_PRODUCTION_GPU
+##############################################################################
+#
+# Khi có máy GPU, tạo thêm một secret tên AI_ENV_PRODUCTION_GPU với nội dung
+# giống hệt bên trên, CHỈ ĐỔI mấy dòng sau:
+#
+#   LLM_PROVIDER=auto
+#       "auto" = ưu tiên Qwen chạy trên GPU, tự rơi về Gemini khi máy vLLM tắt
+#       để tiết kiệm chi phí. Đây là lý do tồn tại của "Degraded Status Pattern"
+#       trong endpoint /health.
+#
+#   VLLM_BASE_URL=http://<ip-noi-bo-cua-may-vllm>:8000/v1
+#
+#   WHISPER_MODEL_SIZE=medium
+#   WHISPER_DEVICE=cuda
+#   WHISPER_COMPUTE_TYPE=float16
+#       Ba dòng này KHÔNG có tác dụng gì trên ảnh bản CPU (không kèm
+#       faster-whisper). Chỉ thêm khi ảnh được build với
+#       --build-arg INSTALL_EXTRAS="whisper,gpu".
+#
+#       float16 tận dụng Tensor Core của card T4: nhanh hơn và tốn ít VRAM hơn
+#       float32. Với card 4GB VRAM (ví dụ RTX 3050 trên máy cá nhân) thì phải
+#       dùng "small", "medium" sẽ hết VRAM rồi tự rơi về CPU — chậm hơn nhiều
+#       so với chạy CPU ngay từ đầu.
+##############################################################################

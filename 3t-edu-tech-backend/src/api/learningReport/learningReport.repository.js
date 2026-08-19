@@ -21,15 +21,44 @@ const getOverviewStats = async (accountId) => {
        WHERE lp.AccountID = @AccountID AND lp.IsCompleted = 1
       ) AS TotalCompletedLessons,
       
-      (SELECT ISNULL(SUM(DATEDIFF(MINUTE, CreatedAt, LastWatchedAt)), 0)
-       FROM LessonProgress
-       WHERE AccountID = @AccountID AND LastWatchedAt IS NOT NULL
+      /* [SỬA 17/08/2026] Bảng LessonProgress KHÔNG có cột CreatedAt.
+         Schema thật: ProgressID, AccountID, LessonID, IsCompleted, CompletedAt,
+         LastWatchedPosition, LastWatchedAt.
+         → DATEDIFF(MINUTE, CreatedAt, ...) gây lỗi "Invalid column name 'CreatedAt'".
+         Hệ thống không ghi nhận thời điểm bắt đầu học nên không tính được thời lượng
+         thực. Ước lượng hợp lý nhất từ dữ liệu đang có:
+           - Bài đã hoàn thành  → tính trọn thời lượng video
+           - Bài đang học dở    → tính tới vị trí xem cuối cùng (LastWatchedPosition) */
+      (SELECT ISNULL(SUM(
+                CASE WHEN lp.IsCompleted = 1
+                     THEN ISNULL(l.VideoDurationSeconds, 0)
+                     ELSE ISNULL(lp.LastWatchedPosition, 0)
+                END
+              ) / 60, 0)
+       FROM LessonProgress lp
+       JOIN Lessons l ON lp.LessonID = l.LessonID
+       WHERE lp.AccountID = @AccountID
       ) AS TotalLearningTimeMinutes,
-      
-      (SELECT ISNULL(AVG(e.ProgressPercentage), 0)
-       FROM Enrollments e
-       JOIN Courses c ON e.CourseID = c.CourseID
-       WHERE e.AccountID = @AccountID AND c.StatusID = 'PUBLISHED'
+
+      /* [SỬA 17/08/2026] e.ProgressPercentage KHÔNG TỒN TẠI trong bảng Enrollments.
+         Tính thật từ LessonProgress; học viên đã khóa cờ IsCompleted tính tròn 100%. */
+      (SELECT ISNULL(AVG(x.Pct), 0) FROM (
+          SELECT CASE WHEN e.IsCompleted = 1 THEN 100.0 ELSE ISNULL(
+              CAST((SELECT COUNT(*) FROM LessonProgress lp
+                      JOIN Lessons lx  ON lp.LessonID = lx.LessonID
+                      JOIN Sections sx ON lx.SectionID = sx.SectionID
+                     WHERE lp.AccountID = @AccountID AND sx.CourseID = e.CourseID
+                       AND lp.IsCompleted = 1 AND lx.IsArchived = 0 AND sx.IsArchived = 0
+                   ) AS FLOAT) * 100.0
+              / NULLIF((SELECT COUNT(*) FROM Lessons ly
+                          JOIN Sections sy ON ly.SectionID = sy.SectionID
+                         WHERE sy.CourseID = e.CourseID
+                           AND ly.IsArchived = 0 AND sy.IsArchived = 0), 0)
+          , 0) END AS Pct
+          FROM Enrollments e
+          JOIN Courses c ON e.CourseID = c.CourseID
+          WHERE e.AccountID = @AccountID AND c.StatusID = 'PUBLISHED'
+       ) x
       ) AS AvgCompletionPercentage
   `;
   
@@ -47,9 +76,27 @@ const getCourseProgressDetails = async (accountId) => {
       c.CourseName,
       c.CourseID,
       c.ThumbnailURL,
-      (SELECT COUNT(*) FROM Lessons l JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID) AS TotalLessons,
-      (SELECT COUNT(*) FROM LessonProgress lp JOIN Lessons l ON lp.LessonID = l.LessonID JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND lp.AccountID = @AccountID AND lp.IsCompleted = 1) AS CompletedLessons,
-      e.ProgressPercentage,
+      /* [SỬA 17/08/2026] Bổ sung lọc IsArchived: giáo trình hiển thị cho học viên
+         đã lọc bài/chương lưu trữ, nên bộ đếm cũng phải lọc theo — nếu không,
+         học viên học hết mọi bài nhìn thấy vẫn không bao giờ đạt 100%. */
+      (SELECT COUNT(*) FROM Lessons l JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND l.IsArchived = 0 AND s.IsArchived = 0) AS TotalLessons,
+      (SELECT COUNT(*) FROM LessonProgress lp JOIN Lessons l ON lp.LessonID = l.LessonID JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND lp.AccountID = @AccountID AND lp.IsCompleted = 1 AND l.IsArchived = 0 AND s.IsArchived = 0) AS CompletedLessons,
+      /* [SỬA] e.ProgressPercentage không tồn tại → tính tại chỗ, giữ nguyên tên trường
+         để frontend (LearningReportPage.tsx) không phải sửa. */
+      CAST(
+        CASE WHEN e.IsCompleted = 1 THEN 100.0 ELSE ISNULL(
+          CAST((SELECT COUNT(*) FROM LessonProgress lp
+                  JOIN Lessons lx  ON lp.LessonID = lx.LessonID
+                  JOIN Sections sx ON lx.SectionID = sx.SectionID
+                 WHERE sx.CourseID = c.CourseID AND lp.AccountID = @AccountID
+                   AND lp.IsCompleted = 1 AND lx.IsArchived = 0 AND sx.IsArchived = 0
+               ) AS FLOAT) * 100.0
+          / NULLIF((SELECT COUNT(*) FROM Lessons ly
+                      JOIN Sections sy ON ly.SectionID = sy.SectionID
+                     WHERE sy.CourseID = c.CourseID
+                       AND ly.IsArchived = 0 AND sy.IsArchived = 0), 0)
+        , 0) END
+      AS DECIMAL(5,2)) AS ProgressPercentage,
       e.EnrolledAt,
       (SELECT MAX(COALESCE(LastWatchedAt, CompletedAt)) FROM LessonProgress lp JOIN Lessons l ON lp.LessonID = l.LessonID JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND lp.AccountID = @AccountID) AS LastActivityAt,
       (SELECT AVG(qa.Score) FROM QuizAttempts qa JOIN Lessons l ON qa.LessonID = l.LessonID JOIN Sections s ON l.SectionID = s.SectionID WHERE s.CourseID = c.CourseID AND qa.AccountID = @AccountID AND qa.CompletedAt IS NOT NULL) AS AvgQuizScore
@@ -120,7 +167,22 @@ const getWeeklyActivity = async (accountId) => {
     SELECT 
       FORMAT(d.Date, 'yyyy-MM-dd') AS Date,
       (SELECT COUNT(*) FROM LessonProgress lp WHERE lp.AccountID = @AccountID AND CAST(lp.CompletedAt AS DATE) = d.Date) AS LessonsCompleted,
-      (SELECT ISNULL(SUM(DATEDIFF(MINUTE, CreatedAt, LastWatchedAt)), 0) FROM LessonProgress lp WHERE lp.AccountID = @AccountID AND CAST(lp.LastWatchedAt AS DATE) = d.Date AND lp.LastWatchedAt IS NOT NULL) AS MinutesSpent
+      /* [SỬA 17/08/2026] LessonProgress KHÔNG có cột CreatedAt → lỗi
+         "Invalid column name 'CreatedAt'" (giống lỗi ở getOverviewStats phía trên).
+         Ước lượng thời lượng học trong ngày từ dữ liệu thực có:
+           - Bài hoàn thành trong ngày → tính trọn thời lượng video
+           - Bài chỉ xem dở trong ngày → tính tới vị trí xem cuối (LastWatchedPosition) */
+      (SELECT ISNULL(SUM(
+                CASE WHEN lp.IsCompleted = 1 AND CAST(lp.CompletedAt AS DATE) = d.Date
+                     THEN ISNULL(l.VideoDurationSeconds, 0)
+                     ELSE ISNULL(lp.LastWatchedPosition, 0)
+                END
+              ) / 60, 0)
+       FROM LessonProgress lp
+       JOIN Lessons l ON lp.LessonID = l.LessonID
+       WHERE lp.AccountID = @AccountID
+         AND CAST(lp.LastWatchedAt AS DATE) = d.Date
+         AND lp.LastWatchedAt IS NOT NULL) AS MinutesSpent
     FROM Last7Days d
     ORDER BY d.Date ASC
   `;

@@ -584,29 +584,37 @@ const createCryptoInvoice = async (orderId, cryptoCurrency, accountId) => {
  * Xử lý webhook từ NOWPayments.
  */
 const processCryptoWebhook = async (signature, rawBody) => {
-  // const isDevelopment = config.env === 'development';
-  // const signatureVerified = nowPaymentsUtil.verifyIpnSignature(
-  //   signature,
-  //   rawBody
-  // );
+  /* [KHÔI PHỤC 19/08/2026] Toàn bộ khối kiểm tra chữ ký dưới đây trước đó bị
+     CHÚ THÍCH LẠI HẾT.
 
-  // // ================================================================
-  // // <<< ÁP DỤNG LOGIC "CỬA HẬU" TƯƠNG TỰ MOMO >>>
-  // // ================================================================
-  // if (!signatureVerified && !isDevelopment) {
-  //   // Ở môi trường Production, nếu chữ ký sai, BẮT BUỘC phải dừng lại.
-  //   throw new ApiError(
-  //     httpStatus.UNAUTHORIZED,
-  //     'Invalid NOWPayments IPN signature.'
-  //   );
-  // }
+     Hậu quả khi đó: bất kỳ ai biết địa chỉ webhook đều gửi được một gói JSON
+     nói "đơn hàng #123 đã thanh toán xong" và hệ thống tin ngay — ghi danh khóa
+     học, cộng doanh thu cho giảng viên, gửi thông báo. Không cần tài khoản,
+     không cần token, không cần trả một đồng nào. Đây là lỗ hổng nghiêm trọng
+     nhất trong toàn bộ luồng thanh toán.
 
-  // if (!signatureVerified && isDevelopment) {
-  //   // Ở môi trường Development, nếu chữ ký sai, chỉ ghi log cảnh báo và tiếp tục chạy.
-  //   logger.warn(
-  //     '!!! [DEV MODE] Bypassing NOWPayments IPN signature check for demo purposes. DO NOT USE IN PRODUCTION! !!!'
-  //   );
-  // }
+     Giữ nguyên "cửa hậu" cho môi trường development như bản gốc thiết kế — nó
+     cần cho việc demo khi chưa có IPN_SECRET thật — nhưng ở production thì
+     chữ ký sai là dừng, không thương lượng. */
+  const isDevelopment = config.env === 'development';
+  const signatureVerified = nowPaymentsUtil.verifyIpnSignature(
+    signature,
+    rawBody
+  );
+
+  if (!signatureVerified && !isDevelopment) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'Invalid NOWPayments IPN signature.'
+    );
+  }
+
+  if (!signatureVerified && isDevelopment) {
+    logger.warn(
+      '!!! [DEV MODE] Bỏ qua kiểm tra chữ ký IPN của NOWPayments để demo. ' +
+        'TUYỆT ĐỐI KHÔNG dùng ở production! !!!'
+    );
+  }
 
   let body;
   try {

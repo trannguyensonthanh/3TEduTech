@@ -1,0 +1,43 @@
+# ===================================================
+# Backend .dockerignore — Không copy các file này vào Docker image
+# ===================================================
+
+# Environment files (CHỨA SECRET — TUYỆT ĐỐI KHÔNG ĐƯỢC ĐƯA VÀO IMAGE)
+.env
+.env.*
+!.env.example
+
+# Dependencies (sẽ được npm ci cài lại trong Dockerfile)
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+logs/
+*.log
+
+# Test & Coverage
+coverage/
+.nyc_output/
+__tests__/
+*.test.js
+*.spec.js
+
+# Docker files (không cần copy chính mình)
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore

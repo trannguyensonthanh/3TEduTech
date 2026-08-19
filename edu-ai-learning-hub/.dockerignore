@@ -1,0 +1,37 @@
+# ===================================================
+# Frontend .dockerignore — Không copy các file này vào Docker image
+# ===================================================
+
+# Environment files (không cần vì build-args inject qua ARG)
+.env
+.env.*
+!.env.example
+
+# Dependencies (sẽ được npm ci cài lại trong Dockerfile)
+node_modules/
+
+# Build output (sẽ được build lại trong Dockerfile)
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore
+
+# Nginx (mount riêng qua volume)
+nginx/

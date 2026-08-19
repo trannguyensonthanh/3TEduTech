@@ -288,7 +288,7 @@ const InstructorProfilePage = () => {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <TabsContent value='about' forceMount={activeTab === 'about'}>
+                  <TabsContent value='about' forceMount={activeTab === 'about' || undefined}>
                     <Card className='p-6 md:p-8 dark:bg-slate-800/30'>
                       {instructor.bio && (
                         <h3 className='text-2xl font-semibold text-foreground mb-4'>
@@ -329,7 +329,7 @@ const InstructorProfilePage = () => {
 
                   <TabsContent
                     value='courses'
-                    forceMount={activeTab === 'courses'}
+                    forceMount={activeTab === 'courses' || undefined}
                   >
                     {isLoadingCourses && !instructorCourses ? (
                       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -364,7 +364,7 @@ const InstructorProfilePage = () => {
 
                   <TabsContent
                     value='reviews'
-                    forceMount={activeTab === 'reviews'}
+                    forceMount={activeTab === 'reviews' || undefined}
                   >
                     {isLoadingReviews && !instructorReviews ? (
                       <div className='space-y-6'>

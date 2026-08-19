@@ -60,14 +60,23 @@ const createCourse = async (courseData, transaction = null) => {
 
 /**
  * Tìm khóa học bằng ID.
+ *
+ * [SỬA 17/08/2026] Bổ sung tham số `transaction`. Trước đây hàm LUÔN mở một
+ * kết nối riêng từ pool. Nếu người gọi đang ở giữa một transaction vừa UPDATE
+ * đúng dòng Courses đó, dòng này đang bị giữ khóa ghi độc quyền; kết nối riêng
+ * sẽ nằm chờ khóa, còn transaction thì chờ câu đọc — hai bên chờ nhau và
+ * request treo cho tới khi hết lock timeout. Truyền transaction vào để câu đọc
+ * đi CHUNG một kết nối, vừa hết kẹt vừa nhìn thấy thay đổi chưa commit.
+ *
+ * @param {number} courseId
+ * @param {boolean} includeDraft - Cho phép trả về khóa chưa xuất bản.
+ * @param {object} [transaction] - Transaction đang mở (tùy chọn).
  */
-const findCourseById = async (courseId, includeDraft = false) => {
+const findCourseById = async (courseId, includeDraft = false, transaction) => {
   try {
-    const pool = await getConnection();
-    const request = pool.request();
-    console.log(
-      `Finding course by ID: ${courseId}, includeDraft: ${includeDraft}`
-    );
+    const request = transaction
+      ? transaction.request()
+      : (await getConnection()).request();
     request.input('CourseID', sql.BigInt, courseId);
 
     let query = `
@@ -215,9 +224,28 @@ const findAllCourses = async (filters = {}, options = {}) => {
 
     const whereClauses = [];
 
+    /* ======================================================================
+       [THÊM 17/08/2026 — Course Versioning]
+       Luôn loại BẢN NHÁP ĐANG SOẠN khỏi mọi danh sách.
+       Bản nháp cập nhật là một dòng Courses thật (StatusID = DRAFT, có
+       LiveCourseID trỏ về bản đang chạy). Nếu không loại, giảng viên sẽ thấy
+       khóa học của mình bị nhân đôi trong dashboard, và bộ đếm khóa học ở
+       trang quản trị cũng bị thổi phồng.
+       ====================================================================== */
+    whereClauses.push('c.LiveCourseID IS NULL');
+
+    /* Chỉ hiển thị PHIÊN BẢN MỚI NHẤT trên các danh sách công khai.
+       Không áp dụng khi caller chủ động yêu cầu statusId = 'ALL' (dashboard
+       của giảng viên / admin), vì ở đó họ cần thấy cả các phiên bản cũ.
+
+       ⚠️ Điều kiện viết dạng `ISNULL(c.IsLatestVersion, 1) = 1` để hệ thống
+       vẫn chạy đúng ngay cả khi migration V5 chưa được áp dụng (cột chưa tồn
+       tại thì câu lệnh sẽ lỗi rõ ràng; còn nếu tồn tại mà dữ liệu cũ NULL thì
+       vẫn được coi là bản mới nhất). */
     if (statusId && statusId.toUpperCase() !== 'ALL') {
       request.input('StatusID', sql.VarChar, statusId);
       whereClauses.push('c.StatusID = @StatusID');
+      whereClauses.push('ISNULL(c.IsLatestVersion, 1) = 1');
     }
     if (categoryId) {
       request.input('CategoryID', sql.Int, categoryId);
@@ -601,7 +629,8 @@ const findCourseApprovalRequestById = async (requestId) => {
  */
 const findCourseWithFullDetailsBySlug = async (
   slug,
-  includeNonPublished = false
+  includeNonPublished = false,
+  viewerAccountId = null
 ) => {
   logger.debug(
     `Fetching full course details for slug: ${slug}, includeNonPublished: ${includeNonPublished}`
@@ -623,9 +652,39 @@ const findCourseWithFullDetailsBySlug = async (
           WHERE c.Slug = @Slug
       `;
 
+    /* ======================================================================
+       [SỬA 17/08/2026 — ĐIỀU KIỆN TIÊN QUYẾT CỦA COURSE VERSIONING]
+
+       Trước đây: người dùng không phải admin/giảng viên chỉ xem được khóa có
+       StatusID = 'PUBLISHED'. Điều này KHÔNG còn đúng khi có phiên bản:
+
+         Học viên mua v1 → admin duyệt v2 → v1 chuyển sang SUPERSEDED
+         → học viên vẫn thấy khóa trong "Khóa học của tôi" nhưng bấm vào bị 404.
+
+       Nay bổ sung ngoại lệ: nếu người xem ĐÃ GHI DANH vào chính khóa học đó,
+       họ được vào bất kể trạng thái. Đây chính là lời hứa cốt lõi của mô hình
+       versioning — "đã mua v1 thì học v1 mãi mãi".
+
+       Ngoại lệ này cũng đồng thời sửa luôn tình huống tương tự với ARCHIVED
+       (giảng viên chủ động ngừng xuất bản).
+       ====================================================================== */
     if (!includeNonPublished) {
       request.input('PublishedStatus', sql.VarChar, CourseStatus.PUBLISHED);
-      courseQuery += ' AND c.StatusID = @PublishedStatus';
+
+      if (viewerAccountId) {
+        request.input('ViewerAccountID', sql.BigInt, viewerAccountId);
+        courseQuery += `
+          AND (
+                c.StatusID = @PublishedStatus
+             OR EXISTS (
+                  SELECT 1 FROM Enrollments e
+                   WHERE e.AccountID = @ViewerAccountID
+                     AND e.CourseID  = c.CourseID
+                )
+          )`;
+      } else {
+        courseQuery += ' AND c.StatusID = @PublishedStatus';
+      }
     }
 
     const courseResult = await request.query(courseQuery);
@@ -639,11 +698,16 @@ const findCourseWithFullDetailsBySlug = async (
     course.sections = await sectionRepository.findAllSectionsWithDetails(
       course.CourseID
     );
+    /* [SỬA 17/08/2026] Bổ sung lọc IsArchived cho cả thời lượng lẫn số bài học.
+       Trước đây hai con số hiển thị trên trang bán khóa học ("Khóa học gồm N bài,
+       tổng M giờ") bị THỔI PHỒNG vì tính cả bài/chương đã lưu trữ — những nội dung
+       mà người mua sẽ không bao giờ nhìn thấy trong giáo trình. */
     const durationQuery = `
       SELECT SUM(ISNULL(l.VideoDurationSeconds, 0)) AS TotalDuration
       FROM Lessons l
       JOIN Sections s ON l.SectionID = s.SectionID
       WHERE s.CourseID = @CourseID
+        AND l.IsArchived = 0 AND s.IsArchived = 0
     `;
     request.input('CourseID', sql.BigInt, course.CourseID);
     const durationResult = await request.query(durationQuery);
@@ -654,6 +718,7 @@ const findCourseWithFullDetailsBySlug = async (
       FROM Lessons l
       JOIN Sections s ON l.SectionID = s.SectionID
       WHERE s.CourseID = @CourseID
+        AND l.IsArchived = 0 AND s.IsArchived = 0
     `;
     const lessonCountResult = await request.query(lessonCountQuery);
     course.totalLessons = lessonCountResult.recordset[0]?.TotalLessons || 0;
@@ -781,16 +846,41 @@ const findExistingUpdateDraft = async (liveCourseId) => {
  * @param {object} transaction
  * @returns {Promise<object>} - Khóa học bản sao đã tạo.
  */
+/**
+ * [THÊM 17/08/2026 — Course Versioning]
+ * Bảng ánh xạ kiểu dữ liệu cho các cột được phép ghi đè khi clone.
+ *
+ * Trước đây hàm này chỉ nhận biết 2 cột (LiveCourseID, StatusID), còn lại mặc
+ * định là NVarChar. Khi bổ sung các cột phiên bản kiểu số/bit, nếu vẫn để mặc
+ * định NVarChar thì driver mssql sẽ gửi chuỗi vào cột INT/BIT — SQL Server có
+ * thể ép kiểu ngầm được nhưng cũng có thể ném lỗi chuyển đổi tùy giá trị.
+ * Khai báo tường minh để tránh hành vi không xác định.
+ */
+const CLONE_OVERRIDE_SQL_TYPES = {
+  StatusID: sql.VarChar,
+  LiveCourseID: sql.BigInt,
+  RootCourseID: sql.BigInt,
+  PreviousVersionID: sql.BigInt,
+  VersionNumber: sql.Int,
+  IsLatestVersion: sql.Bit,
+  VersionNotes: sql.NVarChar,
+};
+
 const cloneCourseRecord = async (originalCourseId, overrides, transaction) => {
   const request = transaction.request();
   request.input('OriginalCourseID', sql.BigInt, originalCourseId);
 
-  // Ghi đè các giá trị cần thiết
+  // Ghi đè các giá trị cần thiết, với kiểu dữ liệu tường minh
   Object.entries(overrides).forEach(([key, value]) => {
-    // Xác định kiểu dữ liệu (cần làm chi tiết hơn nếu có nhiều kiểu)
-    let sqlType = sql.NVarChar;
-    if (key === 'LiveCourseID') sqlType = sql.BigInt;
-    if (key === 'StatusID') sqlType = sql.VarChar;
+    const sqlType = CLONE_OVERRIDE_SQL_TYPES[key];
+    if (!sqlType) {
+      // Chặn sớm thay vì âm thầm dùng sai kiểu — nếu cần ghi đè cột mới,
+      // hãy khai báo kiểu của nó trong CLONE_OVERRIDE_SQL_TYPES ở trên.
+      throw new Error(
+        `cloneCourseRecord: chưa khai báo kiểu SQL cho cột ghi đè "${key}". ` +
+          `Bổ sung vào CLONE_OVERRIDE_SQL_TYPES trước khi dùng.`
+      );
+    }
     request.input(key, sqlType, value);
   });
 
@@ -824,6 +914,206 @@ const cloneCourseRecord = async (originalCourseId, overrides, transaction) => {
     logger.error(`Error cloning course record for ${originalCourseId}:`, error);
     throw error;
   }
+};
+
+/* ==========================================================================
+ * COURSE VERSIONING — các hàm repository phục vụ mô hình phiên bản
+ * [THÊM 17/08/2026]
+ * ========================================================================== */
+
+/**
+ * Thăng cấp một bản nháp thành phiên bản chính thức, đồng thời cho phiên bản
+ * đang chạy "về hưu". Thực hiện TRỌN VẸN trong một transaction duy nhất.
+ *
+ * ⚠️ Nguyên tắc cốt lõi của mô hình versioning: hàm này TUYỆT ĐỐI KHÔNG chạm
+ * vào Sections / Lessons / LessonProgress của phiên bản cũ. Dữ liệu học viên
+ * an toàn không nhờ một cơ chế bảo vệ nào cả, mà đơn giản vì không có câu lệnh
+ * nào tác động tới nó.
+ *
+ * @param {number} draftCourseId - Bản nháp sắp trở thành phiên bản mới.
+ * @param {number} liveCourseId  - Phiên bản đang chạy, sắp chuyển sang SUPERSEDED.
+ * @param {object} transaction   - Transaction đang mở.
+ * @returns {Promise<{newSlug: string, retiredSlug: string, versionNumber: number}>}
+ */
+const promoteDraftToLiveVersion = async (
+  draftCourseId,
+  liveCourseId,
+  transaction
+) => {
+  // --- 1. Đọc trạng thái hiện tại của cả hai bản ghi ---
+  const readReq = transaction.request();
+  readReq.input('DraftID', sql.BigInt, draftCourseId);
+  readReq.input('LiveID', sql.BigInt, liveCourseId);
+  const readResult = await readReq.query(`
+    SELECT CourseID, Slug, VersionNumber, RootCourseID
+    FROM Courses
+    WHERE CourseID IN (@DraftID, @LiveID);
+  `);
+
+  const rows = readResult.recordset;
+  const live = rows.find((r) => String(r.CourseID) === String(liveCourseId));
+  const draft = rows.find((r) => String(r.CourseID) === String(draftCourseId));
+
+  if (!live || !draft) {
+    throw new Error(
+      `promoteDraftToLiveVersion: không tìm thấy bản nháp (${draftCourseId}) hoặc bản live (${liveCourseId}).`
+    );
+  }
+
+  const publicSlug = live.Slug; // Slug "đẹp" cần chuyển giao cho phiên bản mới
+  const newVersionNumber = (live.VersionNumber || 1) + 1;
+  const rootCourseId = live.RootCourseID || live.CourseID;
+
+  /* Slug về hưu: gắn hậu tố phiên bản + CourseID.
+     - Hậu tố CourseID đảm bảo DUY NHẤT tuyệt đối, kể cả khi có ai đó vô tình
+       đặt tay một slug trùng dạng "abc--v1".
+     - Courses.Slug là nvarchar(500): phải cắt phần gốc trước khi nối hậu tố,
+       nếu không một slug dài sát trần sẽ làm câu UPDATE ném lỗi tràn chuỗi và
+       kéo sập cả transaction duyệt. */
+  const SLUG_MAX = 500;
+  const suffix = `--v${live.VersionNumber || 1}-${live.CourseID}`;
+  const retiredSlug = `${publicSlug.slice(0, SLUG_MAX - suffix.length)}${suffix}`;
+
+  /* --- 2. Nhường slug: PHẢI đổi bản cũ TRƯỚC ---
+     Ràng buộc UQ_Courses_Slug là UNIQUE. Nếu gán slug đẹp cho bản mới trước khi
+     giải phóng nó khỏi bản cũ, câu lệnh sẽ vi phạm ràng buộc duy nhất và cả
+     transaction bị rollback. Thứ tự ở đây là bắt buộc, không phải tùy chọn. */
+  const retireReq = transaction.request();
+  retireReq.input('LiveID', sql.BigInt, liveCourseId);
+  retireReq.input('RetiredSlug', sql.NVarChar, retiredSlug);
+  retireReq.input('SupersededStatus', sql.VarChar, 'SUPERSEDED');
+  await retireReq.query(`
+    UPDATE Courses
+       SET Slug            = @RetiredSlug,
+           StatusID        = @SupersededStatus,
+           IsLatestVersion = 0,
+           ArchivedAt      = GETDATE(),
+           UpdatedAt       = GETDATE()
+     WHERE CourseID = @LiveID;
+  `);
+
+  // --- 3. Bản nháp tiếp quản slug đẹp và trở thành phiên bản chính thức ---
+  const promoteReq = transaction.request();
+  promoteReq.input('DraftID', sql.BigInt, draftCourseId);
+  promoteReq.input('PublicSlug', sql.NVarChar, publicSlug);
+  promoteReq.input('PublishedStatus', sql.VarChar, 'PUBLISHED');
+  promoteReq.input('VersionNumber', sql.Int, newVersionNumber);
+  promoteReq.input('RootCourseID', sql.BigInt, rootCourseId);
+  promoteReq.input('PreviousVersionID', sql.BigInt, liveCourseId);
+  await promoteReq.query(`
+    UPDATE Courses
+       SET Slug              = @PublicSlug,
+           StatusID          = @PublishedStatus,
+           IsLatestVersion   = 1,
+           VersionNumber     = @VersionNumber,
+           RootCourseID      = @RootCourseID,
+           PreviousVersionID = @PreviousVersionID,
+           LiveCourseID      = NULL,   -- Không còn là bản nháp của ai nữa
+           PublishedAt       = GETDATE(),
+           UpdatedAt         = GETDATE()
+     WHERE CourseID = @DraftID;
+  `);
+
+  return { newSlug: publicSlug, retiredSlug, versionNumber: newVersionNumber };
+};
+
+/**
+ * Lấy toàn bộ các phiên bản thuộc cùng một "dòng" khóa học, mới nhất trước.
+ * Dùng cho màn hình "Lịch sử phiên bản" và cho việc gom nhóm báo cáo.
+ * @param {number} rootCourseId
+ * @returns {Promise<object[]>}
+ */
+const findVersionsByRootId = async (rootCourseId) => {
+  try {
+    const pool = await getConnection();
+    const request = pool.request();
+    request.input('RootCourseID', sql.BigInt, rootCourseId);
+    const result = await request.query(`
+      SELECT CourseID, CourseName, Slug, StatusID, VersionNumber,
+             PreviousVersionID, IsLatestVersion, VersionNotes,
+             PublishedAt, ArchivedAt, CreatedAt,
+             (SELECT COUNT(*) FROM Enrollments e WHERE e.CourseID = c.CourseID) AS StudentCount,
+             (SELECT COUNT(*) FROM Lessons l
+                JOIN Sections s ON l.SectionID = s.SectionID
+               WHERE s.CourseID = c.CourseID
+                 AND l.IsArchived = 0 AND s.IsArchived = 0)               AS TotalLessons
+      FROM Courses c
+      /* [SỬA 19/08/2026] Thêm vế: OR CourseID = @RootCourseID
+
+         createCourse KHÔNG gán RootCourseID cho khóa mới — cột đó để NULL, và
+         chỉ được điền khi createUpdateSession sinh ra bản sao đời sau (xem
+         courses.service.js ~dòng 1675). Nghĩa là hàng GỐC không bao giờ khớp
+         điều kiện RootCourseID = @RootCourseID.
+
+         ⚠️ Chú thích này nằm TRONG một template literal của JavaScript, nên
+         tuyệt đối không dùng dấu backtick ở đây — nó sẽ đóng chuỗi giữa chừng
+         và làm cả tệp không nạp được.
+
+         Hậu quả: mọi khóa học chưa từng lên đời đều có lịch sử phiên bản RỖNG,
+         và ngay cả khóa đã lên đời cũng mất hàng v1 — đúng thứ mà bảng "Lịch
+         sử phiên bản" sinh ra để hiển thị.
+
+         Vế LiveCourseID IS NULL giữ nguyên: bản nháp đang soạn dở chưa phải
+         một phiên bản, không nên nằm trong lịch sử. */
+      WHERE (RootCourseID = @RootCourseID OR CourseID = @RootCourseID)
+        AND LiveCourseID IS NULL          -- loại bản nháp đang soạn dở
+      ORDER BY VersionNumber DESC;
+    `);
+    return result.recordset;
+  } catch (error) {
+    logger.error(`Error finding versions for root course ${rootCourseId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Kiểm tra một tài khoản đã ghi danh vào khóa học cụ thể chưa.
+ * Đặt tại repository của courses (thay vì gọi chéo sang enrollments.service)
+ * để dùng được ngay trong tầng truy vấn mà không tạo phụ thuộc vòng.
+ * @param {number} accountId
+ * @param {number} courseId
+ * @returns {Promise<boolean>}
+ */
+const hasEnrollment = async (accountId, courseId) => {
+  if (!accountId || !courseId) return false;
+  const pool = await getConnection();
+  const request = pool.request();
+  request.input('AccountID', sql.BigInt, accountId);
+  request.input('CourseID', sql.BigInt, courseId);
+  const result = await request.query(`
+    SELECT TOP 1 1 AS Found FROM Enrollments
+     WHERE AccountID = @AccountID AND CourseID = @CourseID;
+  `);
+  return result.recordset.length > 0;
+};
+
+/**
+ * Kiểm tra học viên có ghi danh vào BẤT KỲ phiên bản nào cùng một dòng khóa học.
+ *
+ * Vì sao cần riêng một hàm: học viên mua v1, nay hệ thống đã lên v2. Khi họ mở
+ * màn hình "Lịch sử phiên bản" từ trang khóa học công khai, ID gửi lên là v2 —
+ * phiên bản họ CHƯA mua. Nếu chỉ so khớp đúng một CourseID thì chính chủ sở hữu
+ * v1 lại bị từ chối xem lịch sử dòng khóa học của mình. Đối chiếu theo
+ * RootCourseID mới phản ánh đúng quyền.
+ *
+ * @param {number} accountId
+ * @param {number} rootCourseId - Gốc của dòng khóa học.
+ * @returns {Promise<boolean>}
+ */
+const hasEnrollmentInCourseFamily = async (accountId, rootCourseId) => {
+  if (!accountId || !rootCourseId) return false;
+  const pool = await getConnection();
+  const request = pool.request();
+  request.input('AccountID', sql.BigInt, accountId);
+  request.input('RootCourseID', sql.BigInt, rootCourseId);
+  const result = await request.query(`
+    SELECT TOP 1 1 AS Found
+      FROM Enrollments e
+      JOIN Courses c ON e.CourseID = c.CourseID
+     WHERE e.AccountID = @AccountID
+       AND ISNULL(c.RootCourseID, c.CourseID) = @RootCourseID;
+  `);
+  return result.recordset.length > 0;
 };
 
 /**
@@ -1105,4 +1395,9 @@ module.exports = {
   findExistingUpdateDraft,
   cloneCourseRecord,
   cloneCurriculum,
+  // --- Course Versioning (thêm 17/08/2026) ---
+  promoteDraftToLiveVersion,
+  findVersionsByRootId,
+  hasEnrollment,
+  hasEnrollmentInCourseFamily,
 };

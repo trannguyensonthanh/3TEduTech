@@ -97,7 +97,18 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Verify TypeScript & Build Vite Production Bundle
+      # [SỬA 19/08/2026] Tên bước cũ nói dối: có chữ "Verify TypeScript"
+      # nhưng lệnh chỉ là `npm run build` = `vite build`, mà Vite dùng esbuild —
+      # esbuild XÓA kiểu chứ không KIỂM TRA kiểu. Đó là lý do 1288 lỗi kiểu nằm
+      # im mà CI vẫn xanh.
+      #
+      # `tsc -b` (build mode) chứ KHÔNG phải `tsc --noEmit -p tsconfig.json`:
+      # tsconfig.json gốc là kiểu "solution" ("files": [] + references), chạy
+      # --noEmit với nó thì không kiểm tra tệp nào cả mà vẫn báo thành công.
+      - name: Verify TypeScript types (tsc -b)
+        run: npm run typecheck
+
+      - name: Build Vite Production Bundle
         run: npm run build
 
   # =========================================================================
@@ -141,6 +152,9 @@ jobs:
           context: ./edu-ai-learning-hub
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_AI_API_URL=${{ secrets.VITE_AI_API_URL }}
 
   # =========================================================================
   # TẦNG 3: TRIỂN KHAI LÊN VPS PRODUCTION (CD - CONTINUOUS DEPLOYMENT)
@@ -150,21 +164,21 @@ jobs:
     name: 🚀 CD / Production VPS Deploy
     runs-on: ubuntu-latest
     needs: [dockerize]
-    # 🌟 ĐIỂM SỐNG CÒN: Kiểm tra biến môi trường DEPLOY_ENABLED từ GitHub Repo Variables hoặc có nút bấm workflow_dispatch
-    if: vars.DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    # 🌟 ĐIỂM SỐNG CÒN: Kiểm tra biến môi trường DEPLOY_ENABLED hoặc có nút bấm workflow_dispatch với force_deploy=true
+    if: vars.DEPLOY_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_deploy == 'true')
     
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.prod.yml to Server
+      - name: Copy Production Config to Server (CPU EC2)
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          # ✅ Khắc phục "bom ngầm": Dùng đúng tên file docker-compose.prod.yml
-          source: "docker-compose.prod.yml"
+          # ✅ Sử dụng đúng file cấu hình production cho CPU EC2 và thư mục nginx
+          source: "docker-compose.cpu-ec2.yml,nginx/"
           target: "/opt/3t-edu-tech"
           strip_components: 0
 
@@ -180,12 +194,11 @@ jobs:
             
             echo "📥 Pulling newest Docker Images from Docker Hub..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-backend:latest
-            docker pull ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-ai-service:latest
             docker pull ${{ secrets.DOCKER_USERNAME }}/3t-edu-tech-frontend:latest
             
-            echo "🔄 Restarting Production stack with Redis memory limitations..."
-            # Sử dụng file prod chính thức cùng tùy chọn remove-orphans dọn dẹp container rác
-            docker compose -f docker-compose.prod.yml down --remove-orphans
-            docker compose -f docker-compose.prod.yml up -d
+            echo "🔄 Restarting Production stack (CPU EC2)..."
+            export REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            docker compose -f docker-compose.cpu-ec2.yml down --remove-orphans
+            docker compose -f docker-compose.cpu-ec2.yml up -d
             
             echo "✨ Deployment Completed Successfully! 🚀"

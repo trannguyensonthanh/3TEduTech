@@ -10,6 +10,8 @@ const Roles = require('../../core/enums/Roles');
 const logger = require('../../utils/logger');
 const notificationService = require('../notifications/notifications.service');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
+// [THÊM 17/08/2026 — LEVEL 2, mục 2.3] Phát tín hiệu realtime tới phòng khóa học.
+const socketService = require('../../services/socket.service');
 
 /**
  * Helper function to check if user can access/participate in discussions for a course.
@@ -239,6 +241,28 @@ const createPost = async (threadId, postData, user) => {
         notifyError
       );
     }
+  }
+
+  /* [THÊM 17/08/2026 — LEVEL 2, mục 2.3] Báo cho mọi người đang mở khóa học.
+
+     CHỈ GỬI TÍN HIỆU, KHÔNG GỬI NỘI DUNG BÀI VIẾT. Client nhận được tín hiệu
+     thì tự gọi lại REST API để tải danh sách — và REST API vẫn kiểm tra quyền
+     như cũ. Nếu đẩy thẳng nội dung qua socket, ta phải nhân đôi toàn bộ logic
+     phân quyền sang tầng socket, nơi rất dễ quên một nhánh và làm lộ nội dung
+     thảo luận của khóa học trả phí.
+
+     Không await và có try/catch riêng: socket là kênh phụ, hỏng thì bình luận
+     vẫn phải được lưu và trả về bình thường. */
+  try {
+    socketService.emitToCourse(thread.CourseID, 'discussion:changed', {
+      threadId,
+      courseId: thread.CourseID,
+      action: 'post_created',
+    });
+  } catch (socketError) {
+    logger.warn(
+      `[Socket.IO] Không phát được tín hiệu thảo luận cho khóa ${thread.CourseID}: ${socketError.message}`
+    );
   }
 
   return discussionRepository.findPostById(newPost.PostID);

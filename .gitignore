@@ -48,3 +48,9 @@ env/
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# vLLM Model Cache (downloaded at runtime on GPU EC2)
+vllm-server/models/
+
+# Nginx SSL Certs (managed separately on server)
+nginx/ssl/

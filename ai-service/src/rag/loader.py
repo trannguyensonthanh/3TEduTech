@@ -123,7 +123,14 @@ async def ingest_file(
     metadata: dict | None = None,
 ) -> int:
     """
-    Ingest a file (txt, md) into the vector store.
+    Ingest a file into the vector store.
+
+    [MỞ RỘNG 18/08/2026 — COURSE IMPORT]
+    Trước đây hàm này chỉ chấp nhận .txt/.md/.csv, nên mọi tài liệu bài giảng
+    thật (PDF, DOCX, PPTX) đều bị từ chối. Nay tài liệu phức hợp được chuyển
+    sang `rag/document_parser.py` — CÙNG bộ đọc mà endpoint
+    `POST /api/extract/document` dùng, nên hai đường đi cho ra kết quả giống
+    hệt nhau thay vì mỗi nơi một kiểu.
 
     Args:
         file_path: Path to the file.
@@ -137,11 +144,39 @@ async def ingest_file(
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    supported_extensions = {".txt", ".md", ".csv"}
-    if path.suffix.lower() not in supported_extensions:
-        raise ValueError(f"Unsupported file type: {path.suffix}. Supported: {supported_extensions}")
+    suffix = path.suffix.lower()
+    plain_extensions = {".txt", ".md", ".markdown", ".csv", ".rst", ".json"}
 
-    text = path.read_text(encoding="utf-8")
+    if suffix in plain_extensions:
+        # `errors="replace"` thay vì để ném lỗi: một tệp .txt lưu bằng bảng mã
+        # cũ (rất hay gặp với tài liệu tiếng Việt) sẽ làm hỏng cả lượt nạp nếu
+        # đọc ở chế độ nghiêm ngặt. Thà mất vài ký tự còn hơn mất cả tệp.
+        text = path.read_text(encoding="utf-8", errors="replace")
+    else:
+        # Import tại chỗ: giữ cho `loader` nạp được ngay cả khi chưa cài pypdf
+        # — các luồng chỉ dùng .txt/.md vẫn chạy bình thường.
+        from src.rag.document_parser import SUPPORTED_EXTENSIONS, parse_document
+
+        if suffix.lstrip(".") not in SUPPORTED_EXTENSIONS:
+            supported = sorted(plain_extensions) + [
+                f".{ext}" for ext in SUPPORTED_EXTENSIONS
+            ]
+            raise ValueError(
+                f"Unsupported file type: {path.suffix}. Supported: {supported}"
+            )
+
+        # `max_chars=0` = không cắt. Ở đây khác với luồng nhập khóa học: mục
+        # tiêu là nạp TRỌN tài liệu vào kho vector để tra cứu, chứ không phải
+        # gói gọn nội dung cho vừa một prompt.
+        result = parse_document(path.name, path.read_bytes(), max_chars=0)
+        text = result["text"]
+        for warning in result.get("warnings", []):
+            logger.warning(f"{path.name}: {warning}")
+
+    if not text.strip():
+        logger.warning(f"Không bóc được nội dung nào từ {path.name} — bỏ qua.")
+        return 0
+
     file_metadata = {"file_name": path.name, "file_type": path.suffix, **(metadata or {})}
 
     return await ingest_text(text, path.name, collection_name, file_metadata)

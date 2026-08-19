@@ -35,3 +35,6 @@ Thumbs.db
 # Optional files
 # مثلاً: coverage reports
 coverage/
+
+# Trạng thái dùng chung giữa các tệp test (sinh ra lúc chạy, không commit)
+tests/.state.json

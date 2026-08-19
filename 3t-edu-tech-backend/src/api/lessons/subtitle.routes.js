@@ -41,6 +41,12 @@ router.post(
   subtitleController.addSubtitle
 );
 
+// Giảng viên chủ động kích hoạt tạo phụ đề AI theo yêu cầu (On-Demand)
+router.post(
+  '/generate-ai',
+  subtitleController.triggerAiSubtitleOnDemand
+);
+
 // Cập nhật phụ đề
 router.patch(
   '/:subtitleId/set-primary',

@@ -1,0 +1,115 @@
+# ===================================================
+# GPU EC2 #2 (g4dn.xlarge, 16GB T4) — AI Service + Whisper + CV
+# ===================================================
+# Usage:
+#   export DOCKER_USERNAME=your_dockerhub_username
+#   docker compose -f docker-compose.gpu-ec2-ai.yml up -d
+#
+# Yêu cầu trên host: NVIDIA driver + nvidia-container-toolkit
+# (đã có sẵn nếu dùng AWS Deep Learning AMI). Kiểm tra bằng: nvidia-smi
+#
+# -----------------------------------------------------------------------------
+# [SỬA 18/08/2026] ẢNH DÙNG Ở ĐÂY PHẢI ĐƯỢC BUILD KÈM `whisper,gpu`
+#
+# `faster-whisper` nay là phụ thuộc TÙY CHỌN (xem ai-service/pyproject.toml), và
+# ai-service/Dockerfile mặc định KHÔNG cài nó — vì máy CPU tạm thời không dùng
+# tới. Ảnh cho máy này phải build tường minh:
+#
+#   docker build --build-arg INSTALL_EXTRAS="whisper,gpu" \
+#     -t ${DOCKER_USERNAME}/3t-edu-tech-ai-service:gpu ./ai-service
+#
+# Build thiếu tham số đó thì dịch vụ VẪN CHẠY (chatbot, RAG, sinh câu hỏi đều
+# bình thường), chỉ riêng phiên âm bị bỏ qua kèm cảnh báo trong log. Kiểm tra
+# nhanh sau khi triển khai:
+#
+#   curl -s http://localhost:2111/health | grep -o '"available":[a-z]*'
+#   → phải là "available":true
+#
+# Vì hai máy dùng hai ảnh khác nhau, biến tag ở đây là `AI_IMAGE_TAG` (mặc định
+# `gpu`) chứ không phải `IMAGE_TAG` dùng chung với backend/frontend.
+# =============================================================================
+
+services:
+  ai-service:
+    image: ${DOCKER_USERNAME}/3t-edu-tech-ai-service:${AI_IMAGE_TAG:-gpu}
+    container_name: edutech-ai-service
+    ports:
+      # ⚠️ Cổng này lộ ra ngoài host vì backend nằm trên MÁY KHÁC (EC2 CPU).
+      #
+      # Security Group của máy này PHẢI chỉ cho phép nguồn là security group
+      # của EC2 CPU, TUYỆT ĐỐI KHÔNG để 0.0.0.0/0: bất kỳ ai gọi được endpoint
+      # này đều tiêu tiền token Gemini của dự án, và `INTERNAL_API_KEY` là lớp
+      # bảo vệ duy nhất đứng chắn.
+      #
+      # Hai máy phải nằm cùng VPC và gọi nhau bằng IP nội bộ. Nếu vì lý do nào
+      # đó phải đi qua Internet công cộng thì bắt buộc bọc HTTPS — không thì
+      # khóa nội bộ đi qua mạng ở dạng chữ thường.
+      - "2111:2111"
+    env_file:
+      - ./ai-service/.env.production
+    environment:
+      # Trên máy này mới có GPU, nên mới bật Qwen. `auto` = ưu tiên Qwen, tự rơi
+      # về Gemini khi GPU EC2 #1 (vLLM) tắt để tiết kiệm chi phí.
+      - LLM_PROVIDER=${LLM_PROVIDER:-auto}
+      - AI_SERVICE_WORKERS=1
+      - LOG_LEVEL=WARNING
+    restart: always
+
+    volumes:
+      - ai-chroma-data:/app/data
+      # [THÊM 17/08/2026] Cache trọng số model HuggingFace ra volume riêng.
+      # faster-whisper tải model "medium" (~1.5GB) ở lần chạy đầu; không gắn
+      # volume thì MỖI LẦN container được tạo lại đều phải tải lại từ đầu.
+      - hf-cache:/root/.cache/huggingface
+      # Thư mục tạm dùng chung với host: Backend đẩy video bài giảng lên đây để
+      # Whisper trích xuất phụ đề. Ghi vào /tmp của host thay vì vào lớp ghi của
+      # container giúp container không phình dung lượng theo thời gian.
+      - /tmp:/tmp
+
+    # [THÊM 17/08/2026] ipc: host — CẦN THIẾT sau khi Whisper chuyển sang chạy
+    # GPU (WHISPER_DEVICE=cuda). PyTorch/CTranslate2 dùng bộ nhớ chia sẻ POSIX
+    # cho tensor CUDA; mặc định Docker chỉ cấp /dev/shm 64MB, gây lỗi
+    # "Bus error" hoặc treo khi xử lý video bài giảng dài.
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # ---------------------------------------------------------------
+    # GET /health áp dụng "Degraded Status Pattern": khi GPU EC2 #1 (vLLM) bị
+    # tắt để tiết kiệm chi phí, endpoint vẫn trả 200 kèm status "degraded" thay
+    # vì 5xx — nếu trả lỗi, Docker sẽ liên tục restart AI Service vô ích trong
+    # khi dịch vụ vẫn phục vụ được qua Gemini fallback.
+    #
+    # timeout = 10s (KHÔNG phải 5s): handler /health có gọi sang vLLM với timeout
+    # nội bộ 3s, cộng truy vấn thống kê ChromaDB. Đặt 5s rất dễ báo thất bại giả
+    # đúng vào lúc vLLM đang tắt và phải chờ hết timeout.
+    # start_period = 40s: ChromaDB khởi tạo + nạp cấu hình lúc startup.
+    # ---------------------------------------------------------------
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2111/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - edutech-gpu-net
+
+networks:
+  edutech-gpu-net:
+    driver: bridge
+
+volumes:
+  ai-chroma-data:
+  hf-cache:

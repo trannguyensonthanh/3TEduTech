@@ -12,6 +12,7 @@ import {
   addSubtitleByUpload,
   setPrimarySubtitle,
   deleteSubtitle,
+  generateAiSubtitle,
   Subtitle,
   AddSubtitleData,
 } from '@/services/subtitle.service'; // Điều chỉnh đường dẫn
@@ -87,6 +88,13 @@ export const useAddSubtitleByUpload = (
       lessonId: number;
       file: File;
       languageCode: string;
+      /* [THÊM 19/08/2026] addSubtitleByUpload nhận 5 tham số:
+         (lessonId, file, languageCode, languageName, isDefault).
+         Hook này chỉ truyền 4 — nên `isDefault` (boolean) rơi vào đúng vị trí
+         của `languageName` (string). Hậu quả nếu ai gọi tới: tên ngôn ngữ của
+         phụ đề được ghi vào CSDL là chuỗi "false", và cờ mặc định luôn là
+         false. TypeScript bắt được vì lệch kiểu (TS2345). */
+      languageName: string;
       isDefault?: boolean;
     }
   >
@@ -99,11 +107,12 @@ export const useAddSubtitleByUpload = (
       lessonId: number;
       file: File;
       languageCode: string;
+      languageName: string;
       isDefault?: boolean;
     }
   >({
-    mutationFn: ({ lessonId, file, languageCode, isDefault }) =>
-      addSubtitleByUpload(lessonId, file, languageCode, isDefault),
+    mutationFn: ({ lessonId, file, languageCode, languageName, isDefault }) =>
+      addSubtitleByUpload(lessonId, file, languageCode, languageName, isDefault),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: subtitleKeys.listByLesson(variables.lessonId),
@@ -174,6 +183,26 @@ export const useDeleteSubtitle = (
     onError: (error) => {
       console.error('Delete subtitle failed:', error.message);
       // toast.error(error.message || 'Xóa phụ đề thất bại.');
+    },
+    ...options,
+  });
+};
+
+/** Hook kích hoạt AI tạo phụ đề tự động (On-Demand button) */
+export const useGenerateAiSubtitle = (
+  options?: UseMutationOptions<{ message: string }, Error, number>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, Error, number>({
+    mutationFn: (lessonId: number) => generateAiSubtitle(lessonId),
+    onSuccess: (data, lessonId) => {
+      queryClient.invalidateQueries({
+        queryKey: subtitleKeys.listByLesson(lessonId),
+      });
+      console.log('On-Demand AI transcription triggered:', data.message);
+    },
+    onError: (error) => {
+      console.error('Trigger AI subtitle failed:', error.message);
     },
     ...options,
   });

@@ -19,6 +19,18 @@ export interface Enrollment {
   totalLessons?: number;
   progressPercentage?: number;
   completionDate?: string | null; // Ngày hoàn thành khóa học
+
+  /* --- Course Versioning (thêm 17/08/2026) ---
+     Backend (enrollments.repository.js) nay trả kèm 3 trường này để giao diện
+     "Khóa học của tôi" nói rõ học viên đang học phiên bản nào và đã có bản mới
+     hơn hay chưa. Học viên KHÔNG bị chuyển sang phiên bản mới — họ chỉ được
+     biết, và có đường dẫn để xem/mua nếu muốn. */
+  /** Số phiên bản của chính khóa học mà học viên đã mua */
+  versionNumber?: number;
+  /** true = phiên bản đang mua vẫn là bản mới nhất */
+  isLatestVersion?: boolean;
+  /** Slug của phiên bản mới nhất; chỉ khác slug hiện tại khi isLatestVersion = false */
+  latestVersionSlug?: string | null;
 }
 
 export interface EnrollmentListResponse {

@@ -5,7 +5,7 @@ services:
     mem_limit: 2048m
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=EduTech_DB_2026!
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}
       - MSSQL_PID=Developer
       - MSSQL_MEMORY_LIMIT_MB=1200
     ports:
@@ -24,7 +24,36 @@ services:
       - database
     volumes:
       - ./db-init:/flyway/sql
-    command: -url="jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true" -user=sa -password=EduTech_DB_2026! -mixed=true -connectRetries=10 -placeholderReplacement=false migrate
+    # -------------------------------------------------------------------
+    # ★ [SỬA 18/08/2026] Thêm `repair` trước `migrate`.
+    #
+    # Khi một migration thất bại giữa chừng, Flyway ghi vào bảng
+    # `flyway_schema_history` một dòng với success = 0. Từ đó trở đi MỌI lần
+    # chạy sau đều dừng ngay với "Detected failed migration to version X" —
+    # kể cả khi bạn đã sửa xong tệp SQL. Phải chạy `repair` mới gỡ được.
+    #
+    # `repair` cũng đồng bộ lại checksum khi bạn sửa một migration đã áp dụng
+    # — chuyện xảy ra liên tục lúc đang phát triển.
+    #
+    # ⚠️ CHỈ dùng ở môi trường DEV. Trên production, `repair` sẽ âm thầm chấp
+    #    nhận một migration đã bị sửa đổi sau khi chạy — đúng thứ mà Flyway
+    #    sinh ra để ngăn chặn. docker-compose.cpu-ec2.yml KHÔNG có dòng này.
+    #
+    # ⚠️ MSSQL_SA_PASSWORD phải TRÙNG với DB_PASSWORD trong
+    #    3t-edu-tech-backend/.env. Lệch nhau thì backend vẫn kết nối bình
+    #    thường còn Flyway login failed — migration LẶNG LẼ không được áp dụng
+    #    và bảng mới không bao giờ xuất hiện. Chạy setup-env.bat để đồng bộ.
+    # -------------------------------------------------------------------
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "flyway -url='jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true'
+      -user=sa -password='${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}'
+      -connectRetries=20 -placeholderReplacement=false repair
+      || echo '[Flyway] repair bo qua (chua co lich su migration)';
+      flyway -url='jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true'
+      -user=sa -password='${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}'
+      -mixed=true -connectRetries=20 -placeholderReplacement=false migrate"
+
     networks:
       - edutech-net-dev
 
@@ -40,8 +69,69 @@ services:
       - NODE_ENV=development
       - DB_HOST=database
       - DB_PORT=1433
+      # ---------------------------------------------------------------
+      # ★ [SỬA 18/08/2026] BẮT BUỘC phải có AI_SERVICE_URL.
+      #
+      # Trước đây ở đây chỉ có `AI_SERVICE_PORT=2111`. Khi đó config/index.js
+      # dựng ra `http://127.0.0.1:2111` — mà bên trong container backend,
+      # 127.0.0.1 CHÍNH LÀ container backend, không phải AI Service. Mọi lượt
+      # gọi sang AI đều nhận ECONNREFUSED.
+      #
+      # Lỗi này không lộ ra trước đây vì trước Level 3 frontend gọi thẳng AI
+      # Service qua cổng 2111 đã publish. Từ Level 3 mọi thứ đi qua backend,
+      # nên đường này mới thật sự được dùng — và nó chưa bao giờ chạy.
+      #
+      # `ai-service` là TÊN SERVICE trong tệp này; Docker Compose tự phân giải
+      # DNS nội bộ theo tên service.
+      # ---------------------------------------------------------------
+      - AI_SERVICE_URL=http://ai-service:2111
       - AI_SERVICE_PORT=2111
       - REDIS_URL=redis://edutech-redis-dev:6379
+      # ---------------------------------------------------------------
+      # [THÊM 18/08/2026 — COURSE IMPORT] Nhập khóa học từ tệp ZIP.
+      #
+      # Đặt Ở ĐÂY chứ không phải trong .env, vì đây là đường dẫn BÊN TRONG
+      # container — nó phải khớp với volume `import-temp-dev` bên dưới, và
+      # người dùng không nên phải tự chỉnh cho khớp.
+      #
+      # Đúng đường dẫn này cũng dùng ở production (xem
+      # docker-compose.cpu-ec2.yml), nên KHÔNG cần một dòng `if (isProduction)`
+      # nào trong mã nguồn — chỉ khác nhau ở chỗ volume trỏ vào đâu.
+      # ---------------------------------------------------------------
+      - IMPORT_TEMP_DIR=/var/lib/3tedu/imports
+      # Hạ trần so với mặc định (200/500/5) vì máy dev đang gần hết dung lượng.
+      # Ba con số này quyết định trực tiếp "một lần nhập ngốn bao nhiêu đĩa";
+      # chỉnh ở đây là đủ, không phải đụng vào mã nguồn.
+      # [SỬA 18/08/2026] 120 → 300MB.
+      #
+      # Con số 120 sinh ra khi tệp ZIP còn phải chứa cả video — và nó vô lý:
+      # không khóa học thật nào vừa trong 120MB.
+      #
+      # Nay video KHÔNG còn được giải nén ra máy chủ (xem safeExtract.js), nên
+      # tệp ZIP chỉ chứa tài liệu và phụ đề — thực tế hiếm khi quá 50MB. 300MB
+      # là dư dả rất nhiều, đủ chỗ cho cả người vẫn để nguyên video trong ZIP
+      # (hệ thống bỏ qua phần nội dung của chúng).
+      - IMPORT_MAX_ZIP_MB=300
+      # Chỉ tính TÀI LIỆU sau khi giải nén — byte của video không được cộng vào
+      # đây nữa, vì chúng không hề chạm tới đĩa.
+      - IMPORT_MAX_TOTAL_MB=300
+      # Từ chối nhận tệp khi đĩa trống dưới mức này. Đặt 2GB (mặc định 5GB) để
+      # máy chật vẫn dùng được, nhưng ĐỪNG đặt 0 — mất phanh này thì một lần
+      # nhập có thể làm đầy ổ và kéo sập cả SQL Server lẫn Docker.
+      - IMPORT_MIN_FREE_DISK_GB=2
+      # Dọn sớm hơn mặc định 48h. Tệp trên đĩa KHÔNG tự hết hạn như khóa Redis
+      # — chỉ có cron dọn mới xóa được chúng.
+      - IMPORT_TTL_HOURS=12
+      # ---------------------------------------------------------------
+      # [THÊM 18/08/2026] Tài liệu chính sách FAQ (PDF → RAG).
+      #
+      # ⚠️ Volume RIÊNG, không dùng chung với import-temp-dev: thư mục nhập khóa
+      # học bị cron dọn sau IMPORT_TTL_HOURS (ở dev là 12 giờ). Để chung thì
+      # sáng hôm sau mở lại máy là danh mục tài liệu biến mất.
+      # ---------------------------------------------------------------
+      - FAQ_DOCS_DIR=/var/lib/3tedu/faq-docs
+      - FAQ_DOC_MAX_MB=10
+      - FAQ_DOC_MAX_COUNT=50
     env_file:
       - ./3t-edu-tech-backend/.env
     volumes:
@@ -49,8 +139,41 @@ services:
       - ./3t-edu-tech-backend:/app
       # Bỏ qua node_modules để tránh xung đột giữa OS
       - /app/node_modules
+      # ---------------------------------------------------------------
+      # Thư mục tạm giải nén ZIP — dùng NAMED VOLUME, tuyệt đối KHÔNG để nằm
+      # trong bind mount `./3t-edu-tech-backend:/app` ở trên. Hai lý do:
+      #
+      #   1. Ổ Windows (NTFS) KHÔNG phân biệt hoa/thường, ext4 thì có. Một ZIP
+      #      chứa cả "Bai1.mp4" và "bai1.mp4" sẽ ra 1 tệp trên máy dev nhưng 2
+      #      tệp trên server — cùng mã nguồn, khác kết quả, rất khó lần ra.
+      #   2. Ghi tệp hơn trăm MB qua lớp chia sẻ tệp của Docker Desktop chậm
+      #      hơn nhiều lần so với ghi thẳng vào volume trong máy ảo Linux.
+      #
+      # Muốn lấy lại dung lượng ngay: `docker volume rm cnpm_import-temp-dev`
+      # (chỉ chứa tệp tạm, xóa không mất dữ liệu thật nào).
+      # ---------------------------------------------------------------
+      - import-temp-dev:/var/lib/3tedu/imports
+      # Danh mục tài liệu chính sách FAQ — DỮ LIỆU THẬT, đừng xóa nhầm khi dọn
+      # dung lượng (khác với import-temp-dev ngay trên, cái đó xóa vô tư).
+      - faq-docs-dev:/var/lib/3tedu/faq-docs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/faqs"] # Test 1 API bất kỳ (vd FAQs)
+      # ---------------------------------------------------------------
+      # ★ [SỬA 18/08/2026] Trước đây gọi `/v1/faqs`.
+      #
+      # Bảng `FAQs` KHÔNG TỒN TẠI trong bất kỳ migration nào (V1..V8 tạo 44
+      # bảng, không có bảng nào tên FAQs). Nên trên một CSDL mới tinh, endpoint
+      # đó LUÔN LUÔN trả 500 "Invalid object name 'FAQs'".
+      #
+      # Hậu quả: container backend vĩnh viễn bị đánh dấu unhealthy, và cứ mỗi
+      # 30 giây lại đẻ ra một stack trace vào log — nhấn chìm mọi thông báo lỗi
+      # thật sự cần đọc.
+      #
+      # `/v1/` mới là endpoint sinh ra để làm việc này: nó kiểm tra thật SQL
+      # Server + Redis (xem src/app.js), trả 503 khi mất DB và 200 "degraded"
+      # khi chỉ mất Redis. docker-compose.cpu-ec2.yml đã dùng đúng từ đầu; chỉ
+      # tệp dev này là bị bỏ quên.
+      # ---------------------------------------------------------------
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -66,6 +189,22 @@ services:
     build:
       context: ./ai-service
       dockerfile: Dockerfile.dev
+      args:
+        # [THÊM 18/08/2026] Nhóm phụ thuộc tùy chọn — mặc định RỖNG.
+        #
+        # `faster-whisper` nay không còn nằm trong nhóm bắt buộc (xem
+        # ai-service/pyproject.toml). Trên máy dev, LLM_PROVIDER=gemini nên
+        # phiên âm không được gọi tới, mà gói này nặng ~500MB và tải rất lâu.
+        #
+        # Máy Acer Nitro 5 có card RTX 3050 nên VẪN chạy được phiên âm nếu muốn
+        # thử — đặt trong .env ở thư mục gốc:
+        #     AI_INSTALL_EXTRAS=whisper,gpu
+        # rồi:
+        #     docker compose -f docker-compose.dev.yml build ai-service
+        #
+        # ⚠️ 3050 chỉ có 4GB VRAM: dùng WHISPER_MODEL_SIZE=small, đừng dùng
+        #    medium/large-v3 (sẽ hết VRAM và tự rơi về CPU, chậm hơn nhiều).
+        INSTALL_EXTRAS: ${AI_INSTALL_EXTRAS:-}
     container_name: edutech-ai-service-dev
     mem_limit: 2048m
     ports:
@@ -79,7 +218,30 @@ services:
       - edutech-net-dev
     volumes:
       - ./ai-service:/app
+      # Volume vô danh che `.venv` của máy Windows.
+      #
+      # BẮT BUỘC phải giữ: `./ai-service:/app` ở trên kéo cả `.venv` do `uv sync`
+      # tạo trên Windows vào container Linux. Các tệp .exe/.dll trong đó không
+      # chạy được trên Linux, và nếu Python trong container nhìn thấy chúng thì
+      # lỗi báo ra sẽ rất khó hiểu.
       - /app/.venv
+    # ---------------------------------------------------------------
+    # [THÊM 18/08/2026] Healthcheck — trước đây KHÔNG có.
+    #
+    # Thiếu nó, `docker compose ps` báo "Up" ngay cả khi AI Service đã chết vì
+    # thiếu khóa Gemini hoặc lỗi cú pháp lúc nạp module. Lúc đó backend gọi sang
+    # và nhận ECONNREFUSED, còn người dùng thì nhìn vào danh sách container thấy
+    # mọi thứ vẫn xanh — đúng kiểu lỗi mất nhiều giờ để lần ra.
+    #
+    # start_period 60s (dài hơn bản production 40s): ở dev còn phải chờ uvicorn
+    # dựng bộ theo dõi hot-reload, và máy cá nhân thường chậm hơn EC2.
+    # ---------------------------------------------------------------
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2111/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   redis:
     image: redis:7-alpine
@@ -118,3 +280,11 @@ networks:
 volumes:
   mssql-data-dev:
   redis-data-dev:
+  # [THÊM 18/08/2026 — COURSE IMPORT] Thư mục tạm giải nén ZIP.
+  # Chỉ chứa tệp tạm: xóa volume này KHÔNG mất dữ liệu thật nào, nên cứ thoải
+  # mái `docker volume rm` khi cần lấy lại dung lượng.
+  import-temp-dev:
+  # [THÊM 18/08/2026] Danh mục tài liệu chính sách FAQ (manifest.json + bản
+  # text đã bóc). Xóa volume này = mất danh sách tài liệu, KHÔNG khôi phục được
+  # từ Cloudinary vì Cloudinary chỉ giữ tệp gốc chứ không giữ siêu dữ liệu.
+  faq-docs-dev:

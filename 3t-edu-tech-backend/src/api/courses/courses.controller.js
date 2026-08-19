@@ -63,6 +63,9 @@ const submitCourseForApproval = catchAsync(async (req, res) => {
     req.user,
     notes
   );
+  // [SỬA 19/08/2026] danh sách khóa của giảng viên đổi trạng thái — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send({
     message: 'Yêu cầu duyệt khóa học đã được gửi.',
     request: approvalRequest,
@@ -105,6 +108,21 @@ const reviewCourseApproval = catchAsync(async (req, res) => {
     req.user,
     adminNotes
   );
+  /* [SỬA 19/08/2026] Xóa bộ nhớ đệm khi khả năng HIỂN THỊ CÔNG KHAI thay đổi.
+
+     GET /courses và GET /courses/:slug được đệm 1800 giây (30 phút, xem
+     courses.routes.js). createCourse/updateCourse/deleteCourse/archiveCourse
+     đều đã xóa đệm, nhưng những chỗ dưới đây thì KHÔNG — dù chúng mới chính là
+     lúc khóa học đổi từ "không ai thấy" sang "cả thiên hạ thấy".
+
+     Hậu quả cụ thể: admin bấm DUYỆT, khóa học sang PUBLISHED trong CSDL, nhưng
+     trang danh sách vẫn phục vụ bản đệm cũ — tới 30 phút sau mới hiện. Người
+     duyệt tưởng mình bấm hỏng, giảng viên tưởng bị từ chối.
+
+     Bộ test 14-course-lifecycle bắt được lỗi này ở phép thử
+     "Sau khi duyệt, khóa học HIỆN ở danh sách công khai". */
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send({
     message: 'Đã xử lý yêu cầu duyệt.',
     request: toCamelCaseObject(updatedRequest),
@@ -121,6 +139,9 @@ const toggleCourseFeature = catchAsync(async (req, res) => {
     isFeatured,
     req.user
   );
+  // [SỬA 19/08/2026] khóa nổi bật hiện ngay trang chủ — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send(course);
 });
 
@@ -181,6 +202,9 @@ const updateCourseThumbnail = catchAsync(async (req, res) => {
     req.file,
     req.user
   );
+  // [SỬA 19/08/2026] ảnh bìa đổi phải thấy ngay — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send(course);
 });
 
@@ -199,6 +223,9 @@ const updateCourseIntroVideo = catchAsync(async (req, res) => {
     req.file,
     req.user
   );
+  // [SỬA 19/08/2026] video giới thiệu đổi phải thấy ngay — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send(course);
 });
 
@@ -253,6 +280,9 @@ const createUpdateSession = catchAsync(async (req, res) => {
     req.params.courseId,
     req.user
   );
+  // [SỬA 19/08/2026] sinh thêm một bản ghi khóa học — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.CREATED).send({
     message: 'Update session created. You are now editing a new version.',
     updateCourse: updatedCourse,
@@ -265,10 +295,26 @@ const cancelUpdate = catchAsync(async (req, res) => {
     req.params.updateCourseId,
     req.user
   );
+  // [SỬA 19/08/2026] xóa bản ghi khóa học bản sao — xem giải thích ở reviewCourseApproval.
+  await clearCache('cache:/v1/courses*');
+  await clearCache('cache:/v1/instructors*');
   res.status(httpStatus.OK).send({
     message: 'Update session cancelled. The original course is now active.',
     originalCourseSlug: result.originalCourseSlug,
   });
+});
+
+/**
+ * [THÊM 17/08/2026 — Course Versioning]
+ * Lấy lịch sử toàn bộ phiên bản của một dòng khóa học.
+ * Truyền vào ID của BẤT KỲ phiên bản nào cũng trả về đủ cả dòng.
+ */
+const getCourseVersionHistory = catchAsync(async (req, res) => {
+  const history = await courseService.getCourseVersionHistory(
+    req.params.courseId,
+    req.user
+  );
+  res.status(httpStatus.OK).send(history);
 });
 
 module.exports = {
@@ -291,4 +337,5 @@ module.exports = {
   createUpdateSession,
   cancelUpdate,
   archiveCourse,
+  getCourseVersionHistory,
 };

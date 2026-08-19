@@ -134,10 +134,66 @@ export interface CoursePerformanceItem {
   revenue: number;
 }
 
+/* [THÊM 19/08/2026] Ba khối dưới đây backend đã trả về từ lâu
+   (admin.service.js → getInstructorAnalyticsReport) nhưng khai báo kiểu bên
+   frontend chưa cập nhật theo. Hậu quả: InstructorAnalytics.tsx đọc
+   data.quizStats / data.dropoutBottlenecks / data.sentiment thì TypeScript báo
+   TS2339, dù chạy thật vẫn có đủ dữ liệu. Bổ sung đúng theo hình dạng backend
+   đang trả.
+
+   Để `?` (không bắt buộc) là có chủ ý: trang đang có sẵn dữ liệu dự phòng
+   (`data?.quizStats || {...}`), và ba khối này hiện là số liệu mẫu cứng ở
+   backend — khi thay bằng truy vấn thật, một trong ba có thể vắng mặt. */
+
+export interface HardestQuestionItem {
+  id: number;
+  question: string;
+  passRate: number;
+  courseName: string;
+}
+
+export interface InstructorQuizStats {
+  avgPassRate: number;
+  avgScore: number;
+  totalAttempts: number;
+  hardestQuestions: HardestQuestionItem[];
+}
+
+export interface DropoutBottleneckItem {
+  id: number;
+  lessonTitle: string;
+  courseName: string;
+  dropRate: number;
+  completion: number;
+}
+
+export interface SentimentStarItem {
+  stars: number;
+  percentage: number;
+  count: number;
+}
+
+export interface SentimentTopicItem {
+  id: number;
+  title: string;
+  student: string;
+  time: string;
+  urgent: boolean;
+}
+
+export interface InstructorSentiment {
+  stars: SentimentStarItem[];
+  unansweredQnA: number;
+  recentTopics: SentimentTopicItem[];
+}
+
 export interface InstructorAnalyticsData {
   stats: InstructorAnalyticsStats;
   timeSeries: TimeSeriesItem[];
   coursePerformance: CoursePerformanceItem[];
+  quizStats?: InstructorQuizStats;
+  dropoutBottlenecks?: DropoutBottleneckItem[];
+  sentiment?: InstructorSentiment;
 }
 
 // ===== Report API Functions =====

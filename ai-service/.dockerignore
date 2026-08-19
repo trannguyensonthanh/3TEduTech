@@ -1,0 +1,48 @@
+# ===================================================
+# AI Service .dockerignore — Không copy các file này vào Docker image
+# ===================================================
+
+# Environment files (CHỨA SECRET — TUYỆT ĐỐI KHÔNG ĐƯỢC ĐƯA VÀO IMAGE)
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ChromaDB persistent data (sẽ mount volume riêng trên server)
+data/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore
+
+# UV cache
+.uv/

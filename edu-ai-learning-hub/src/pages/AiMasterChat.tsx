@@ -31,7 +31,11 @@ import {
   Check,
   Terminal,
 } from 'lucide-react';
-import { streamAgentAI, UIWidgetData } from '@/services/ai.service';
+import {
+  getOrCreateChatSession,
+  streamChatMessage,
+  UIWidgetData,
+} from '@/services/ai.service';
 import {
   CourseCarouselWidget,
   ChatPaymentSelectorWidget,
@@ -94,6 +98,24 @@ const AiMasterChat: React.FC = () => {
   const tokenQueueRef = useRef<string[]>([]);
   const typewriterTimerRef = useRef<any>(null);
   const streamDoneDataRef = useRef<{ isDone: boolean; suggestedQuestions?: string[] }>({ isDone: false });
+
+  /* [THÊM 19/08/2026] Phiên trò chuyện phía MÁY CHỦ.
+
+     Danh sách hội thoại ở thanh bên là của riêng trình duyệt (localStorage,
+     id kiểu chuỗi) — nó chỉ để người dùng xem lại. Còn muốn gọi luồng
+     streaming mới thì phải có sessionId THẬT trong CSDL, vì đường dẫn là
+     /ai/sessions/:sessionId/chat/stream và lịch sử hội thoại nay do backend
+     giữ chứ không gửi kèm từ trình duyệt nữa.
+
+     Tạo lười (chỉ khi gửi tin đầu tiên) để mở trang không kèm một lần gọi API
+     thừa. Backend trả về đúng phiên MASTER đang mở nếu đã có. */
+  const serverSessionIdRef = useRef<number | null>(null);
+  const ensureServerSession = async (): Promise<number> => {
+    if (serverSessionIdRef.current !== null) return serverSessionIdRef.current;
+    const session = await getOrCreateChatSession({ scope: 'MASTER' });
+    serverSessionIdRef.current = session.sessionId;
+    return session.sessionId;
+  };
   
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -254,16 +276,9 @@ const AiMasterChat: React.FC = () => {
 
     setIsStreaming(true);
 
-    // Prepare history for RAG context
-    const chat_history = [];
-    for (let i = 0; i < messages.length - 1; i++) {
-      if (messages[i].sender === 'user' && messages[i + 1]?.sender === 'bot') {
-        chat_history.push({
-          question: messages[i].text,
-          answer: messages[i + 1].text,
-        });
-      }
-    }
+    /* [BỎ 19/08/2026] Khối dựng `chat_history` ở đây đã được gỡ.
+       Lịch sử hội thoại nay do backend đọc từ CSDL theo sessionId — gửi kèm từ
+       trình duyệt vừa thừa vừa để người dùng tự bịa được lịch sử. */
 
     // Reset typewriter buffer queue
     tokenQueueRef.current = [];
@@ -318,14 +333,19 @@ const AiMasterChat: React.FC = () => {
       }
     }, 16);
 
-    streamAgentAI(
-      {
-        query: textToSend,
-        chat_history: chat_history.slice(-6),
-        use_general_knowledge: false,
-        enrolled_courses: enrolledCourses,
-      },
-      {
+    /* [SỬA 19/08/2026] `streamAgentAI` đã bị xóa khỏi ai.service.ts vì nó gọi
+       THẲNG từ trình duyệt sang AI Service kèm MASTER_API_KEY nhúng cứng —
+       ai mở DevTools cũng lấy được khóa. Tệp này là chỗ duy nhất còn sót lại
+       chưa chuyển, nên trang chat đang hỏng ngay từ lúc nạp mô-đun.
+
+       Hai thứ không còn được gửi kèm và LÝ DO:
+         - chat_history      : backend đọc từ CSDL theo sessionId
+         - enrolled_courses  : trình duyệt không được tự khai mình học khóa nào;
+                               nếu muốn AI biết, backend phải tự tra (xem
+                               enrollmentRepository trong chat.service.js). */
+    try {
+      const sessionId = await ensureServerSession();
+      await streamChatMessage(sessionId, textToSend, {
         onMetadata: (data) => {
           setSessions((prev) =>
             prev.map((s) =>
@@ -380,8 +400,22 @@ const AiMasterChat: React.FC = () => {
             )
           );
         },
+      });
+    } catch (err) {
+      /* Lỗi ở ĐÂY là lỗi trước khi luồng chạy — chủ yếu là không tạo được phiên
+         (mất mạng, hết hạn đăng nhập). Lỗi giữa luồng đã có onError lo. */
+      streamDoneDataRef.current = { isDone: true };
+      if (typewriterTimerRef.current) {
+        clearInterval(typewriterTimerRef.current);
+        typewriterTimerRef.current = null;
       }
-    );
+      setIsStreaming(false);
+      toast({
+        title: 'Không mở được phiên trò chuyện',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+    }
   };
 
   const copyToClipboard = (text: string, id: string) => {

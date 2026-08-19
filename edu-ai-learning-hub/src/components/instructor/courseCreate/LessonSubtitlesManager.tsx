@@ -19,6 +19,7 @@ import {
   useAddSubtitleByUrl,
   useDeleteSubtitle,
   useSetPrimarySubtitle,
+  useGenerateAiSubtitle,
 } from '@/hooks/queries/subtitle.queries';
 import { Subtitle } from '@/services/subtitle.service';
 import {
@@ -52,6 +53,21 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
   const { mutate: deleteSubtitle, isPending: isDeleting } = useDeleteSubtitle();
   const { mutate: setPrimary, isPending: isSettingPrimary } =
     useSetPrimarySubtitle();
+  const { mutate: generateAi, isPending: isGeneratingAi } =
+    useGenerateAiSubtitle();
+
+  const handleGenerateAi = () => {
+    generateAi(lessonId, {
+      onSuccess: (data) => {
+        toast.success(data.message || 'Đã gửi lệnh dịch AI, vui lòng quay lại sau ít phút!');
+      },
+      onError: (err: any) => {
+        toast.error(
+          err?.response?.data?.message || err?.message || 'Không thể kích hoạt AI Transcribe.'
+        );
+      },
+    });
+  };
 
   const openDeleteDialog = (subtitleId: number) => {
     setPendingDeleteId(subtitleId);
@@ -131,6 +147,43 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
         <Icons.captions className='h-5 w-5 mr-2 text-primary' />
         Subtitles
       </h3>
+
+      {/* On-Demand AI Generator Banner */}
+      <div className='bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-lg p-3 my-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm'>
+        <div className='flex items-center space-x-3'>
+          <div className='p-2.5 bg-indigo-500/20 text-indigo-400 rounded-lg shrink-0 flex items-center justify-center'>
+            <Icons.bot className='w-5 h-5 text-indigo-500 animate-pulse' />
+          </div>
+          <div>
+            <p className='text-sm font-semibold text-foreground flex items-center gap-1.5'>
+              AI Auto-Transcribe <span className='text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider'>On-Demand</span>
+            </p>
+            <p className='text-xs text-muted-foreground mt-0.5'>
+              Tiết kiệm tài nguyên! AI chỉ chạy tạo phụ đề khi bạn thực sự mong muốn và bấm nút kích hoạt.
+            </p>
+          </div>
+        </div>
+        <Button
+          type='button'
+          size='sm'
+          onClick={handleGenerateAi}
+          disabled={isGeneratingAi || (subtitlesData && subtitlesData.subtitles && subtitlesData.subtitles.length > 0)}
+          className='bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shrink-0 shadow-sm transition-all duration-200 w-full sm:w-auto'
+        >
+          {isGeneratingAi ? (
+            <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+          ) : (
+            <Icons.sparkles className='mr-2 h-4 w-4' />
+          )}
+          Tạo srt bằng AI
+        </Button>
+      </div>
+      {subtitlesData && subtitlesData.subtitles && subtitlesData.subtitles.length > 0 && (
+        <p className='text-[11px] text-amber-500 italic mt-[-4px] mb-2 flex items-center gap-1'>
+          <Icons.info className='w-3.5 h-3.5' /> Bài học đã có sẵn phụ đề srt. Để sử dụng AI dịch và tạo lại mới, hãy xóa file phụ đề cũ bên dưới.
+        </p>
+      )}
+
       {/* Add Form */}
       <div className='space-y-3 border-b pb-4'>
         <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>

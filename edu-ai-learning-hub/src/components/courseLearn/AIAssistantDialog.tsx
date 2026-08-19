@@ -20,13 +20,17 @@ import { AvatarCanvas } from '@/components/ai-avatar/AvatarCanvas';
 
 // Logic
 import { useChatbot, ChatMessage } from '@/hooks/useChatbot';
-import { queryCourseAI } from '@/services/ai.service';
 
 interface AIAssistantDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  courseContext: { courseName: string };
-  lessonContext?: { lessonName: string };
+  /* [SỬA 17/08/2026 — LEVEL 3] Bổ sung courseId.
+     Phiên chat của khóa học được định danh bằng (tài khoản, scope, courseId)
+     trong CSDL, nên chỉ có courseName là không đủ — hai khóa trùng tên sẽ dùng
+     chung lịch sử. CourseLearningPage vốn đã truyền nguyên object `course` nên
+     không phải sửa gì ở nơi gọi. */
+  courseContext: { courseName: string; courseId?: number };
+  lessonContext?: { lessonName: string; lessonId?: number };
 }
 
 const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({
@@ -52,10 +56,21 @@ const AIAssistantDialog: React.FC<AIAssistantDialogProps> = ({
     ],
   };
 
+  /* [SỬA 17/08/2026 — LEVEL 3]
+     scope='COURSE' + courseId → phiên RIÊNG cho từng khóa học, tách hẳn khỏi
+     chatbot tổng ở trang chủ. Đây chính là lỗi "chat trong khóa học dùng chung
+     lịch sử với chat ngoài master" đã được báo cáo.
+
+     useStreaming: false — trợ lý trong khóa học trả về kèm dữ liệu giọng nói
+     (trường `voice`), mà giọng nói chỉ có ở phản hồi trọn gói chứ không đi
+     kèm luồng token. Bật streaming ở đây sẽ làm mất tính năng đọc thành tiếng. */
   const { messages, isTyping, addUserMessage, confirmFallback } = useChatbot({
     initialMessages: [initialMessage],
-    queryFn: queryCourseAI,
-    queryContext: { courseName: courseContext.courseName },
+    scope: 'COURSE',
+    courseId: courseContext.courseId ?? null,
+    lessonId: lessonContext?.lessonId ?? null,
+    useStreaming: false,
+    enabled: isOpen,
   });
 
   const [input, setInput] = useState('');

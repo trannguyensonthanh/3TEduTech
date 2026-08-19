@@ -203,9 +203,13 @@ const getCourseBySlug = async (slug, user, targetCurrency) => {
     user && (user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN);
   const isPotentiallyInstructor = user && user.role === Roles.INSTRUCTOR;
   const includeNonPublished = isAdmin || isPotentiallyInstructor;
+  /* [SỬA 17/08/2026 — Course Versioning] Truyền thêm accountId để repository
+     cho phép học viên ĐÃ GHI DANH xem khóa học kể cả khi nó đã chuyển sang
+     SUPERSEDED (bị thay bởi phiên bản mới) hoặc ARCHIVED. */
   const course = await courseRepository.findCourseWithFullDetailsBySlug(
     slug,
-    includeNonPublished
+    includeNonPublished,
+    user?.id || null
   );
   if (!course) {
     throw new ApiError(
@@ -216,7 +220,19 @@ const getCourseBySlug = async (slug, user, targetCurrency) => {
   const isPublished = course.StatusID === CourseStatus.PUBLISHED;
   const isOwnerInstructor =
     isPotentiallyInstructor && course.InstructorID === user.id;
-  if (!isPublished && !isAdmin && !isOwnerInstructor) {
+
+  /* [SỬA] Học viên đã mua vẫn được vào khóa SUPERSEDED / ARCHIVED.
+     Không có ngoại lệ này thì lời hứa "mua v1 thì học v1 mãi mãi" bị phá vỡ:
+     ngay khi v2 được duyệt, toàn bộ học viên v1 sẽ nhận 403/404. */
+  let viewerHasEnrollment = false;
+  if (!isPublished && user && !isAdmin && !isOwnerInstructor) {
+    viewerHasEnrollment = await courseRepository.hasEnrollment(
+      user.id,
+      course.CourseID
+    );
+  }
+
+  if (!isPublished && !isAdmin && !isOwnerInstructor && !viewerHasEnrollment) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'You do not have permission to view this course.'
@@ -435,77 +451,110 @@ const deleteCourse = async (courseId, user) => {
       'Bạn không có quyền xóa khóa học này.'
     );
   }
-  if (course.ThumbnailPublicId) {
-    try {
-      await cloudinaryUtil.deleteAsset(course.ThumbnailPublicId, {
-        resource_type: 'image',
-      });
-      logger.info(
-        `Course thumbnail deleted from Cloudinary: ${course.ThumbnailPublicId}`
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to delete course thumbnail ${course.ThumbnailPublicId}:`,
-        error
-      );
-    }
-  }
-  const sections = await sectionRepository.findSectionsByCourseId(courseId);
-  for (const section of sections) {
-    const lessons = await lessonRepository.findLessonsBySectionId(
-      section.SectionID
+  /* ======================================================================
+     [SỬA 17/08/2026] BỎ BACKDOOR CHO ADMIN
+
+     TRƯỚC ĐÂY guard nằm trong `if (isOwnerInstructor && ...)`, nghĩa là chỉ
+     giảng viên bị chặn. Admin xóa được khóa học PUBLISHED đang có học viên,
+     kéo theo CASCADE xóa sạch Enrollments và LessonProgress của toàn bộ
+     học viên — không log, không backup, không khôi phục được.
+
+     Nay áp dụng cho MỌI vai trò: đã có người mua thì không ai được xóa vĩnh
+     viễn, kể cả Quản trị viên. Muốn gỡ khỏi hệ thống thì dùng luồng
+     ARCHIVE_SUBMISSION (giữ nguyên quyền truy cập của học viên đã mua).
+     ====================================================================== */
+  const isEditableDraft = [
+    CourseStatus.DRAFT,
+    CourseStatus.REJECTED,
+  ].includes(course.StatusID);
+
+  if (!isEditableDraft && course.studentCount > 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Khóa học đã có học viên tham gia, không thể xóa vĩnh viễn nhằm bảo vệ quyền lợi học viên. ' +
+        'Vui lòng gửi yêu cầu Tạm Ngừng Xuất Bản (Archive) thay vì xóa.'
     );
-    for (const lesson of lessons) {
-      if (lesson.ExternalVideoID) {
-        try {
-          await cloudinaryUtil.deleteAsset(lesson.ExternalVideoID, {
-            resource_type: 'video',
-          });
-          logger.info(
-            `Lesson video deleted from Cloudinary: ${lesson.ExternalVideoID}`
-          );
-        } catch (error) {
-          logger.error(
-            `Failed to delete lesson video ${lesson.ExternalVideoID}:`,
-            error
-          );
-        }
-      }
-      const attachments =
-        await lessonAttachmentRepository.findAttachmentsByLessonId(
-          lesson.LessonID
-        );
-      for (const attachment of attachments) {
-        if (attachment.CloudStorageID) {
-          try {
-            await cloudinaryUtil.deleteAsset(attachment.CloudStorageID, {
-              resource_type: 'raw',
-            });
-            logger.info(
-              `Lesson attachment deleted from Cloudinary: ${attachment.CloudStorageID}`
-            );
-          } catch (error) {
-            logger.error(
-              `Failed to delete lesson attachment ${attachment.CloudStorageID}:`,
-              error
-            );
-          }
-        }
-      }
-    }
   }
-  if (
-    isOwnerInstructor &&
-    ![CourseStatus.DRAFT, CourseStatus.REJECTED].includes(course.StatusID)
-  ) {
-    if (course.studentCount > 0) {
+
+  /* ======================================================================
+     [THÊM 17/08/2026 — BẢO TOÀN LỊCH SỬ PHIÊN BẢN]
+
+     Guard studentCount ở trên vẫn còn một khe hở: một phiên bản SUPERSEDED
+     tình cờ chưa có học viên nào sẽ lọt qua và bị xóa vĩnh viễn. Hậu quả:
+       - Cột PreviousVersionID của phiên bản kế tiếp trỏ vào một dòng không còn
+         tồn tại → khóa ngoại chặn lệnh xóa (lỗi 500 khó hiểu), hoặc nếu khóa
+         ngoại có ON DELETE SET NULL thì chuỗi phiên bản bị đứt đoạn.
+       - Màn hình "Lịch sử phiên bản" mất hẳn một mắt xích, đúng thứ mà đề tài
+         này sinh ra để chứng minh.
+
+     Nguyên tắc: LỊCH SỬ LÀ BẤT BIẾN. Đã từng phát hành thì không xóa, dù
+     không bán được bản nào. Chỉ bản nháp (DRAFT/REJECTED) mới được xóa.
+
+     LƯU Ý: guard này CHỈ áp cho khóa đã phát hành. Bản nháp cập nhật cũng mang
+     VersionNumber = 2, nhưng nó chưa từng lên sóng nên vẫn phải xóa được —
+     nếu không, giảng viên mở nhầm phiên cập nhật sẽ không có đường lùi.
+     ====================================================================== */
+  if (!isEditableDraft) {
+    if (
+      course.StatusID === CourseStatus.SUPERSEDED ||
+      (course.VersionNumber || 1) > 1
+    ) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        'Khóa học đã có học viên tham gia, không thể xóa vĩnh viễn nhằm bảo vệ quyền lợi học viên. Vui lòng gửi yêu cầu Tạm Ngừng Xuất Bản (Archive).'
+        'Đây là một phiên bản đã phát hành trong lịch sử khóa học nên không thể xóa vĩnh viễn. ' +
+          'Lịch sử phiên bản phải được bảo toàn để đối chiếu với học viên đã mua các phiên bản trước.'
       );
     }
-    // Nếu studentCount === 0 (chưa có ai học/mua), được phép xóa vĩnh viễn
+
+    // Là gốc của một dòng đã có phiên bản kế thừa? Xóa sẽ làm đứt cả chuỗi.
+    const familyVersions = await courseRepository.findVersionsByRootId(
+      course.RootCourseID || course.CourseID
+    );
+    if (familyVersions.length > 1) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Khóa học này đã có các phiên bản kế thừa nên không thể xóa vĩnh viễn. ' +
+          'Vui lòng dùng Tạm Ngừng Xuất Bản (Archive).'
+      );
+    }
   }
+
+  /* Là bản nháp cập nhật của một khóa đang chạy hay không?
+     Nếu đúng, nó DÙNG CHUNG file Cloudinary với khóa gốc (cloneCourseRecord
+     sao chép nguyên ThumbnailPublicId / IntroVideoPublicId), nên tuyệt đối
+     không được dọn tài nguyên đám mây — sẽ làm mất ảnh bìa của khóa đang bán. */
+  const isUpdateDraft = Boolean(course.LiveCourseID);
+
+  if (isUpdateDraft) {
+    logger.info(
+      `[Versioning] Khóa ${courseId} là bản nháp cập nhật của ${course.LiveCourseID}; ` +
+        `bỏ qua bước dọn Cloudinary vì tài nguyên dùng chung với bản gốc.`
+    );
+  } else {
+    // 1. Xóa riêng Thumbnail khóa học (nếu nằm ngoài folder mặc định của khóa học)
+    if (course.ThumbnailPublicId) {
+      try {
+        await cloudinaryUtil.deleteAsset(course.ThumbnailPublicId, {
+          resource_type: 'image',
+        });
+        logger.info(
+          `Course thumbnail deleted from Cloudinary: ${course.ThumbnailPublicId}`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to delete course thumbnail ${course.ThumbnailPublicId}:`,
+          error
+        );
+      }
+    }
+
+    // 2. Dọn rác Khóa học bằng 1 lệnh Bulk Delete duy nhất cho toàn bộ folder
+    await cloudinaryUtil.deleteResourcesByPrefix(`courses/${courseId}/`);
+    logger.info(
+      `Bulk deleted all Cloudinary resources under folder courses/${courseId}/`
+    );
+  }
+
   await courseRepository.deleteCourseById(courseId);
   logger.info(`Course ${courseId} deleted by user ${user.id}`);
   await aiSyncService.removeCourseFromAi(course.CourseName);
@@ -802,304 +851,335 @@ const getPendingApprovalRequestByCourseId = async (courseId) => {
   return request ? toCamelCaseObject(request) : null;
 };
 
-/**
- * [HELPER 1] Clone CÁC THÀNH PHẦN CON của một lesson sang một lesson khác.
- */
-async function cloneLessonSubComponents(
-  fromLesson,
-  toLessonId,
-  transaction,
-  skipQuiz = false
-) {
-  if (
-    !skipQuiz &&
-    fromLesson.lessonType === LessonType.QUIZ &&
-    fromLesson.questions?.length > 0
-  ) {
-    for (const question of fromLesson.questions) {
-      const newQuestion = await quizRepository.createQuestion(
-        toPascalCaseObject({
-          lessonId: toLessonId,
-          ...question,
-        }),
-        transaction
-      );
-      if (question.options?.length > 0) {
-        const optionsData = question.options.map((opt) =>
-          toCamelCaseObject(opt)
-        );
-        await quizRepository.createOptionsForQuestion(
-          newQuestion.QuestionID,
-          optionsData,
-          transaction
-        );
-      }
-    }
-  }
-  if (fromLesson.attachments?.length > 0) {
-    for (const attachment of fromLesson.attachments) {
-      await lessonAttachmentRepository.createAttachment(
-        toPascalCaseObject({ lessonId: toLessonId, ...attachment }),
-        transaction
-      );
-    }
-  }
-  if (fromLesson.subtitles?.length > 0) {
-    for (const subtitle of fromLesson.subtitles) {
-      await subtitleRepository.addSubtitle(
-        toPascalCaseObject({ lessonId: toLessonId, ...subtitle }),
-        transaction
-      );
-    }
-  }
-}
-
-/**
- * [HELPER 2] Clone MỘT LESSON ĐẦY ĐỦ.
- */
-async function cloneFullLesson(lessonToClone, newSectionId, transaction) {
-  const newLessonData = {
-    ...lessonToClone,
-    sectionId: newSectionId,
-    originalId: null,
-  };
-  const newLesson = await lessonRepository.createLesson(
-    toPascalCaseObject(newLessonData),
-    transaction
-  );
-  await cloneLessonSubComponents(
-    lessonToClone,
-    newLesson.LessonID,
-    transaction
-  );
-}
-
-/**
- * [HELPER 3] Đồng bộ hóa Quiz cho một lesson bằng "Archive và Tạo lại".
- */
-async function syncQuizForLesson(updateQuestions, liveLessonId, transaction) {
-  await quizRepository.archiveQuestionsByLessonId(liveLessonId, transaction);
-  if (updateQuestions?.length > 0) {
-    for (const uQuestion of updateQuestions) {
-      const newQuestion = await quizRepository.createQuestion(
-        {
-          LessonID: liveLessonId,
-          QuestionText: uQuestion.questionText,
-          Explanation: uQuestion.explanation,
-          QuestionOrder: uQuestion.questionOrder,
-        },
-        transaction
-      );
-      if (uQuestion.options?.length > 0) {
-        const optionsData = uQuestion.options.map((opt) => ({
-          optionText: opt.optionText,
-          isCorrectAnswer: opt.isCorrectAnswer,
-          optionOrder: opt.optionOrder,
-        }));
-        await quizRepository.createOptionsForQuestion(
-          newQuestion.QuestionID,
-          optionsData,
-          transaction
-        );
-      }
-    }
-  }
-}
-
-/**
- * [HELPER 5] Đồng bộ hóa các lessons cho một section.
- */
-async function syncLessonsForSection(
-  updateLessons,
-  liveSectionId,
-  transaction
-) {
-  const cloudFilesToDelete = [];
-  const liveLessonsRaw =
-    await lessonRepository.findAllLessonsWithDetailsBySectionIds(
-      [liveSectionId],
-      transaction
-    );
-  const liveLessons = toCamelCaseObject(
-    liveLessonsRaw.filter((l) => !l.isArchived)
-  );
-  const updateLessonsMap = new Map(
-    (updateLessons || []).map((l) => [l.originalId, l])
-  );
-  const liveLessonsMapById = new Map(liveLessons.map((l) => [l.lessonId, l]));
-  const lessonsToArchiveIds = [];
-  for (const [liveLessonId] of liveLessonsMapById.entries()) {
-    if (!updateLessonsMap.has(liveLessonId)) {
-      lessonsToArchiveIds.push(liveLessonId);
-    }
-  }
-  if (lessonsToArchiveIds.length > 0) {
-    await lessonRepository.archiveLessonsByIds(
-      lessonsToArchiveIds,
-      transaction
-    );
-  }
-  for (const updateLesson of updateLessons || []) {
-    const originalLessonId = updateLesson.originalId;
-    logger.debug(
-      `[syncLessonsForSection] Processing lesson: ${updateLesson.lessonName} (ID: ${originalLessonId})`,
-      { updateLesson }
-    );
-    if (originalLessonId && liveLessonsMapById.has(originalLessonId)) {
-      const liveLesson = liveLessonsMapById.get(originalLessonId);
-      const oldVideoId = liveLesson.externalVideoId;
-      const newVideoId = updateLesson.externalVideoId;
-      if (
-        liveLesson.lessonType === 'VIDEO' &&
-        oldVideoId &&
-        newVideoId !== oldVideoId &&
-        liveLesson.videoSourceType === 'CLOUDINARY'
-      ) {
-        cloudFilesToDelete.push({
-          publicId: oldVideoId,
-          resourceType: 'video',
-        });
-      }
-      await lessonRepository.updateLessonById(
-        originalLessonId,
-        toPascalCaseObject(updateLesson),
-        transaction
-      );
-      await syncQuizForLesson(
-        updateLesson.questions || [],
-        originalLessonId,
-        transaction
-      );
-      const attachmentsResult =
-        await lessonAttachmentRepository.deleteAttachmentsByLessonId(
-          originalLessonId,
-          transaction
-        );
-      cloudFilesToDelete.push(...attachmentsResult.filesToDelete);
-      if (updateLesson.attachments?.length > 0) {
-        for (const attachment of updateLesson.attachments) {
-          const newAttachmentData = {
-            LessonID: originalLessonId,
-            FileName: attachment.fileName,
-            FileURL: attachment.fileUrl,
-            FileType: attachment.fileType,
-            FileSize: attachment.fileSize,
-            CloudStorageID: attachment.cloudStorageId,
-          };
-          await lessonAttachmentRepository.createAttachment(
-            newAttachmentData,
-            transaction
-          );
-        }
-      }
-      await subtitleRepository.deleteSubtitlesByLessonId(
-        originalLessonId,
-        transaction
-      );
-      if (updateLesson.subtitles?.length > 0) {
-        for (const subtitle of updateLesson.subtitles) {
-          const newSubtitleData = {
-            LessonID: originalLessonId,
-            LanguageCode: subtitle.languageCode,
-            SubtitleUrl: subtitle.subtitleUrl,
-            IsDefault: subtitle.isDefault,
-          };
-          await subtitleRepository.addSubtitle(newSubtitleData, transaction);
-        }
-      }
-    } else {
-      await cloneFullLesson(updateLesson, liveSectionId, transaction);
-    }
-  }
-  return cloudFilesToDelete;
-}
-
-/**
- * [HÀM CHÍNH - FINAL] Thực hiện logic "Smart Sync" từ bản sao sang bản gốc.
- */
-async function syncLiveCourseFromUpdate(
-  updateCourseId,
-  liveCourseId,
-  transaction
-) {
-  logger.info(
-    `Starting Diff-and-Patch Sync from course ${updateCourseId} to ${liveCourseId}`
-  );
-  const allCloudFilesToDelete = [];
-  const updateCurriculumRaw =
-    await sectionRepository.findAllSectionsWithDetails(
-      updateCourseId,
-      transaction
-    );
-  const liveCurriculumRaw = await sectionRepository.findAllSectionsWithDetails(
-    liveCourseId,
-    transaction
-  );
-  const updateCurriculum = toCamelCaseObject(updateCurriculumRaw);
-  const liveCurriculum = toCamelCaseObject(
-    liveCurriculumRaw.filter((s) => !s.isArchived)
-  );
-  const updateSectionsMap = new Map(
-    updateCurriculum.map((s) => [s.originalId, s])
-  );
-  const liveSectionsMapById = new Map(
-    liveCurriculum.map((s) => [s.sectionId, s])
-  );
-  const sectionsToArchiveIds = [];
-  for (const [liveSectionId] of liveSectionsMapById.entries()) {
-    if (!updateSectionsMap.has(liveSectionId)) {
-      sectionsToArchiveIds.push(liveSectionId);
-    }
-  }
-  if (sectionsToArchiveIds.length > 0) {
-    await sectionRepository.archiveSectionsByIds(
-      sectionsToArchiveIds,
-      transaction
-    );
-  }
-  for (const updateSection of updateCurriculum) {
-    const originalSectionId = updateSection.originalId;
-    if (originalSectionId && liveSectionsMapById.has(originalSectionId)) {
-      await sectionRepository.updateSectionById(
-        originalSectionId,
-        toPascalCaseObject(updateSection),
-        transaction
-      );
-      const filesFromLessons = await syncLessonsForSection(
-        updateSection.lessons || [],
-        originalSectionId,
-        transaction
-      );
-      allCloudFilesToDelete.push(...filesFromLessons);
-    } else {
-      await cloneFullLesson(updateSection, liveCourseId, transaction);
-    }
-  }
-  const updateCourseDataRaw = await courseRepository.findCourseById(
-    updateCourseId,
-    true,
-    transaction
-  );
-  const updateCourseData = toCamelCaseObject(updateCourseDataRaw);
-  await courseRepository.updateCourseById(
-    liveCourseId,
-    toPascalCaseObject({
-      courseName: updateCourseData.courseName,
-      shortDescription: updateCourseData.shortDescription,
-      fullDescription: updateCourseData.fullDescription,
-      requirements: updateCourseData.requirements,
-      learningOutcomes: updateCourseData.learningOutcomes,
-      originalPrice: updateCourseData.originalPrice,
-      discountedPrice: updateCourseData.discountedPrice,
-      categoryId: updateCourseData.categoryId,
-      levelId: updateCourseData.levelId,
-      language: updateCourseData.language,
-    }),
-    transaction
-  );
-  logger.info(`Synced course-level details to live course ${liveCourseId}`);
-  return allCloudFilesToDelete;
-}
+// ============================================================================
+// [VÔ HIỆU HÓA 17/08/2026 — CHUYỂN SANG MÔ HÌNH COURSE VERSIONING]
+// ----------------------------------------------------------------------------
+// Toàn bộ khối "Diff-and-Patch" bên dưới (cloneLessonSubComponents,
+// cloneFullLesson, syncQuizForLesson, syncLessonsForSection và
+// syncLiveCourseFromUpdate) KHÔNG CÒN ĐƯỢC SỬ DỤNG.
+//
+// CƠ CHẾ CŨ: khi Admin duyệt bản cập nhật, hệ thống so sánh bản nháp với bản
+// đang chạy rồi VÁ TỪNG BÀI HỌC vào chính khóa học đang chạy — nghĩa là học
+// viên đã mua bị đổi nội dung ngay dưới chân mình.
+//
+// CƠ CHẾ MỚI (promoteCourseVersion): bản nháp TRỞ THÀNH phiên bản mới, bản cũ
+// chuyển sang trạng thái SUPERSEDED và giữ nguyên vẹn 100%. Không một câu lệnh
+// nào chạm vào Sections / Lessons / LessonProgress của phiên bản cũ.
+//
+// TIỆN THỂ SỬA LUÔN MỘT LỖI NGHIÊM TRỌNG: dòng
+//     await cloneFullLesson(updateSection, liveCourseId, transaction);
+// ở cuối syncLiveCourseFromUpdate truyền một object Section vào tham số
+// `lessonToClone`, và truyền `liveCourseId` vào vị trí `newSectionId`. Hệ quả:
+// mỗi khi giảng viên THÊM MỘT CHƯƠNG MỚI rồi gửi duyệt, job đồng bộ ném lỗi
+// INSERT (LessonName NOT NULL) -> rollback -> yêu cầu duyệt kẹt vĩnh viễn ở
+// trạng thái APPROVED nhưng nội dung không bao giờ được áp dụng.
+// Lỗi này biến mất cùng việc bỏ cả khối, không cần vá.
+//
+// Giữ lại dạng comment để đối chiếu khi bảo vệ đồ án (thể hiện quá trình tiến
+// hóa kiến trúc). Có thể xóa hẳn sau khi nghiệm thu xong Level 1.
+//
+// LƯU Ý KỸ THUẬT: dùng comment hai gạch chéo từng dòng thay vì bọc khối, vì
+// đoạn bên dưới có sẵn các JSDoc kết thúc bằng dấu đóng comment — JavaScript
+// không hỗ trợ comment khối lồng nhau.
+// ============================================================================
+// /**
+//  * [HELPER 1] Clone CÁC THÀNH PHẦN CON của một lesson sang một lesson khác.
+//  */
+// async function cloneLessonSubComponents(
+//   fromLesson,
+//   toLessonId,
+//   transaction,
+//   skipQuiz = false
+// ) {
+//   if (
+//     !skipQuiz &&
+//     fromLesson.lessonType === LessonType.QUIZ &&
+//     fromLesson.questions?.length > 0
+//   ) {
+//     for (const question of fromLesson.questions) {
+//       const newQuestion = await quizRepository.createQuestion(
+//         toPascalCaseObject({
+//           lessonId: toLessonId,
+//           ...question,
+//         }),
+//         transaction
+//       );
+//       if (question.options?.length > 0) {
+//         const optionsData = question.options.map((opt) =>
+//           toCamelCaseObject(opt)
+//         );
+//         await quizRepository.createOptionsForQuestion(
+//           newQuestion.QuestionID,
+//           optionsData,
+//           transaction
+//         );
+//       }
+//     }
+//   }
+//   if (fromLesson.attachments?.length > 0) {
+//     for (const attachment of fromLesson.attachments) {
+//       await lessonAttachmentRepository.createAttachment(
+//         toPascalCaseObject({ lessonId: toLessonId, ...attachment }),
+//         transaction
+//       );
+//     }
+//   }
+//   if (fromLesson.subtitles?.length > 0) {
+//     for (const subtitle of fromLesson.subtitles) {
+//       await subtitleRepository.addSubtitle(
+//         toPascalCaseObject({ lessonId: toLessonId, ...subtitle }),
+//         transaction
+//       );
+//     }
+//   }
+// }
+//
+// /**
+//  * [HELPER 2] Clone MỘT LESSON ĐẦY ĐỦ.
+//  */
+// async function cloneFullLesson(lessonToClone, newSectionId, transaction) {
+//   const newLessonData = {
+//     ...lessonToClone,
+//     sectionId: newSectionId,
+//     originalId: null,
+//   };
+//   const newLesson = await lessonRepository.createLesson(
+//     toPascalCaseObject(newLessonData),
+//     transaction
+//   );
+//   await cloneLessonSubComponents(
+//     lessonToClone,
+//     newLesson.LessonID,
+//     transaction
+//   );
+// }
+//
+// /**
+//  * [HELPER 3] Đồng bộ hóa Quiz cho một lesson bằng "Archive và Tạo lại".
+//  */
+// async function syncQuizForLesson(updateQuestions, liveLessonId, transaction) {
+//   await quizRepository.archiveQuestionsByLessonId(liveLessonId, transaction);
+//   if (updateQuestions?.length > 0) {
+//     for (const uQuestion of updateQuestions) {
+//       const newQuestion = await quizRepository.createQuestion(
+//         {
+//           LessonID: liveLessonId,
+//           QuestionText: uQuestion.questionText,
+//           Explanation: uQuestion.explanation,
+//           QuestionOrder: uQuestion.questionOrder,
+//         },
+//         transaction
+//       );
+//       if (uQuestion.options?.length > 0) {
+//         const optionsData = uQuestion.options.map((opt) => ({
+//           optionText: opt.optionText,
+//           isCorrectAnswer: opt.isCorrectAnswer,
+//           optionOrder: opt.optionOrder,
+//         }));
+//         await quizRepository.createOptionsForQuestion(
+//           newQuestion.QuestionID,
+//           optionsData,
+//           transaction
+//         );
+//       }
+//     }
+//   }
+// }
+//
+// /**
+//  * [HELPER 5] Đồng bộ hóa các lessons cho một section.
+//  */
+// async function syncLessonsForSection(
+//   updateLessons,
+//   liveSectionId,
+//   transaction
+// ) {
+//   const cloudFilesToDelete = [];
+//   const liveLessonsRaw =
+//     await lessonRepository.findAllLessonsWithDetailsBySectionIds(
+//       [liveSectionId],
+//       transaction
+//     );
+//   const liveLessons = toCamelCaseObject(
+//     liveLessonsRaw.filter((l) => !l.isArchived)
+//   );
+//   const updateLessonsMap = new Map(
+//     (updateLessons || []).map((l) => [l.originalId, l])
+//   );
+//   const liveLessonsMapById = new Map(liveLessons.map((l) => [l.lessonId, l]));
+//   const lessonsToArchiveIds = [];
+//   for (const [liveLessonId] of liveLessonsMapById.entries()) {
+//     if (!updateLessonsMap.has(liveLessonId)) {
+//       lessonsToArchiveIds.push(liveLessonId);
+//     }
+//   }
+//   if (lessonsToArchiveIds.length > 0) {
+//     await lessonRepository.archiveLessonsByIds(
+//       lessonsToArchiveIds,
+//       transaction
+//     );
+//   }
+//   for (const updateLesson of updateLessons || []) {
+//     const originalLessonId = updateLesson.originalId;
+//     logger.debug(
+//       `[syncLessonsForSection] Processing lesson: ${updateLesson.lessonName} (ID: ${originalLessonId})`,
+//       { updateLesson }
+//     );
+//     if (originalLessonId && liveLessonsMapById.has(originalLessonId)) {
+//       const liveLesson = liveLessonsMapById.get(originalLessonId);
+//       const oldVideoId = liveLesson.externalVideoId;
+//       const newVideoId = updateLesson.externalVideoId;
+//       if (
+//         liveLesson.lessonType === 'VIDEO' &&
+//         oldVideoId &&
+//         newVideoId !== oldVideoId &&
+//         liveLesson.videoSourceType === 'CLOUDINARY'
+//       ) {
+//         cloudFilesToDelete.push({
+//           publicId: oldVideoId,
+//           resourceType: 'video',
+//         });
+//       }
+//       await lessonRepository.updateLessonById(
+//         originalLessonId,
+//         toPascalCaseObject(updateLesson),
+//         transaction
+//       );
+//       await syncQuizForLesson(
+//         updateLesson.questions || [],
+//         originalLessonId,
+//         transaction
+//       );
+//       const attachmentsResult =
+//         await lessonAttachmentRepository.deleteAttachmentsByLessonId(
+//           originalLessonId,
+//           transaction
+//         );
+//       cloudFilesToDelete.push(...attachmentsResult.filesToDelete);
+//       if (updateLesson.attachments?.length > 0) {
+//         for (const attachment of updateLesson.attachments) {
+//           const newAttachmentData = {
+//             LessonID: originalLessonId,
+//             FileName: attachment.fileName,
+//             FileURL: attachment.fileUrl,
+//             FileType: attachment.fileType,
+//             FileSize: attachment.fileSize,
+//             CloudStorageID: attachment.cloudStorageId,
+//           };
+//           await lessonAttachmentRepository.createAttachment(
+//             newAttachmentData,
+//             transaction
+//           );
+//         }
+//       }
+//       await subtitleRepository.deleteSubtitlesByLessonId(
+//         originalLessonId,
+//         transaction
+//       );
+//       if (updateLesson.subtitles?.length > 0) {
+//         for (const subtitle of updateLesson.subtitles) {
+//           const newSubtitleData = {
+//             LessonID: originalLessonId,
+//             LanguageCode: subtitle.languageCode,
+//             SubtitleUrl: subtitle.subtitleUrl,
+//             IsDefault: subtitle.isDefault,
+//           };
+//           await subtitleRepository.addSubtitle(newSubtitleData, transaction);
+//         }
+//       }
+//     } else {
+//       await cloneFullLesson(updateLesson, liveSectionId, transaction);
+//     }
+//   }
+//   return cloudFilesToDelete;
+// }
+//
+// /**
+//  * [HÀM CHÍNH - FINAL] Thực hiện logic "Smart Sync" từ bản sao sang bản gốc.
+//  */
+// async function syncLiveCourseFromUpdate(
+//   updateCourseId,
+//   liveCourseId,
+//   transaction
+// ) {
+//   logger.info(
+//     `Starting Diff-and-Patch Sync from course ${updateCourseId} to ${liveCourseId}`
+//   );
+//   const allCloudFilesToDelete = [];
+//   const updateCurriculumRaw =
+//     await sectionRepository.findAllSectionsWithDetails(
+//       updateCourseId,
+//       transaction
+//     );
+//   const liveCurriculumRaw = await sectionRepository.findAllSectionsWithDetails(
+//     liveCourseId,
+//     transaction
+//   );
+//   const updateCurriculum = toCamelCaseObject(updateCurriculumRaw);
+//   const liveCurriculum = toCamelCaseObject(
+//     liveCurriculumRaw.filter((s) => !s.isArchived)
+//   );
+//   const updateSectionsMap = new Map(
+//     updateCurriculum.map((s) => [s.originalId, s])
+//   );
+//   const liveSectionsMapById = new Map(
+//     liveCurriculum.map((s) => [s.sectionId, s])
+//   );
+//   const sectionsToArchiveIds = [];
+//   for (const [liveSectionId] of liveSectionsMapById.entries()) {
+//     if (!updateSectionsMap.has(liveSectionId)) {
+//       sectionsToArchiveIds.push(liveSectionId);
+//     }
+//   }
+//   if (sectionsToArchiveIds.length > 0) {
+//     await sectionRepository.archiveSectionsByIds(
+//       sectionsToArchiveIds,
+//       transaction
+//     );
+//   }
+//   for (const updateSection of updateCurriculum) {
+//     const originalSectionId = updateSection.originalId;
+//     if (originalSectionId && liveSectionsMapById.has(originalSectionId)) {
+//       await sectionRepository.updateSectionById(
+//         originalSectionId,
+//         toPascalCaseObject(updateSection),
+//         transaction
+//       );
+//       const filesFromLessons = await syncLessonsForSection(
+//         updateSection.lessons || [],
+//         originalSectionId,
+//         transaction
+//       );
+//       allCloudFilesToDelete.push(...filesFromLessons);
+//     } else {
+//       await cloneFullLesson(updateSection, liveCourseId, transaction);
+//     }
+//   }
+//   const updateCourseDataRaw = await courseRepository.findCourseById(
+//     updateCourseId,
+//     true,
+//     transaction
+//   );
+//   const updateCourseData = toCamelCaseObject(updateCourseDataRaw);
+//   await courseRepository.updateCourseById(
+//     liveCourseId,
+//     toPascalCaseObject({
+//       courseName: updateCourseData.courseName,
+//       shortDescription: updateCourseData.shortDescription,
+//       fullDescription: updateCourseData.fullDescription,
+//       requirements: updateCourseData.requirements,
+//       learningOutcomes: updateCourseData.learningOutcomes,
+//       originalPrice: updateCourseData.originalPrice,
+//       discountedPrice: updateCourseData.discountedPrice,
+//       categoryId: updateCourseData.categoryId,
+//       levelId: updateCourseData.levelId,
+//       language: updateCourseData.language,
+//     }),
+//     transaction
+//   );
+//   logger.info(`Synced course-level details to live course ${liveCourseId}`);
+//   return allCloudFilesToDelete;
+// }
 
 /**
  * Admin phê duyệt hoặc từ chối khóa học.
@@ -1110,6 +1190,23 @@ const reviewCourseApproval = async (
   user,
   adminNotes = null
 ) => {
+  // ==========================================================================
+  // [THÊM 17/08/2026] Lớp bảo vệ thứ hai (defense in depth)
+  // --------------------------------------------------------------------------
+  // Trước đây hàm này KHÔNG kiểm tra role. Kết hợp với việc router
+  // approvalRequests.routes.js cho phép cả INSTRUCTOR đi qua, giảng viên có
+  // thể tự duyệt khóa học của mình.
+  // Router đã được siết lại, nhưng vẫn kiểm tra ở đây vì hàm này còn được
+  // gọi từ một route thứ hai: PATCH /v1/courses/reviews/:requestId
+  // (courses.routes.js). Kiểm tra ở service đảm bảo mọi lối vào đều an toàn.
+  // ==========================================================================
+  if (![Roles.ADMIN, Roles.SUPERADMIN].includes(user?.role)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Chỉ Quản trị viên mới có quyền duyệt yêu cầu khóa học.'
+    );
+  }
+
   let updatedRequest;
   const approvalRequest =
     await courseRepository.findCourseApprovalRequestById(requestId);
@@ -1126,8 +1223,8 @@ const reviewCourseApproval = async (
   let newCourseStatus;
   const publishedAt = null;
   let courseData;
-  // Biến lưu thông tin để enqueue job BullMQ sau khi commit
-  let syncJobData = null;
+  // Thông tin phiên bản vừa thăng cấp, dùng để gửi thông báo SAU khi commit
+  let promotionResult = null;
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
   try {
@@ -1136,45 +1233,76 @@ const reviewCourseApproval = async (
       decision === ApprovalStatus.APPROVED &&
       approvalRequest.RequestType === ApprovalRequestType.UPDATE_SUBMISSION
     ) {
-      // ============================================================
-      // 🚀 BULLMQ ASYNC QUEUE: Không sync trực tiếp trong request nữa!
-      // Chỉ cập nhật trạng thái approval → Enqueue job cho Worker xử lý ngầm
-      // ============================================================
-      const updateCourseId = approvalRequest.CourseID;
-      const liveCourse = await courseRepository.findCourseById(
-        updateCourseId,
+      /* ==================================================================
+         [VIẾT LẠI 17/08/2026 — COURSE VERSIONING]
+
+         TRƯỚC ĐÂY: chỉ đánh dấu APPROVED rồi đẩy một job BullMQ để Worker
+         chạy nền `syncLiveCourseFromUpdate` — vá từng bài học vào khóa đang
+         chạy. Cách đó có ba vấn đề nghiêm trọng:
+           1. Học viên đã mua bị thay đổi nội dung ngay dưới chân.
+           2. Job chạy SAU khi transaction đã commit trạng thái APPROVED. Nếu
+              job lỗi (và nó luôn lỗi khi giảng viên thêm chương mới — xem
+              phần comment về bug cloneFullLesson ở trên), yêu cầu duyệt kẹt
+              vĩnh viễn: đã APPROVED nhưng nội dung không bao giờ được áp dụng,
+              và KHÔNG có cơ chế nào đưa nó về lại PENDING.
+           3. Admin thấy API trả 200 và tin rằng đã duyệt xong.
+
+         BÂY GIỜ: thăng cấp phiên bản diễn ra ĐỒNG BỘ, ngay trong cùng
+         transaction với việc đổi trạng thái yêu cầu duyệt. Hoặc cả hai cùng
+         thành công, hoặc cả hai cùng rollback — không còn trạng thái nửa vời.
+         Thao tác cũng nhẹ hơn hẳn: chỉ là 2 câu UPDATE trên bảng Courses,
+         không đụng tới Sections/Lessons nên không cần chạy nền.
+         ================================================================== */
+      const draftCourseId = approvalRequest.CourseID;
+      const draftCourse = await courseRepository.findCourseById(
+        draftCourseId,
         true,
         transaction
       );
-      const liveCourseId = liveCourse.LiveCourseID;
+      const liveCourseId = draftCourse?.LiveCourseID;
       if (!liveCourseId) {
         throw new ApiError(
           httpStatus.INTERNAL_SERVER_ERROR,
-          'Cannot find live course to apply update.'
+          'Không tìm thấy khóa học gốc để áp dụng phiên bản mới.'
         );
       }
-      // Cập nhật trạng thái approval thành APPROVED ngay lập tức
+
+      // Ghi nhận quyết định duyệt
       updatedRequest = await courseRepository.updateApprovalRequestStatus(
         requestId,
-        {
-          status: decision,
-          adminId: user.id,
-          adminNotes,
-        },
+        { status: decision, adminId: user.id, adminNotes },
         transaction
       );
-      courseData = await courseRepository.findCourseById(courseId);
-      // Lưu thông tin để enqueue job SAU KHI commit thành công
-      syncJobData = {
-        updateCourseId,
+
+      // Thăng cấp: bản nháp -> phiên bản chính thức, bản cũ -> SUPERSEDED
+      const promotion = await courseRepository.promoteDraftToLiveVersion(
+        draftCourseId,
         liveCourseId,
-        requestId,
-        adminId: user.id,
+        transaction
+      );
+
+      /* ⚠️ KHÔNG gọi findCourseById(draftCourseId) ở đây nếu KHÔNG truyền
+         transaction. Câu UPDATE ngay phía trên đang giữ khóa ghi độc quyền
+         (exclusive lock) trên đúng dòng Courses đó. Một kết nối KHÁC lấy từ
+         pool sẽ nằm chờ khóa được nhả, trong khi transaction lại đang chờ câu
+         đọc đó xong mới commit — hai bên chờ nhau, request treo tới khi hết
+         lock timeout. Đây là kiểu tự khóa chính mình (self-deadlock) rất khó
+         tái hiện lúc dev vì chỉ lộ ra khi có tải thật.
+         Bản nháp đã được đọc ở trên (draftCourse) và việc thăng cấp không đổi
+         CourseName, nên dùng lại luôn — vừa đúng vừa tiết kiệm một truy vấn. */
+      courseData = draftCourse;
+      promotionResult = {
+        newCourseId: draftCourseId,
+        retiredCourseId: liveCourseId,
         courseName: courseData?.CourseName,
         instructorId: approvalRequest.InstructorID,
+        ...promotion,
       };
+
       logger.info(
-        `Approval APPROVED for update course ${updateCourseId}. Sync job will be enqueued after commit.`
+        `[Versioning] Khóa học ${draftCourseId} đã trở thành phiên bản v${promotion.versionNumber} ` +
+          `(slug: ${promotion.newSlug}). Phiên bản cũ ${liveCourseId} chuyển sang SUPERSEDED ` +
+          `với slug ${promotion.retiredSlug}. Dữ liệu học viên phiên bản cũ được giữ nguyên.`
       );
     } else {
       if (decision === ApprovalStatus.REJECTED) {
@@ -1224,27 +1352,56 @@ const reviewCourseApproval = async (
     }
     await transaction.commit();
 
-    // ============================================================
-    // 📮 ENQUEUE BULLMQ JOB (sau khi commit thành công)
-    // Worker sẽ xử lý: Sync → Xóa Draft → Notify → Cleanup Cloudinary
-    // ============================================================
-    if (syncJobData) {
+    /* ============================================================
+       [THAY THẾ 17/08/2026] Trước đây chỗ này đẩy job BullMQ để Worker chạy
+       nền `syncLiveCourseFromUpdate`. Việc thăng cấp phiên bản nay đã hoàn tất
+       ĐỒNG BỘ bên trong transaction ở trên, nên không còn job nào để đẩy.
+
+       Phần còn lại sau commit chỉ là gửi thông báo — thao tác phụ, thất bại
+       cũng không được phép ảnh hưởng tới kết quả nghiệp vụ đã commit.
+       ============================================================ */
+    if (promotionResult) {
       try {
-        const { addCourseSyncJob } = require('../../queues/courseSync.queue');
-        await addCourseSyncJob(syncJobData);
-        logger.info(
-          `📮 Course sync job enqueued for approval request ${requestId}.`
+        // 1. Báo giảng viên: phiên bản mới đã lên sóng
+        await notificationService.createNotification(
+          promotionResult.instructorId,
+          'COURSE_APPROVED',
+          `Phiên bản v${promotionResult.versionNumber} của khóa học "${promotionResult.courseName}" đã được phê duyệt và xuất bản! ` +
+            `Học viên mua từ nay sẽ học phiên bản này. Học viên đã mua các phiên bản trước vẫn giữ nguyên nội dung cũ.`,
+          { type: 'Course', id: promotionResult.newCourseId }
         );
-      } catch (queueError) {
+
+        // 2. Báo học viên của PHIÊN BẢN CŨ: đã có phiên bản mới.
+        //    Họ KHÔNG bị chuyển sang phiên bản mới — chỉ được thông báo.
+        //    Dùng repository trực tiếp (đã có sẵn hàm này) thay vì gọi qua
+        //    enrollments.service để tránh phụ thuộc vòng giữa hai service.
+        const enrollmentRepository = require('../enrollments/enrollments.repository');
+        const retiredStudents =
+          await enrollmentRepository.findEnrolledStudentsByCourseId(
+            promotionResult.retiredCourseId
+          );
+        for (const student of retiredStudents) {
+          await notificationService.createNotification(
+            student.AccountID,
+            'SYSTEM',
+            `Khóa học "${promotionResult.courseName}" vừa có phiên bản mới (v${promotionResult.versionNumber}). ` +
+              `Bạn vẫn tiếp tục học phiên bản đã mua, toàn bộ tiến độ được giữ nguyên.`,
+            { type: 'Course', id: promotionResult.retiredCourseId }
+          );
+        }
+        logger.info(
+          `[Versioning] Đã thông báo cho ${retiredStudents.length} học viên của phiên bản cũ ${promotionResult.retiredCourseId}.`
+        );
+      } catch (notifyError) {
         logger.error(
-          `Failed to enqueue sync job for request ${requestId}. Manual sync may be needed:`,
-          queueError
+          `[Versioning] Thăng cấp phiên bản THÀNH CÔNG nhưng gửi thông báo thất bại (không ảnh hưởng dữ liệu):`,
+          notifyError
         );
       }
     }
 
     // Gửi thông báo cho instructor (cho các trường hợp không phải UPDATE_SUBMISSION)
-    if (!syncJobData) {
+    if (!promotionResult) {
       try {
         const instructorId = approvalRequest.InstructorID;
         let notifyMessage = '';
@@ -1418,13 +1575,29 @@ const cancelUpdate = async (updateCourseId, user) => {
   const transaction = new sql.Transaction(pool);
   try {
     await transaction.begin();
-    await courseRepository.updateCourseById(
-      liveCourseId,
-      { StatusID: CourseStatus.PUBLISHED },
-      transaction
-    );
+    /* [SỬA 17/08/2026 — Course Versioning]
+       BỎ câu lệnh `updateCourseById(liveCourseId, { StatusID: PUBLISHED })`.
+       Trong mô hình mới, khóa học đang chạy KHÔNG hề bị đổi trạng thái khi
+       giảng viên mở phiên cập nhật — nó vẫn PUBLISHED và vẫn bán bình thường
+       suốt thời gian bản nháp được soạn. Vì vậy lúc hủy nháp cũng không có gì
+       cần khôi phục. Câu lệnh cũ là tàn dư của ý tưởng "trạng thái UPDATING"
+       vốn chưa bao giờ được triển khai (xem CourseStatuses trong DB).
+
+       Chỉ xóa bản nháp. An toàn tuyệt đối vì bản nháp không có học viên nào.
+       Xóa khóa nháp sẽ CASCADE xuống Sections/Lessons của chính nó — đây là
+       lý do V8__protect_student_data.sql cố ý GIỮ CASCADE cho hai quan hệ đó. */
     await courseRepository.deleteCourseById(updateCourseId, transaction);
     await transaction.commit();
+
+    /* ⚠️ KHÔNG dọn tài nguyên Cloudinary ở đây.
+       cloneCourseRecord sao chép nguyên ThumbnailPublicId và IntroVideoPublicId
+       từ khóa gốc sang bản nháp — hai bản ghi DÙNG CHUNG cùng một file trên
+       Cloudinary. Nếu xóa file theo bản nháp, ảnh bìa và video giới thiệu của
+       khóa học ĐANG BÁN sẽ biến mất. */
+    logger.info(
+      `[Versioning] Đã hủy bản nháp ${updateCourseId}. Không đụng tới khóa đang chạy ${liveCourseId} ` +
+        `và không xóa tài nguyên Cloudinary (dùng chung với bản gốc).`
+    );
     return { originalCourseSlug: originalCourse.Slug };
   } catch (error) {
     await transaction.rollback();
@@ -1482,11 +1655,26 @@ const createUpdateSession = async (courseId, user) => {
   const transaction = new sql.Transaction(pool);
   try {
     await transaction.begin();
+    /* [SỬA 17/08/2026 — Course Versioning]
+       Bản nháp nay mang sẵn thông tin phiên bản ngay từ lúc được clone:
+         - VersionNumber   : số phiên bản nó SẼ trở thành nếu được duyệt
+         - RootCourseID    : gốc của cả dòng khóa học (không đổi qua các đời)
+         - PreviousVersionID: phiên bản nó sẽ thay thế
+         - IsLatestVersion : 0 — chưa phải bản đang bán, chỉ là nháp
+       Nhờ vậy khi Admin duyệt, promoteDraftToLiveVersion chỉ việc lật cờ
+       trạng thái + hoán đổi slug, không phải suy luận lại quan hệ phiên bản. */
+    const currentVersion = originalCourse.VersionNumber || 1;
+    const rootCourseId = originalCourse.RootCourseID || originalCourse.CourseID;
+
     const newDraftCourse = await courseRepository.cloneCourseRecord(
       courseId,
       {
         StatusID: CourseStatus.DRAFT,
         LiveCourseID: courseId,
+        VersionNumber: currentVersion + 1,
+        RootCourseID: rootCourseId,
+        PreviousVersionID: courseId,
+        IsLatestVersion: 0,
       },
       transaction
     );
@@ -1619,6 +1807,63 @@ const archiveCourse = async (courseId, user, notes) => {
   }
 };
 
+/**
+ * [THÊM 17/08/2026 — Course Versioning]
+ * Lấy lịch sử toàn bộ phiên bản của một dòng khóa học.
+ *
+ * Dùng cho hai màn hình:
+ *   - Giảng viên / Admin: xem đã phát hành bao nhiêu phiên bản, mỗi phiên bản
+ *     còn bao nhiêu học viên đang theo học.
+ *   - Học viên: biết mình đang học phiên bản nào và đã có bản mới hơn chưa.
+ *
+ * @param {number} courseId - ID của BẤT KỲ phiên bản nào trong dòng.
+ * @param {object} user
+ */
+const getCourseVersionHistory = async (courseId, user) => {
+  const course = await courseRepository.findCourseById(courseId, true);
+  if (!course) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy khóa học.');
+  }
+
+  const isAdmin =
+    user && (user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN);
+  const isOwnerInstructor =
+    user && user.role === Roles.INSTRUCTOR && course.InstructorID === user.id;
+
+  const rootId = course.RootCourseID || course.CourseID;
+
+  /* Xét quyền theo CẢ DÒNG khóa học, không theo một phiên bản.
+     Học viên mua v1; khi hệ thống đã lên v2, họ mở lịch sử từ trang công khai
+     thì ID gửi lên là v2 — phiên bản họ chưa mua. Nếu so khớp đúng một CourseID
+     thì chính chủ sở hữu v1 lại bị chặn xem lịch sử dòng khóa học của mình. */
+  const hasEnrolled =
+    user && !isAdmin && !isOwnerInstructor
+      ? await courseRepository.hasEnrollmentInCourseFamily(user.id, rootId)
+      : false;
+
+  if (!isAdmin && !isOwnerInstructor && !hasEnrolled) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Bạn không có quyền xem lịch sử phiên bản của khóa học này.'
+    );
+  }
+
+  const versions = await courseRepository.findVersionsByRootId(rootId);
+
+  return {
+    rootCourseId: rootId,
+    currentVersionId: courseId,
+    currentVersionNumber: course.VersionNumber || 1,
+    // Học viên chỉ cần thấy số phiên bản và nội dung thay đổi; số lượng học
+    // viên từng phiên bản là thông tin kinh doanh, chỉ giảng viên/admin xem.
+    versions: versions.map((v) => {
+      const base = toCamelCaseObject(v);
+      if (!isAdmin && !isOwnerInstructor) delete base.studentCount;
+      return base;
+    }),
+  };
+};
+
 module.exports = {
   createCourse,
   getCourses,
@@ -1642,6 +1887,12 @@ module.exports = {
   getMyCourses,
   getPublicCourses,
 
-  // Export cho BullMQ Worker sử dụng
-  syncLiveCourseFromUpdate,
+  // --- Course Versioning (thêm 17/08/2026) ---
+  getCourseVersionHistory,
+
+  /* [GỠ 17/08/2026] Trước đây export `syncLiveCourseFromUpdate` cho BullMQ
+     Worker. Hàm đã bị vô hiệu hóa cùng cả khối Diff-and-Patch, nên nếu giữ
+     dòng export này Node sẽ ném ReferenceError ngay lúc nạp module —
+     `node --check` KHÔNG bắt được lỗi loại này vì nó chỉ kiểm tra cú pháp.
+     Worker trong queues/courseSync.queue.js cũng đã được vô hiệu hóa tương ứng. */
 };

@@ -19,7 +19,52 @@ dependencies = [
     "python-multipart>=0.0.9",
     "rank-bm25>=0.2.2",
     "uvicorn>=0.51.0",
+    "aiohttp>=3.9.3",
+    # [THÊM 18/08/2026 — COURSE IMPORT] Bóc text từ PDF.
+    #
+    # Đây là THƯ VIỆN DUY NHẤT phải thêm cho toàn bộ tính năng nhập khóa học.
+    # DOCX/PPTX/ODT/ODP được đọc bằng `zipfile` + `xml.etree` của thư viện
+    # chuẩn (xem src/rag/document_parser.py), nên KHÔNG cần python-docx,
+    # python-pptx hay lxml — tiết kiệm khoảng 40MB dung lượng image.
+    #
+    # Chọn pypdf (~1MB, giấy phép BSD) thay vì PyMuPDF: PyMuPDF bóc text tốt
+    # và nhanh hơn hẳn nhưng nặng ~60MB sau khi cài VÀ mang giấy phép AGPL —
+    # ràng buộc lây lan không nên đặt vào một đồ án. document_parser.py tự dò
+    # và ưu tiên PyMuPDF nếu máy nào đó có sẵn, nên nâng cấp về sau chỉ là một
+    # lệnh cài chứ không phải sửa mã.
+    "pypdf>=5.1.0",
+]
+
+[project.optional-dependencies]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [TÁCH RA 18/08/2026] Phiên âm video bằng Whisper.
+#
+# ★ VÌ SAO TÁCH KHỎI NHÓM BẮT BUỘC
+#
+# `faster-whisper` kéo theo ctranslate2, av (~34MB), tokenizers, huggingface-hub
+# — tổng cộng khoảng 400–600MB sau khi cài. Nhưng ở giai đoạn hiện tại (một
+# EC2 CPU tạm thời, LLM_PROVIDER=gemini, chưa xin được quota vCPU cho GPU) thì
+# TÍNH NĂNG NÀY KHÔNG DÙNG TỚI MỘT LẦN NÀO.
+#
+# Trả 600MB dung lượng image cho thứ không chạy là lãng phí — nhất là khi ổ đĩa
+# đang chật và EC2 dùng EBS tính tiền theo GB.
+#
+# Bật lại bằng:  --extra whisper   (xem Dockerfile, ARG INSTALL_EXTRAS)
+#
+# ⚠️ KHÔNG bỏ được `chromadb`, và chính nó kéo theo onnxruntime (~18MB) +
+#    numpy (~16MB). Đừng kỳ vọng image tụt xuống vài trăm MB.
+# ─────────────────────────────────────────────────────────────────────────────
+whisper = [
     "faster-whisper>=1.0.3",
     "static-ffmpeg>=2.7",
-    "aiohttp>=3.9.3",
+]
+
+# Chỉ cần khi WHISPER_DEVICE=cuda, để faster-whisper/ctranslate2 nạp được thư
+# viện runtime cuBLAS + cuDNN cho card NVIDIA.
+# ⚠️ Nhóm này VÔ NGHĨA nếu không cài kèm `whisper` — nó chỉ là thư viện runtime
+#    cho ctranslate2, mà ctranslate2 đến từ faster-whisper.
+gpu = [
+    "nvidia-cublas-cu12>=12.1.3.1",
+    "nvidia-cudnn-cu12>=9.1.0.70",
 ]

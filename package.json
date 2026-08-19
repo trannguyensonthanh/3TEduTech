@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Root workspace to manage all services",
   "scripts": {
+    "fix-ports": "fix-windows-ports.bat",
     "postinstall": "npm run install:all",
     "install:all": "npm install --prefix 3t-edu-tech-backend && npm install --prefix edu-ai-learning-hub && cd ai-service && uv sync",
     "dev:docker": "docker-compose -f docker-compose.dev.yml up -d redis database database-init",

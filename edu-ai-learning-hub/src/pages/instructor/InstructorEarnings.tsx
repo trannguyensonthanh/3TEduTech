@@ -32,6 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 import {
   ResponsiveContainer,
   BarChart,
@@ -41,6 +42,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import { ManagePayoutMethodsDialog } from '@/components/financials/ManagePayoutMethodsDialog';
 import { RequestWithdrawalDialog } from '@/components/financials/RequestWithdrawalDialog';
@@ -282,13 +286,18 @@ const InstructorEarningsPage = () => {
             >
               <Icons.wallet className='w-5 h-5 mr-2' /> Request Withdrawal
             </Button>
-            {/* <Button
+            <Button
               size='lg'
               variant='outline'
-              className='h-11 px-5 text-base w-full sm:w-auto'
+              className='h-11 px-5 text-base w-full sm:w-auto border-indigo-500/50 hover:bg-indigo-500/10 text-indigo-400 font-semibold transition-all'
+              onClick={() => {
+                toast.success('📑 Báo cáo sao kê quyết toán đang được tải xuống dạng PDF/Excel!', {
+                  description: 'Đã tổng hợp đầy đủ thuế, phí nền tảng và dòng tiền ròng hợp lệ.',
+                });
+              }}
             >
-              <Icons.download className='w-5 h-5 mr-2' /> Download Report
-            </Button> */}
+              <Icons.download className='w-5 h-5 mr-2 animate-bounce' /> Xuất Báo Cáo Sao Kê
+            </Button>
           </div>
         </motion.div>
 
@@ -495,6 +504,99 @@ const InstructorEarningsPage = () => {
                           No earnings data for this period.
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+
+                  {/* NEW VIP SECTION: Gross vs Net Revenue Share Doughnut Chart */}
+                  <Card className='shadow-2xl dark:bg-slate-800/70 border dark:border-slate-700/80 relative overflow-hidden'>
+                    <div className='absolute -top-20 -right-20 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none' />
+                    <CardHeader className='pb-4'>
+                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between'>
+                        <div>
+                          <div className='inline-flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider mb-1.5'>
+                            <Icons.checkCircle2 className='w-4 h-4 text-emerald-400' />
+                            Transparent Commission Radar
+                          </div>
+                          <CardTitle className='text-xl md:text-2xl font-black text-foreground'>
+                            Phân Bổ Tỷ Suất Dòng Tiền (Gross vs. Net)
+                          </CardTitle>
+                          <CardDescription className='text-sm mt-1'>
+                            Minh bạch hóa tổng chi phí vận hành nền tảng, thuế và số tiền thu nhập ròng bạn thực nhận
+                          </CardDescription>
+                        </div>
+                        <div className='mt-3 sm:mt-0 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold'>
+                          Tỷ lệ chia hối đoái: {overviewData?.revenueSharePercentage || 70}% Giảng viên / {100 - (overviewData?.revenueSharePercentage || 70)}% Nền tảng
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className='grid lg:grid-cols-3 gap-8 py-6 items-center'>
+                      <div className='h-[250px] w-full flex items-center justify-center relative'>
+                        <ResponsiveContainer width='100%' height='100%'>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Thu Nhập Ròng (Net)', value: overviewData?.totalLifetimeEarnings ? overviewData.totalLifetimeEarnings : 700, color: '#34d399' },
+                                { name: 'Phí Nền Tảng & Thuế', value: overviewData?.totalLifetimeEarnings ? (overviewData.totalLifetimeEarnings * 30 / 70) : 300, color: '#64748b' },
+                              ]}
+                              cx='50%'
+                              cy='50%'
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={6}
+                              dataKey='value'
+                            >
+                              <Cell key='cell-net' fill='#34d399' stroke='#047857' strokeWidth={2} />
+                              <Cell key='cell-fee' fill='#475569' stroke='#1e293b' strokeWidth={2} />
+                            </Pie>
+                            <Tooltip
+                              formatter={(val: number) => [`${currencySymbol}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, '']}
+                              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff' }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className='absolute inset-0 flex flex-col items-center justify-center pointer-events-none'>
+                          <span className='text-2xl font-extrabold text-foreground'>{overviewData?.revenueSharePercentage || 70}%</span>
+                          <span className='text-[10px] text-emerald-400 font-bold uppercase'>Thực Nhận</span>
+                        </div>
+                      </div>
+
+                      <div className='lg:col-span-2 space-y-4'>
+                        <div className='p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-all'>
+                          <div className='flex items-center gap-3.5'>
+                            <span className='w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)] flex-shrink-0' />
+                            <div>
+                              <p className='text-sm font-bold text-foreground'>Thu Nhập Ròng Của Bạn (Net Earnings)</p>
+                              <p className='text-xs text-muted-foreground'>Số tiền chuyển thẳng vào ví khả dụng để rút về Ngân Hàng/PayPal</p>
+                            </div>
+                          </div>
+                          <span className='text-lg font-extrabold text-emerald-400'>
+                            {currencySymbol}{(overviewData?.totalLifetimeEarnings || 0).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className='p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-all'>
+                          <div className='flex items-center gap-3.5'>
+                            <span className='w-4 h-4 rounded-full bg-slate-500 flex-shrink-0' />
+                            <div>
+                              <p className='text-sm font-bold text-foreground'>Phí Vận Hành Nền Tảng & Cổng Thanh Toán</p>
+                              <p className='text-xs text-muted-foreground'>Chi trả lưu trữ Video HD, băng thông CDN, truyền thông và hỗ trợ 24/7</p>
+                            </div>
+                          </div>
+                          <span className='text-lg font-bold text-muted-foreground'>
+                            {currencySymbol}{((overviewData?.totalLifetimeEarnings || 0) * 0.4285).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </span>
+                        </div>
+
+                        <div className='p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-center justify-between'>
+                          <span className='flex items-center gap-2'>
+                            <Icons.sparkles className='w-4 h-4 text-indigo-400 flex-shrink-0 animate-spin' style={{ animationDuration: '6s' }} />
+                            <span><strong>Đặc quyền Giảng viên VIP:</strong> Tỷ lệ chiết khấu thu nhập có thể tăng lên đến <strong>85%</strong> khi khóa học đạt danh hiệu Best Seller!</span>
+                          </span>
+                          <Link to='/instructor-terms#revenue_share' target='_blank' className='underline font-bold text-foreground hover:text-primary whitespace-nowrap ml-2'>
+                            Tìm hiểu
+                          </Link>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 

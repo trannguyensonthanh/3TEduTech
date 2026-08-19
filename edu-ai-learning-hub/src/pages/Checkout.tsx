@@ -120,7 +120,20 @@ const CheckoutPage: React.FC = () => {
   >('null');
   const [selectedCrypto, setSelectedCrypto] = useState<string>('usdttrc20');
   const [createdOrder, setCreatedOrder] = useState<boolean>(true);
-  const availablePaymentMethods = useMemo(() => {
+  /* [SỬA 19/08/2026] Trước đây useMemo không có chú thích kiểu, nên TypeScript
+     suy ra kiểu phần tử CHÍNH XÁC theo mảng chữ — không có trường `disabled`,
+     và dòng `disabled={method.disabled}` bên dưới thành lỗi TS2339. Khai báo
+     tường minh vừa chữa lỗi vừa mở sẵn đường: muốn tạm khóa một cổng thanh
+     toán thì chỉ cần thêm `disabled: true` vào mục tương ứng. */
+  const availablePaymentMethods = useMemo<
+    {
+      id: string;
+      name: string;
+      icon: React.ReactNode;
+      description?: string;
+      disabled?: boolean;
+    }[]
+  >(() => {
     return [
       {
         id: 'VNPAY',

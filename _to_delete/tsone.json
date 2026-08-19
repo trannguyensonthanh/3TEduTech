@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [],
+  "files": [
+    "src/vite-env.d.ts",
+    "src/pages/instructor/CourseImport.tsx",
+    "src/pages/instructor/components/ImportReviewPanel.tsx",
+    "src/pages/admin/FaqsManagement.tsx"
+  ]
+}

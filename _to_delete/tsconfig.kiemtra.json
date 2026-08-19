@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [],
+  "files": [
+    "src/pages/instructor/CourseImport.tsx",
+    "src/pages/instructor/components/VideoAttachPanel.tsx",
+    "src/pages/instructor/components/ZipGuidePanel.tsx",
+    "src/pages/instructor/components/ImportReviewPanel.tsx",
+    "src/services/import.service.ts",
+    "src/services/lesson.service.ts",
+    "src/services/faqs.service.ts",
+    "src/pages/admin/FaqsManagement.tsx"
+  ]
+}

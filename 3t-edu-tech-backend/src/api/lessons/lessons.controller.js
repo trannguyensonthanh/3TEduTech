@@ -106,6 +106,23 @@ const getLessonVideoUrl = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(urlData);
 });
 
+const getVideoUploadToken = catchAsync(async (req, res) => {
+  const token = await lessonService.generateVideoUploadToken(
+    req.params.lessonId,
+    req.user
+  );
+  res.status(httpStatus.OK).send(token);
+});
+
+const confirmVideoUpload = catchAsync(async (req, res) => {
+  const lesson = await lessonService.confirmLessonVideoUpload(
+    req.params.lessonId,
+    req.body,
+    req.user
+  );
+  res.status(httpStatus.OK).send(lesson);
+});
+
 module.exports = {
   createLesson,
   getLessons,
@@ -114,6 +131,8 @@ module.exports = {
   deleteLesson,
   updateLessonsOrder,
   updateLessonVideo,
+  getVideoUploadToken,
+  confirmVideoUpload,
   addLessonAttachment,
   deleteLessonAttachment,
   getLessonVideoUrl,

@@ -230,7 +230,11 @@ const useInstantAiCheckout = () => {
       }
 
       // 3. Với VNPAY, MOMO, STRIPE, CRYPTO -> Tự động tạo Đơn hàng và sang WEB HOOK / GATEWAY ngay lập tức không cần qua trang Checkout!
-      const order = await createOrder({ promotionCode: null });
+      /* [SỬA 19/08/2026] mutationFn ở đây là createOrderFromCart(promotionCode?:
+         string | null) — nó nhận THẲNG mã khuyến mãi, không phải một object bọc
+         ngoài. Truyền object khiến backend luôn nhận promotionCode = undefined
+         (tức mất mã giảm giá nếu sau này có truyền), và TypeScript báo TS2345. */
+      const order = await createOrder(null);
       if (!order || !order.orderId) {
         throw new Error('Không thể tạo đơn hàng tự động từ giỏ hàng AI.');
       }

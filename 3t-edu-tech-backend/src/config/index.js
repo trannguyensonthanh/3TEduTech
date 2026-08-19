@@ -2,8 +2,12 @@ const dotenv = require('dotenv');
 const path = require('path');
 const Joi = require('joi');
 
-const envPath = path.join(__dirname, '../../.env');
+// Production: load .env.production nếu NODE_ENV=production, fallback .env
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+const envPath = path.join(__dirname, '../../', envFile);
 dotenv.config({ path: envPath });
+// Luôn load .env làm fallback cho các biến chưa định nghĩa trong .env.production
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const envVarsSchema = Joi.object()
   .keys({
@@ -77,6 +81,112 @@ const envVarsSchema = Joi.object()
     MOMO_ACCESS_KEY: Joi.string().description('MoMo Access Key'),
     MOMO_SECRET_KEY: Joi.string().description('MoMo Secret Key'),
     MOMO_API_URL: Joi.string().uri().description('MoMo API Base URL'),
+    // Production Deployment Config
+    AI_SERVICE_URL: Joi.string()
+      .uri()
+      .description('Full URL of AI Service on GPU EC2 (e.g. http://10.0.1.50:2111)'),
+    AI_SERVICE_PORT: Joi.number()
+      .default(2111)
+      .description('AI Service port (fallback when AI_SERVICE_URL not set)'),
+    REDIS_URL: Joi.string()
+      .description('Redis connection URL (e.g. redis://:password@host:port)'),
+    SERVER_URL: Joi.string()
+      .uri()
+      .description('Public URL of this backend server'),
+    CORS_ALLOWED_ORIGINS: Joi.string()
+      .description('Comma-separated list of allowed CORS origins'),
+    /* [THÊM 17/08/2026 — LEVEL 2] Khóa ký chứng chỉ.
+       CỐ Ý không đặt .required(): thiếu biến này thì certificates.service tự
+       dùng tạm JWT_SECRET và ghi cảnh báo, thay vì chặn cả hệ thống khởi động
+       chỉ vì một tính năng phụ chưa được cấu hình.
+       Ràng buộc min(16) để chặn kiểu đặt cho có ("secret", "123456") — khóa quá
+       ngắn thì chữ ký HMAC mất phần lớn giá trị chống giả mạo. */
+    CERTIFICATE_SECRET: Joi.string()
+      .min(16)
+      .description(
+        'Secret key ký HMAC cho chứng chỉ (nên đặt KHÁC JWT_SECRET để xoay vòng JWT không làm hỏng chứng chỉ đã cấp)'
+      ),
+    /* [THÊM 17/08/2026 — LEVEL 3] Khóa chia sẻ giữa backend và AI Service.
+       Phải TRÙNG KHỚP với INTERNAL_API_KEY trong ai-service/.env.
+       Bỏ trống ở cả hai phía = AI Service chạy không xác thực như trước. */
+    AI_SERVICE_INTERNAL_KEY: Joi.string()
+      .min(16)
+      .description('Khóa nội bộ để backend gọi AI Service (khớp INTERNAL_API_KEY của ai-service)'),
+
+    /* ========================================================================
+       [THÊM 18/08/2026 — COURSE IMPORT] Nhập khóa học từ tệp ZIP.
+
+       ★ IMPORT_TEMP_DIR là điểm mấu chốt để cùng một mã nguồn chạy được ở CẢ
+       local lẫn server: đường dẫn là CẤU HÌNH, không phải hằng số trong code.
+           .env             → /app/.tmp/imports
+           .env.production  → /var/lib/3tedu/imports
+       Nhờ vậy không có một dòng `if (isProduction)` nào trong toàn bộ tính năng.
+
+       ⚠️ Thư mục này PHẢI là Docker volume, không được nằm trong bind mount mã
+       nguồn — ổ Windows (NTFS) không phân biệt hoa/thường còn ext4 thì có, dẫn
+       tới local ra 20 bài mà server ra 21 bài.
+       ======================================================================== */
+    IMPORT_TEMP_DIR: Joi.string()
+      .default('/var/lib/3tedu/imports')
+      .description('Thư mục tạm giải nén ZIP'),
+    IMPORT_TTL_HOURS: Joi.number()
+      .default(48)
+      .description('Số giờ giữ bản nháp và thư mục tạm'),
+    IMPORT_MAX_ZIP_MB: Joi.number().default(200),
+    IMPORT_MAX_TOTAL_MB: Joi.number()
+      .default(500)
+      .description('Tổng dung lượng tối đa SAU khi giải nén (chống zip bomb)'),
+    IMPORT_MAX_FILE_MB: Joi.number()
+      .default(200)
+      .description('Kích thước tối đa của một tệp bên trong ZIP'),
+    IMPORT_MAX_FILES: Joi.number().default(1000),
+    IMPORT_MIN_FREE_DISK_GB: Joi.number()
+      .default(5)
+      .description('Từ chối nhận tệp khi đĩa trống dưới mức này'),
+    IMPORT_MAX_CONCURRENT_PER_USER: Joi.number().default(1),
+    IMPORT_JOB_TIMEOUT_MINUTES: Joi.number().default(30),
+
+    /* [THÊM 18/08/2026] Trần dung lượng MỘT tệp video khi giảng viên tải thẳng
+       lên Cloudinary từ trình duyệt.
+
+       ⚠️ 100MB KHÔNG phải con số ta tự chọn — đó là giới hạn cứng của gói
+       Cloudinary miễn phí ("Max video file size: 100 MB"). Vượt qua là
+       Cloudinary từ chối, không có cách nào lách bằng cấu hình phía ta.
+
+       Đặt thành biến môi trường để khi nâng gói Cloudinary thì chỉ sửa một
+       dòng, không phải đi tìm con số ghi cứng rải rác trong mã nguồn và giao
+       diện. Với gói trả phí, giá trị này có thể nâng lên vài GB. */
+    IMPORT_MAX_VIDEO_UPLOAD_MB: Joi.number()
+      .default(100)
+      .description('Trần dung lượng một tệp video tải thẳng lên Cloudinary'),
+
+    /* ========================================================================
+       [THÊM 18/08/2026 — TÀI LIỆU CHÍNH SÁCH FAQ]
+
+       Quản trị viên tải lên PDF chính sách (điều khoản, quy chế hoàn tiền...).
+       Hệ thống bóc text → nạp vào ChromaDB cho chatbot, còn TỆP GỐC vẫn xem
+       được ở trang quản lý FAQ.
+
+       ★ KHÔNG có bảng CSDL nào cho việc này. Siêu dữ liệu (tên tệp, đường dẫn
+       Cloudinary, thời điểm tải lên) nằm trong MỘT tệp JSON ở
+       FAQ_DOCS_DIR/manifest.json. Vài chục bản ghi không đáng một bảng, một bộ
+       migration và một lớp repository.
+
+       ⚠️ Mặc định trỏ vào cùng volume với IMPORT_TEMP_DIR nhưng thư mục khác.
+       Nếu đặt vào thư mục KHÔNG PHẢI volume, mỗi lần `docker compose up` thay
+       container là mất sạch danh mục tài liệu — tệp gốc vẫn nằm trên Cloudinary
+       nhưng hệ thống không còn biết chúng tồn tại, và cũng không xóa được
+       vector tương ứng trong ChromaDB nữa.
+       ======================================================================== */
+    FAQ_DOCS_DIR: Joi.string()
+      .default('/var/lib/3tedu/faq-docs')
+      .description('Thư mục chứa manifest.json của tài liệu chính sách FAQ'),
+    FAQ_DOC_MAX_MB: Joi.number()
+      .default(10)
+      .description('Kích thước tối đa một tệp tài liệu chính sách'),
+    FAQ_DOC_MAX_COUNT: Joi.number()
+      .default(50)
+      .description('Số tài liệu tối đa — chặn manifest phình vô hạn'),
   })
   .unknown();
 
@@ -93,6 +203,46 @@ module.exports = {
   frontendUrl: envVars.FRONTEND_URL,
   env: envVars.NODE_ENV,
   port: envVars.PORT,
+  // AI Service URL — ưu tiên AI_SERVICE_URL, fallback http://127.0.0.1:PORT
+  aiServiceUrl:
+    envVars.AI_SERVICE_URL ||
+    `http://127.0.0.1:${envVars.AI_SERVICE_PORT || 2111}`,
+  // Redis URL — ưu tiên REDIS_URL, fallback localhost
+  redisUrl: envVars.REDIS_URL || 'redis://localhost:6379',
+  // [THÊM 17/08/2026 — LEVEL 3] Cấu hình gọi AI Service
+  aiService: {
+    internalKey: envVars.AI_SERVICE_INTERNAL_KEY || '',
+  },
+  // [THÊM 18/08/2026 — COURSE IMPORT] Quy đổi sang byte ngay tại đây để phần
+  // còn lại của mã nguồn không phải nhân chia MB lặp đi lặp lại (và không có
+  // chỗ nào nhân nhầm 1000 thay vì 1024).
+  import: {
+    tempDir: envVars.IMPORT_TEMP_DIR,
+    ttlHours: envVars.IMPORT_TTL_HOURS,
+    maxZipBytes: envVars.IMPORT_MAX_ZIP_MB * 1024 * 1024,
+    maxTotalBytes: envVars.IMPORT_MAX_TOTAL_MB * 1024 * 1024,
+    maxFileBytes: envVars.IMPORT_MAX_FILE_MB * 1024 * 1024,
+    maxFiles: envVars.IMPORT_MAX_FILES,
+    minFreeDiskBytes: envVars.IMPORT_MIN_FREE_DISK_GB * 1024 * 1024 * 1024,
+    maxConcurrentPerUser: envVars.IMPORT_MAX_CONCURRENT_PER_USER,
+    jobTimeoutMinutes: envVars.IMPORT_JOB_TIMEOUT_MINUTES,
+    maxVideoUploadMb: envVars.IMPORT_MAX_VIDEO_UPLOAD_MB,
+  },
+  // [THÊM 18/08/2026] Tài liệu chính sách FAQ (PDF → RAG).
+  faqDocs: {
+    dir: envVars.FAQ_DOCS_DIR,
+    maxBytes: envVars.FAQ_DOC_MAX_MB * 1024 * 1024,
+    maxCount: envVars.FAQ_DOC_MAX_COUNT,
+  },
+  // CORS allowed origins — parse từ comma-separated string
+  corsAllowedOrigins: envVars.CORS_ALLOWED_ORIGINS
+    ? envVars.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+    : [
+        'http://localhost:5173',
+        'https://localhost:5173',
+        'http://localhost:8080',
+        'https://localhost:8080',
+      ],
   db: {
     host: envVars.DB_HOST,
     port: envVars.DB_PORT,

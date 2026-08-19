@@ -39,7 +39,6 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext'; // Để lấy currency
 import {
   InstructorTransactionDetail,
   TransactionHistoryParams,
@@ -72,7 +71,9 @@ interface AllTransactionsTabContentProps {
 export const AllTransactionsTabContent: React.FC<
   AllTransactionsTabContentProps
 > = ({ currencySymbol }) => {
-  const { user } = useAuth();
+  /* [SỬA 19/08/2026] Bỏ `const { user } = useAuth()`: AuthContextType không
+     có trường `user` (tên đúng là `userData`), và biến này không được dùng ở
+     bất kỳ đâu trong tệp — chỉ là dòng thừa sót lại. */
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 500);

@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import {
   useLessonVideoUrl,
-  useUpdateLessonVideo,
+  useUploadLessonVideoDirect,
 } from '@/hooks/queries/lesson.queries';
 import {
   getYoutubeEmbedUrl,
@@ -49,13 +49,18 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
-  const { mutate: uploadVideo, isPending: isUploading } = useUpdateLessonVideo({
+  const { mutate: uploadVideoDirect, isPending: isUploading } = useUploadLessonVideoDirect({
     onSuccess: () => {
-      toast.success('Video uploaded successfully!');
-      setVideoFile(null); // Clear file sau khi upload
+      toast.success('Video uploaded directly to Cloudinary successfully!');
+      setVideoFile(null);
+      setUploadProgress(0);
     },
-    onError: (error) => toast.error(error.message || 'Video upload failed.'),
+    onError: (error: any) => {
+      toast.error(error.message || 'Video direct upload failed.');
+      setUploadProgress(0);
+    },
   });
   console.log('LessonVideoManager rendered with lesson:', lesson);
   // Fetch signed URL cho Cloudinary video khi edit
@@ -91,13 +96,19 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
       }
       setVideoFile(file);
       setVideoPreview(URL.createObjectURL(file));
-      // Không cần set RHF value ở đây nữa, vì việc upload là một hành động riêng
     }
   };
 
   const handleUploadVideo = () => {
     if (videoFile && lessonId) {
-      uploadVideo({ lessonId, file: videoFile });
+      setUploadProgress(1);
+      uploadVideoDirect({
+        lessonId,
+        file: videoFile,
+        onProgress: (percent) => setUploadProgress(percent),
+      });
+    } else if (!lessonId) {
+      toast.error('Vui lòng lưu thông tin bài học trước khi tải video lên!');
     }
   };
 
@@ -210,34 +221,50 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
             className='hidden'
           />
           <div
-            className='mt-2 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary'
-            onClick={() => videoFileRef.current?.click()}
+            className='mt-2 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-all'
+            onClick={() => !isUploading && videoFileRef.current?.click()}
           >
             {videoPreview && videoPreview.startsWith('blob:') ? (
-              <p className='text-sm font-medium'>{videoFile?.name}</p>
+              <p className='text-sm font-medium text-primary'>{videoFile?.name}</p>
             ) : (
               <>
                 <Icons.upload className='h-8 w-8 text-muted-foreground' />
                 <p className='mt-2 text-sm text-muted-foreground'>
-                  Click or drag file to upload
+                  Click or drag file to upload directly to Cloudinary
                 </p>
               </>
             )}
           </div>
-          {videoFile && (
+          {videoFile && !isUploading && (
             <Button
               type='button'
               onClick={handleUploadVideo}
               disabled={isUploading}
-              className='mt-2'
+              className='mt-3 w-full shadow-sm hover:shadow-md transition-all'
             >
-              {isUploading ? (
-                <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
-              ) : (
-                <Icons.upload className='mr-2 h-4 w-4' />
-              )}
-              Upload Now
+              <Icons.upload className='mr-2 h-4 w-4' />
+              Direct Upload Now
             </Button>
+          )}
+          {isUploading && (
+            <div className='w-full max-w-sm mx-auto mt-4 p-3.5 bg-secondary/50 rounded-xl border border-primary/20 shadow-inner backdrop-blur-sm transition-all'>
+              <div className='flex items-center justify-between text-xs font-semibold text-foreground mb-1.5'>
+                <span className='flex items-center gap-1.5'>
+                  <Icons.spinner className='h-4 w-4 animate-spin text-primary' />
+                  Direct Cloud Uploading...
+                </span>
+                <span className='text-primary font-mono font-bold'>{uploadProgress}%</span>
+              </div>
+              <div className='w-full bg-muted rounded-full h-2.5 overflow-hidden border border-border/50'>
+                <div
+                  className='bg-primary h-2.5 rounded-full transition-all duration-300 shadow-sm'
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className='text-[11px] text-center text-emerald-600 dark:text-emerald-400 mt-2 font-mono font-medium flex items-center justify-center gap-1'>
+                <span>⚡</span> 0MB Server RAM consumed • Real-time stream
+              </p>
+            </div>
           )}
         </div>
       )}

@@ -2,6 +2,7 @@ const axios = require('axios');
 const repository = require('./learningReport.repository');
 const logger = require('../../utils/logger');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
+const { getAiServiceUrl } = require('../../services/aiSync.service');
 
 const getLearningReport = async (accountId, fullName) => {
   const [
@@ -28,9 +29,7 @@ const getLearningReport = async (accountId, fullName) => {
 
   let aiAnalysis = null;
   try {
-    const aiServicePort = process.env.AI_SERVICE_PORT || 2111;
-    const aiBaseUrl = process.env.AI_SERVICE_URL || `http://127.0.0.1:${aiServicePort}`;
-    const aiServiceUrl = `${aiBaseUrl}/api/chat/query`;
+    const aiServiceUrl = `${getAiServiceUrl()}/api/chat/query`;
     
     const prompt = `Dưới đây là dữ liệu học tập của học viên ${fullName}:
 - Tổng số khóa học đã đăng ký: ${overviewStats.TotalEnrolledCourses}

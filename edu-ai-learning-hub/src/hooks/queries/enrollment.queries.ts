@@ -85,9 +85,14 @@ export const useEnrollCourse = (
 
 export const useMyCategorizedEnrollmentsWithCertificateInfo = (
   params?: EnrollmentQueryParams,
+  /* [SỬA 19/08/2026] Tham số đầu tiên phải là kiểu API TRẢ VỀ
+     (EnrollmentListResponse), không phải kiểu SAU KHI select
+     (CategorizedEnrollments). Khai báo sai khiến những trường như initialData /
+     placeholderData trong `options` mang kiểu khác với useQuery bên dưới, nên
+     `...options` không khớp overload nào — đó là lỗi TS2769. */
   options?: Omit<
     UseQueryOptions<
-      CategorizedEnrollments,
+      EnrollmentListResponse,
       Error,
       CategorizedEnrollments,
       ReturnType<typeof enrollmentKeys.myLists>

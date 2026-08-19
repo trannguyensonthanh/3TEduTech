@@ -10,6 +10,7 @@ const logger = require('../../utils/logger');
 const { getConnection, sql } = require('../../database/connection');
 const cloudinaryUtil = require('../../utils/cloudinary.util');
 const lessonAttachmentRepository = require('./lessonAttachment.repository');
+const subtitleRepository = require('./subtitle.repository');
 const { extractYoutubeId, extractVimeoId } = require('../../utils/video.util');
 const authRepository = require('../auth/auth.repository');
 const enrollmentService = require('../enrollments/enrollments.service');
@@ -27,8 +28,35 @@ const parseISO8601Duration = (duration) => {
 };
 
 const getYoutubeVideoDuration = async (videoId) => {
-  const apiKey = 'AIzaSyDvkT0dLa4ZffRdGroe1vPrgBiOb3UqLa4';
-  const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${apiKey}`;
+  /* ========================================================================
+     [SỬA 17/08/2026 — LEVEL 3] GỠ KHÓA API GOOGLE HARDCODE
+
+     Dòng cũ:  const apiKey = 'AIzaSy...';  (khóa thật đã được gỡ khỏi mã nguồn)
+
+     File này ĐÃ import sẵn `youtubeApiKey` từ config ở đầu file (dòng 18),
+     nhưng lại khai báo một biến cục bộ trùng ý nghĩa che mất nó — nên biến môi
+     trường YOUTUBE_API_KEY chưa bao giờ được dùng tới.
+
+     Vì sao phải sửa dù đây là mã CHẠY TRÊN MÁY CHỦ (khác với hai khóa ở
+     ai.service.ts vốn bị đóng gói xuống trình duyệt):
+       • Khóa đã nằm trong lịch sử Git. Ai có quyền đọc repo — hoặc repo lỡ để
+         public một lần — là đọc được, và xóa dòng code KHÔNG xóa được nó khỏi
+         lịch sử commit.
+       • Không xoay vòng được: muốn đổi khóa phải sửa mã và triển khai lại,
+         thay vì chỉ đổi một biến môi trường.
+
+     👉 VIỆC CẦN LÀM THÊM (không phải việc của code): vào Google Cloud Console
+        THU HỒI khóa YouTube cũ (xem lịch sử Git) và tạo khóa mới thay thế.
+     ======================================================================== */
+  if (!youtubeApiKey) {
+    // Không có khóa thì báo lỗi rõ ràng ngay, thay vì để Google trả về 403 với
+    // thông điệp khó hiểu và giảng viên tưởng video của mình bị lỗi.
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Chưa cấu hình YOUTUBE_API_KEY nên không lấy được thời lượng video YouTube.'
+    );
+  }
+  const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${youtubeApiKey}`;
   try {
     const response = await axios.get(url);
     const video = response.data.items[0];
@@ -252,6 +280,7 @@ const updateLesson = async (lessonId, updateBody, user) => {
           cloudinaryUtil
             .deleteAsset(lesson.ExternalVideoID, {
               resource_type: 'video',
+              type: 'private',
             })
             .catch((err) =>
               logger.error(
@@ -353,10 +382,11 @@ const deleteLesson = async (lessonId, user) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Bài học không tồn tại.');
   }
   await checkCourseAccess(lesson.CourseID, user, 'xóa bài học');
-  if (lesson.ExternalVideoID) {
+  if (lesson.ExternalVideoID && lesson.VideoSourceType === 'CLOUDINARY') {
     try {
       await cloudinaryUtil.deleteAsset(lesson.ExternalVideoID, {
         resource_type: 'video',
+        type: 'private',
       });
       logger.info(
         `Lesson video deleted from Cloudinary: ${lesson.ExternalVideoID} (during lesson delete)`
@@ -386,6 +416,23 @@ const deleteLesson = async (lessonId, user) => {
         );
       }
     }
+  }
+  // Dọn sạch phụ đề .srt thuộc về bài học này khỏi Cloudinary
+  try {
+    const subtitles = await subtitleRepository.findSubtitlesByLessonId(lesson.LessonID);
+    for (const sub of subtitles) {
+      if (sub.SubtitleUrl) {
+        const publicId = cloudinaryUtil.extractPublicIdFromUrl(sub.SubtitleUrl);
+        if (publicId) {
+          await cloudinaryUtil.deleteAsset(publicId, { resource_type: 'raw' }).catch((e) => {
+            logger.warn(`Failed to clean up subtitle asset ${publicId}:`, e);
+          });
+          logger.info(`Lesson subtitle deleted from Cloudinary: ${publicId} (during lesson delete)`);
+        }
+      }
+    }
+  } catch (subError) {
+    logger.error(`Error while cleaning up subtitles during lesson delete for ${lesson.LessonID}:`, subError);
   }
   await lessonRepository.deleteLessonById(lessonId);
   logger.info(`Lesson ${lessonId} deleted from DB by user ${user.id}`);
@@ -461,7 +508,7 @@ const updateLessonsOrder = async (sectionId, lessonOrders, user) => {
 };
 
 /**
- * Cập nhật video cho bài học.
+ * Cập nhật video cho bài học qua server buffer (legacy/multer).
  * @param {number} lessonId
  * @param {object} file - File object từ multer (req.file).
  * @param {object} user - Người dùng thực hiện.
@@ -518,6 +565,7 @@ const updateLessonVideo = async (lessonId, file, user) => {
     try {
       await cloudinaryUtil.deleteAsset(uploadResult.public_id, {
         resource_type: 'video',
+        type: 'private',
       });
       logger.warn(
         `Rolled back Cloudinary upload due to DB update failure: ${uploadResult.public_id}`
@@ -534,36 +582,80 @@ const updateLessonVideo = async (lessonId, file, user) => {
     );
   }
 
-  // Trigger transcription background job
-  try {
-    const course = await courseRepository.findCourseById(lesson.CourseID);
-    const courseName = course ? course.CourseName : "Unknown Course";
-    const lessonName = lesson.LessonName;
+  // [ON-DEMAND AI SUBTITLE]: Không tự động kích hoạt AI dịch video sang srt để tiết kiệm tài nguyên máy chủ.
+  // Giảng viên có quyền chủ động ấn nút "Tạo phụ đề bằng AI" trên giao diện nếu thực sự mong muốn.
+  logger.info(`✨ [On-Demand Policy] Đã tải video thành công cho bài học ${lessonId}. Việc tự động tạo phụ đề AI được bỏ qua theo chế độ On-Demand.`);
 
-    const signedUrl = cloudinaryUtil.generateSignedUrl(uploadResult.public_id, {
-      resource_type: 'video',
-      type: 'private'
-    });
-    
-    const aiBaseUrl = process.env.AI_SERVICE_URL || `http://127.0.0.1:${process.env.AI_SERVICE_PORT || 2111}`;
-    const aiUrl = `${aiBaseUrl}/api/ingest/transcribe`;
-    const backendPort = process.env.PORT || 8080;
-    const webhookUrl = `http://127.0.0.1:${backendPort}/v1/lessons/${lessonId}/subtitles/auto-webhook`;
-    
-    axios.post(aiUrl, {
-      video_url: signedUrl,
-      course_name: courseName,
-      lesson_name: lessonName,
-      lesson_id: Number(lessonId),
-      webhook_url: webhookUrl
-    }).then(() => {
-      logger.info(`Triggered transcription and subtitle generator for lesson ${lessonId}`);
-    }).catch(err => {
-      logger.error(`Failed to trigger transcription for lesson ${lessonId}:`, err.message);
-    });
-  } catch (e) {
-    logger.error("Error generating signed URL or triggering AI service:", e);
+  return toCamelCaseObject(updatedLesson);
+};
+
+/**
+ * Cấp chữ ký bảo mật (token) để Client trực tiếp upload video lên Cloudinary (Không qua RAM máy chủ)
+ * @param {number} lessonId
+ * @param {object} user - Giảng viên thực hiện
+ */
+const generateVideoUploadToken = async (lessonId, user) => {
+  const lesson = await lessonRepository.findLessonById(lessonId);
+  if (!lesson) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Bài học không tồn tại.');
   }
+  if (lesson.LessonType !== LessonType.VIDEO) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Bài học này không phải loại VIDEO.');
+  }
+  await checkCourseAccess(lesson.CourseID, user, 'tải video bài học');
+  const folder = `courses/${lesson.CourseID}/lessons/${lessonId}/videos_private`;
+  const tokenData = cloudinaryUtil.generateUploadSignature({
+    folder,
+    resource_type: 'video',
+    type: 'private',
+    overwrite: true,
+  });
+  return tokenData;
+};
+
+/**
+ * Xác nhận sau khi Client đã upload trực tiếp thành công video lên Cloudinary
+ * @param {number} lessonId
+ * @param {object} body - { publicId, duration }
+ * @param {object} user - Giảng viên thực hiện
+ */
+const confirmLessonVideoUpload = async (lessonId, body, user) => {
+  const { publicId, duration } = body;
+  if (!publicId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Thiếu thông tin publicId từ Cloudinary.');
+  }
+  const lesson = await lessonRepository.findLessonById(lessonId);
+  if (!lesson) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Bài học không tồn tại.');
+  }
+  await checkCourseAccess(lesson.CourseID, user, 'xác nhận video bài học');
+
+  // Nếu đã có video cũ, tiêu hủy trên Cloudinary với chế độ type: private
+  if (lesson.VideoSourceType === 'CLOUDINARY' && lesson.ExternalVideoID && lesson.ExternalVideoID !== publicId) {
+    try {
+      await cloudinaryUtil.deleteAsset(lesson.ExternalVideoID, {
+        resource_type: 'video',
+        type: 'private',
+      });
+      logger.info(`Old Cloudinary private video deleted during confirm: ${lesson.ExternalVideoID}`);
+    } catch (deleteError) {
+      logger.error(`Failed to delete old video ${lesson.ExternalVideoID}:`, deleteError);
+    }
+  }
+
+  const updateData = {
+    VideoSourceType: 'CLOUDINARY',
+    ExternalVideoID: publicId,
+    VideoDurationSeconds: Math.round(Number(duration) || 0),
+    TextContent: null,
+  };
+  const updatedLesson = await lessonRepository.updateLessonById(lessonId, updateData);
+  if (!updatedLesson) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Lỗi cập nhật database sau khi upload video.');
+  }
+
+  // [ON-DEMAND AI SUBTITLE]: Bỏ qua tự động gọi AI trong luồng Direct Upload để tối ưu hóa hiệu năng máy chủ.
+  logger.info(`✨ [On-Demand Policy] Xác nhận Direct Upload video cho bài học ${lessonId} thành công. Chờ Giảng viên bấm nút tạo SRT nếu cần.`);
 
   return toCamelCaseObject(updatedLesson);
 };
@@ -769,6 +861,8 @@ module.exports = {
   deleteLesson,
   updateLessonsOrder,
   updateLessonVideo,
+  generateVideoUploadToken,
+  confirmLessonVideoUpload,
   addLessonAttachment,
   deleteLessonAttachment,
   getLessonVideoUrl,

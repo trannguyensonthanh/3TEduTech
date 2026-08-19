@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chứng chỉ hoàn thành khóa học</title>
+  </head>
+  <!--
+    Email HTML phải viết theo lối "cổ điển": bảng lồng bảng và CSS inline.
+    Gmail, Outlook và các webmail khác lược bỏ phần lớn thẻ <style>, không hỗ
+    trợ flexbox/grid. Dùng Tailwind hay CSS hiện đại ở đây thì trên máy mình
+    nhìn đẹp còn trong hộp thư người nhận sẽ vỡ layout.
+  -->
+  <body style="margin:0; padding:0; background-color:#0b1220; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1220; padding:32px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#111c33; border-radius:16px; overflow:hidden; border:1px solid #1e3a5f;">
+
+            <!-- Dải tiêu đề -->
+            <tr>
+              <td style="background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%); padding:4px 0;"></td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:36px 32px 8px 32px;">
+                <div style="font-size:46px; line-height:1;">&#127891;</div>
+                <h1 style="margin:16px 0 4px 0; color:#ffffff; font-size:26px; font-weight:700; letter-spacing:-0.3px;">
+                  Chúc mừng {{fullNameOrDefault}}!
+                </h1>
+                <p style="margin:0; color:#94a3b8; font-size:15px;">
+                  Bạn vừa hoàn thành khóa học và nhận được chứng chỉ chính thức.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Thẻ thông tin chứng chỉ -->
+            <tr>
+              <td style="padding:24px 32px 8px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1220; border:1px solid #1e3a5f; border-radius:12px;">
+                  <tr>
+                    <td style="padding:22px 24px;">
+                      <p style="margin:0 0 6px 0; color:#64748b; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;">
+                        Khóa học
+                      </p>
+                      <p style="margin:0 0 18px 0; color:#ffffff; font-size:19px; font-weight:600; line-height:1.35;">
+                        {{courseName}}
+                      </p>
+
+                      {{#if instructorName}}
+                      <p style="margin:0 0 6px 0; color:#64748b; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;">
+                        Giảng viên
+                      </p>
+                      <p style="margin:0 0 18px 0; color:#cbd5e1; font-size:15px;">
+                        {{instructorName}}
+                      </p>
+                      {{/if}}
+
+                      <p style="margin:0 0 6px 0; color:#64748b; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;">
+                        Mã chứng chỉ
+                      </p>
+                      <p style="margin:0 0 18px 0; color:#38bdf8; font-size:18px; font-weight:700; font-family: 'Courier New', Courier, monospace; letter-spacing:1px;">
+                        {{certificateCode}}
+                      </p>
+
+                      <p style="margin:0 0 6px 0; color:#64748b; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;">
+                        Ngày cấp
+                      </p>
+                      <p style="margin:0; color:#cbd5e1; font-size:15px;">
+                        {{issuedDate}}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Nút hành động -->
+            <tr>
+              <td align="center" style="padding:24px 32px 8px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="border-radius:10px; background: #0ea5e9;">
+                      <a href="{{certificatesUrl}}" target="_blank"
+                         style="display:inline-block; padding:14px 30px; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px;">
+                        Xem &amp; tải chứng chỉ
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Xác minh -->
+            <tr>
+              <td style="padding:20px 32px 32px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px;">
+                  <tr>
+                    <td style="padding:16px 20px;">
+                      <p style="margin:0 0 8px 0; color:#34d399; font-size:13px; font-weight:600;">
+                        &#10003; Chứng chỉ này xác minh được công khai
+                      </p>
+                      <p style="margin:0 0 10px 0; color:#94a3b8; font-size:13px; line-height:1.6;">
+                        Nhà tuyển dụng có thể tự kiểm chứng chứng chỉ của bạn mà không cần tài khoản 3TEduTech —
+                        quét mã QR in trên chứng chỉ hoặc mở đường dẫn dưới đây.
+                      </p>
+                      <a href="{{verifyUrl}}" target="_blank"
+                         style="color:#38bdf8; font-size:13px; word-break:break-all; text-decoration:underline;">
+                        {{verifyUrl}}
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:0 32px 30px 32px; border-top:1px solid #1e3a5f;">
+                <p style="margin:20px 0 0 0; color:#475569; font-size:12px; line-height:1.6;">
+                  Email này được gửi tự động từ {{appName}}.<br />
+                  Nếu bạn không thực hiện khóa học này, vui lòng bỏ qua email.
+                </p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -9,6 +9,13 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
+# Build-time env vars (injected vào Vite bundle lúc build)
+# Truyền qua --build-arg khi docker build
+ARG VITE_API_URL
+ARG VITE_AI_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_AI_API_URL=${VITE_AI_API_URL}
+
 # Copy source files
 COPY . .
 
@@ -21,17 +28,19 @@ FROM nginx:alpine
 # Copy built assets from build stage to nginx serving directory
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Add a default nginx config for SPA routing (fallback to index.html)
-RUN echo 'server { \
-    listen 80; \
-    server_name localhost; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Nginx config sẽ được mount từ bên ngoài qua volume trong docker-compose
+# Fallback config cho trường hợp chạy standalone (không mount)
+RUN printf 'server {\n\
+    listen 80;\n\
+    server_name localhost;\n\
+    location / {\n\
+        root /usr/share/nginx/html;\n\
+        index index.html index.htm;\n\
+        try_files $uri $uri/ /index.html;\n\
+    }\n\
+}\n' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+EXPOSE 443
 
 CMD ["nginx", "-g", "daemon off;"]

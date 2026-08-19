@@ -178,12 +178,16 @@ const countCompletedLessonsInCourse = async (accountId, courseId) => {
     request.input('AccountID', sql.BigInt, accountId);
     request.input('CourseID', sql.BigInt, courseId);
 
+    /* [SỬA 17/08/2026] Bổ sung lọc IsArchived — tử số và mẫu số của công thức
+       tính % BẮT BUỘC phải lọc giống nhau (xem countTotalLessonsInCourse). */
     const result = await request.query(`
             SELECT COUNT(lp.ProgressID) as completedCount
             FROM LessonProgress lp
             JOIN Lessons l ON lp.LessonID = l.LessonID
             JOIN Sections s ON l.SectionID = s.SectionID
-            WHERE lp.AccountID = @AccountID AND s.CourseID = @CourseID AND lp.IsCompleted = 1;
+            WHERE lp.AccountID = @AccountID AND s.CourseID = @CourseID
+              AND lp.IsCompleted = 1
+              AND l.IsArchived = 0 AND s.IsArchived = 0;
         `);
     return result.recordset[0].completedCount;
   } catch (error) {
@@ -206,11 +210,24 @@ const countTotalLessonsInCourse = async (courseId) => {
     const request = pool.request();
     request.input('CourseID', sql.BigInt, courseId);
     request.input('QuizType', sql.VarChar, 'QUIZ');
+    /* ========================================================================
+       [SỬA 17/08/2026] LỖI KHIẾN HỌC VIÊN KHÔNG BAO GIỜ ĐẠT 100%
+       ------------------------------------------------------------------------
+       Giáo trình hiển thị cho học viên ĐÃ lọc bài/chương đã lưu trữ
+       (sections.repository.js, lessons.repository.js đều có IsArchived = 0),
+       nhưng bộ đếm này thì KHÔNG.
+
+       Hậu quả: khóa học 10 bài, giảng viên lưu trữ 3 bài cũ + thêm 3 bài mới
+       → DB có 13 dòng Lessons. Học viên chỉ NHÌN THẤY 10 bài, học hết cả 10,
+       nhưng mẫu số vẫn là 13 → kẹt ở 77%, không nhận được chứng chỉ, và
+       không có cách nào truy cập 3 bài đã lưu trữ để hoàn thành.
+       ======================================================================== */
     const result = await request.query(`
             SELECT COUNT(l.LessonID) as totalCount
             FROM Lessons l
             JOIN Sections s ON l.SectionID = s.SectionID
-            WHERE s.CourseID = @CourseID -- AND l.LessonType != @QuizType;
+            WHERE s.CourseID = @CourseID
+              AND l.IsArchived = 0 AND s.IsArchived = 0;
         `);
     return result.recordset[0].totalCount;
   } catch (error) {

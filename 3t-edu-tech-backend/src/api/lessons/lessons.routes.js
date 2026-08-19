@@ -134,6 +134,20 @@ router.patch(
 );
 
 router.post(
+  '/:lessonId/video-upload-token',
+  authenticate,
+  authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),
+  lessonController.getVideoUploadToken
+);
+
+router.put(
+  '/:lessonId/confirm-video',
+  authenticate,
+  authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),
+  lessonController.confirmVideoUpload
+);
+
+router.post(
   '/:lessonId/attachments',
   authenticate,
   authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),

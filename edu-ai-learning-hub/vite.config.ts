@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: '0.0.0.0', // Lắng nghe ổn định trên mọi IPv4 & IPv6 (localhost, 127.0.0.1) cho Windows/Opera
     port: 5173,
-    strictPort: true,
+    strictPort: true, // Giữ vững chính xác port 5173 để đảm bảo CORS và các redirect thanh toán không bị lỗi
     allowedHosts: [
       'guided-wallaby-measured.ngrok-free.app',
       '.ngrok-free.app',

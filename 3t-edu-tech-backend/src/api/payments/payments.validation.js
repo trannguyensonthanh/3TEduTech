@@ -42,6 +42,23 @@ const capturePayPalOrder = {
   }),
 };
 
+/* [THÊM 19/08/2026] Schema này TỪNG KHÔNG TỒN TẠI.
+
+   payments.routes.js dòng 32 gọi `validate(paymentValidation.createStripeSession)`
+   — nhưng `createStripeSession` chưa bao giờ được định nghĩa ở tệp này. Kết quả:
+   `validate(undefined)` → `pick(undefined, [...])` trả về {} → `Joi.compile({})`
+   chấp nhận MỌI thứ.
+
+   Route không sập, không ai thấy gì bất thường, nhưng thân request của
+   POST /v1/payments/stripe/create-checkout-session KHÔNG hề được kiểm tra —
+   trong khi tất cả các cổng thanh toán còn lại đều có. Lỗi loại này không lộ ra
+   khi chạy, chỉ lộ ra khi đọc kỹ hoặc khi có người cố tình gửi rác vào. */
+const createStripeSession = {
+  body: Joi.object().keys({
+    orderId: Joi.number().integer().required(),
+  }),
+};
+
 // Tạo URL thanh toán Momo
 const createMomoUrl = {
   body: Joi.object().keys({
@@ -53,6 +70,7 @@ module.exports = {
   createVnpayUrl,
   vnpayReturn,
   vnpayIpn,
+  createStripeSession,
   createCryptoInvoice,
   createPayPalOrder,
   capturePayPalOrder,

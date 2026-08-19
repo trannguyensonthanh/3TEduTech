@@ -63,7 +63,7 @@ const InstructorLayout = ({
     {
       name: t('instructorLayout.navigation.dashboard'),
       icon: LayoutDashboard,
-      href: '/instructor',
+      href: '/instructor/dashboard',
       notifications: 0,
     },
     {

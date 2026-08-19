@@ -1,4 +1,11 @@
-FROM node:20-alpine
+# Đồng bộ với Dockerfile production: chuyển từ node:20-alpine sang
+# node:20-bookworm-slim (Debian glibc, có thể cài curl tường minh) để tránh
+# lỗi "curl: not found" khi healthcheck của docker-compose.dev.yml gọi
+# `curl -f http://localhost:5000/v1/faqs`.
+FROM node:20-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

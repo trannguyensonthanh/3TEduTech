@@ -34,13 +34,27 @@ const checkCourseAccess = async (courseId, user, action) => {
     );
   }
 
-  if (
-    !isAdmin &&
-    ![CourseStatus.DRAFT, CourseStatus.REJECTED].includes(course.StatusID)
-  ) {
+  /* ======================================================================
+     [SỬA 17/08/2026 — BỎ BACKDOOR `!isAdmin`]
+
+     TRƯỚC ĐÂY điều kiện là `!isAdmin && ![DRAFT, REJECTED].includes(...)`,
+     nghĩa là Quản trị viên được MIỄN hoàn toàn kiểm tra trạng thái. Admin có
+     thể sửa hoặc xóa chương/bài của khóa PUBLISHED đang có học viên; kết hợp
+     với ON DELETE CASCADE trên FK_LessonProgress_LessonID, một lệnh xóa chương
+     sẽ quét sạch tiến độ học của TOÀN BỘ học viên khóa đó.
+
+     Trong mô hình Course Versioning, KHÔNG AI được sửa trực tiếp nội dung của
+     khóa đã xuất bản — kể cả Admin. Mọi thay đổi bắt buộc đi qua luồng
+     "Tạo phiên bản mới": clone ra bản nháp, sửa trên nháp, gửi duyệt. Nhờ đó
+     mọi thay đổi đều có vết kiểm toán và học viên cũ không bị ảnh hưởng.
+
+     Muốn gỡ cả khóa học khỏi hệ thống thì dùng luồng ARCHIVE_SUBMISSION.
+     ====================================================================== */
+  if (![CourseStatus.DRAFT, CourseStatus.REJECTED].includes(course.StatusID)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      `Không thể ${action} khi khóa học không ở trạng thái ${CourseStatus.DRAFT} hoặc ${CourseStatus.REJECTED}.`
+      `Không thể ${action} trên khóa học đã xuất bản (trạng thái hiện tại: ${course.StatusID}). ` +
+        `Hãy dùng chức năng "Tạo phiên bản mới" để chỉnh sửa nội dung mà không ảnh hưởng tới học viên đã mua.`
     );
   }
   return course;
@@ -133,50 +147,18 @@ const deleteSection = async (sectionId, user) => {
 
   const lessons = await lessonRepository.findLessonsBySectionId(sectionId);
 
-  for (const lesson of lessons) {
-    if (lesson.ExternalVideoID) {
-      try {
-        await cloudinaryUtil.deleteAsset(lesson.ExternalVideoID, {
-          resource_type: 'video',
-        });
-        logger.info(
-          `Lesson video deleted from Cloudinary: ${lesson.ExternalVideoID} (during section delete)`
-        );
-      } catch (error) {
-        logger.error(
-          `Failed to delete lesson video ${lesson.ExternalVideoID} (during section delete):`,
-          error
-        );
-      }
-    }
-
-    const attachments =
-      await lessonAttachmentRepository.findAttachmentsByLessonId(
-        lesson.LessonID
-      );
-
-    for (const attachment of attachments) {
-      if (attachment.CloudStorageID) {
-        try {
-          await cloudinaryUtil.deleteAsset(attachment.CloudStorageID, {
-            resource_type: 'raw',
-          });
-          logger.info(
-            `Lesson attachment deleted from Cloudinary: ${attachment.CloudStorageID} (during section delete)`
-          );
-        } catch (error) {
-          logger.error(
-            `Failed to delete lesson attachment ${attachment.CloudStorageID} (during section delete):`,
-            error
-          );
-        }
-      }
-    }
-  }
+  // Siêu tối ưu: Dọn trọn gói toàn bộ tài nguyên (video private, phụ đề .srt, file đính kèm) của từng bài học
+  await Promise.all(
+    lessons.map((lesson) =>
+      cloudinaryUtil.deleteResourcesByPrefix(
+        `courses/${section.CourseID}/lessons/${lesson.LessonID}/`
+      )
+    )
+  );
 
   await sectionRepository.deleteSectionById(sectionId);
   logger.info(
-    `Section ${sectionId} and associated DB records deleted by user ${user.id}`
+    `Section ${sectionId} and all associated Cloudinary resource folders deleted by user ${user.id}`
   );
 };
 

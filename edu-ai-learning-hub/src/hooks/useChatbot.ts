@@ -1,17 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/useChatbot.ts
+//
+/* ============================================================================
+   [VIẾT LẠI 17/08/2026 — LEVEL 3]
+
+   ★ LỖI ĐÃ SỬA: CHAT KHÓA HỌC DÙNG CHUNG LỊCH SỬ VỚI CHAT TỔNG
+
+   Bản cũ lưu hội thoại vào localStorage với khóa mặc định
+   DEFAULT_STORAGE_KEY = 'agy_mini_chatbot_history_v2'. Cả hai nơi gọi hook —
+   ChatbotUI.tsx (chatbot tổng ở trang chủ) và AIAssistantDialog.tsx (trợ lý
+   trong khóa học) — đều KHÔNG truyền `storageKey` riêng, nên cùng ghi vào một
+   chỗ. Hệ quả: đang hỏi trợ lý khóa "Lập trình Python" lại thấy AI nhắc tới
+   cuộc trò chuyện tư vấn mua hàng ở trang chủ, và ngược lại.
+
+   Cách sửa KHÔNG phải là đặt hai storageKey khác nhau. Làm vậy chỉ chữa triệu
+   chứng, còn ba vấn đề gốc vẫn nguyên:
+     • Mất sạch khi người dùng xóa cache trình duyệt.
+     • Không đồng bộ giữa máy tính và điện thoại.
+     • Client tự gửi lịch sử lên server → sửa localStorage là chèn được câu trả
+       lời giả của AI (prompt injection).
+
+   → Nay lịch sử nằm trong CSDL, mỗi (tài khoản, scope, courseId) một phiên
+     riêng, và client KHÔNG gửi lịch sử lên nữa.
+============================================================================ */
+
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import {
-  queryMasterAI,
+  getOrCreateChatSession,
+  getSessionMessages,
+  archiveChatSession,
+  sendChatMessage,
+  streamChatMessage,
   fetchSuggestedQuestions,
-  QueryResponse,
-  AgentResponse,
-  UIWidgetData,
-  streamAgentAI,
+  type ChatScope,
+  type UIWidgetData,
 } from '@/services/ai.service';
 
-// --- INTERFACES ---
 export interface ChatMessage {
   id: string;
   text: string;
@@ -24,179 +48,220 @@ export interface ChatMessage {
   uiWidget?: UIWidgetData | null;
 }
 
+/** @deprecated Lịch sử nay do backend quản lý; kiểu này chỉ còn để tương thích import cũ. */
 export interface ChatHistoryPair {
   question: string;
   answer: string;
 }
 
 interface UseChatbotOptions {
+  /** Tin nhắn chào mừng, chỉ hiện khi phiên chưa có tin nhắn nào. */
   initialMessages?: ChatMessage[];
-  queryFn: (payload: any) => Promise<any>;
-  queryContext?: Record<string, any>;
+  /** Ngữ cảnh hội thoại. Đây là thứ tách biệt chat tổng với chat khóa học. */
+  scope?: ChatScope;
+  courseId?: number | null;
+  lessonId?: number | null;
   useStreaming?: boolean;
-  storageKey?: string;
+  /**
+   * Chỉ khởi tạo phiên khi = true.
+   * Hộp thoại trợ lý AI nằm sẵn trong cây React nhưng thường đang đóng; không
+   * có cờ này thì mỗi lần mở trang học là tạo một phiên chat vô ích.
+   */
+  enabled?: boolean;
 }
-
-const DEFAULT_STORAGE_KEY = 'agy_mini_chatbot_history_v2';
 
 export const useChatbot = ({
   initialMessages,
-  queryFn,
-  queryContext = {},
+  scope = 'MASTER',
+  courseId = null,
+  lessonId = null,
   useStreaming = true,
-  storageKey = DEFAULT_STORAGE_KEY,
+  enabled = true,
 }: UseChatbotOptions) => {
-  // 1. Persistent LocalStorage Recovery: Giữ lịch sử không bao giờ biến mất khi reload hay chuyển trang
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error('Error loading chat history from localStorage:', e);
-    }
-    return initialMessages || [];
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    initialMessages || []
+  );
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
-
-  // Refs cho hệ thống Typewriter Token Buffer (Nhả chữ mượt mà như lụa)
+  // Refs cho hệ thống Typewriter Token Buffer (nhả chữ mượt)
   const tokenQueueRef = useRef<string[]>([]);
   const typewriterTimerRef = useRef<any>(null);
-  const streamDoneDataRef = useRef<{ isDone: boolean; suggestedQuestions?: string[] }>({ isDone: false });
+  const streamDoneDataRef = useRef<{
+    isDone: boolean;
+    suggestedQuestions?: string[];
+  }>({ isDone: false });
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Save to LocalStorage on every message update
+  /* ---------------------------------------------------------------------
+     Khởi tạo phiên + nạp lịch sử từ CSDL
+     ------------------------------------------------------------------- */
   useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(messages));
-    } catch (e) {
-      console.error('Error saving chat history to localStorage:', e);
-    }
-  }, [messages, storageKey]);
+    if (!enabled) return undefined;
+    // COURSE/LESSON bắt buộc có courseId; thiếu thì chờ chứ không gọi API để
+    // nhận về lỗi 400.
+    if (scope !== 'MASTER' && !courseId) return undefined;
 
-  // Cleanup timer on unmount
+    let active = true;
+    setIsLoadingHistory(true);
+
+    (async () => {
+      try {
+        const session = await getOrCreateChatSession({
+          scope,
+          courseId: scope === 'MASTER' ? null : courseId,
+          lessonId: scope === 'LESSON' ? lessonId : null,
+        });
+        if (!active) return;
+        setSessionId(session.sessionId);
+
+        const { messages: stored } = await getSessionMessages(
+          session.sessionId
+        );
+        if (!active) return;
+
+        if (stored.length > 0) {
+          setMessages(
+            stored.map((m) => ({
+              id: `db-${m.messageId}`,
+              text: m.content,
+              sender: m.role === 'user' ? 'user' : 'bot',
+              sources: m.sources,
+              uiWidget: m.uiWidget,
+            }))
+          );
+        } else {
+          // Phiên trống → hiện lời chào. Nếu luôn hiện lời chào kể cả khi đã có
+          // lịch sử thì mỗi lần F5 lại thấy "Xin chào" chen giữa cuộc trò chuyện.
+          setMessages(initialMessages || []);
+        }
+      } catch (error) {
+        if (!active) return;
+        console.error('Không khởi tạo được phiên chat:', error);
+        // Vẫn hiện lời chào để khung chat không trống trơn; người dùng gửi tin
+        // sẽ nhận thông báo lỗi cụ thể lúc đó.
+        setMessages(initialMessages || []);
+      } finally {
+        if (active) setIsLoadingHistory(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+    // initialMessages CỐ Ý không nằm trong mảng phụ thuộc: nơi gọi thường tạo
+    // mảng đó ngay trong thân component nên nó có định danh mới mỗi lần render
+    // — đưa vào đây sẽ tạo vòng lặp gọi API tạo phiên không dừng.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, scope, courseId, lessonId]);
+
+  // Dọn timer và hủy stream đang chạy khi component bị gỡ.
   useEffect(() => {
     return () => {
       if (typewriterTimerRef.current) clearInterval(typewriterTimerRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
-  const clearChatHistory = useCallback(() => {
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (e) {
-      console.error(e);
+  /* ---------------------------------------------------------------------
+     Xóa lịch sử
+     ------------------------------------------------------------------- */
+  const clearChatHistory = useCallback(async () => {
+    if (sessionId) {
+      try {
+        // Backend chỉ ĐÁNH DẤU lưu trữ, không xóa dữ liệu — thống kê
+        // vw_CourseChatInsights ("bài giảng nào gây nhiều thắc mắc nhất") sẽ
+        // sai lệch nếu người dùng xóa được lịch sử thật.
+        await archiveChatSession(sessionId);
+      } catch (error) {
+        console.error('Không lưu trữ được phiên chat:', error);
+      }
     }
     setMessages(initialMessages || []);
-  }, [storageKey, initialMessages]);
+    setSessionId(null);
 
-  const { mutate: getSuggestions } = useMutation({
-    mutationFn: fetchSuggestedQuestions,
-    onSuccess: (data) => {
-      if (data.suggested_questions?.length > 0) {
-        setMessages((prev) => {
-          const lastMessageIndex = prev.length - 1;
-          if (
-            lastMessageIndex >= 0 &&
-            prev[lastMessageIndex].sender === 'bot'
-          ) {
-            const updatedMessages = [...prev];
-            updatedMessages[lastMessageIndex] = {
-              ...updatedMessages[lastMessageIndex],
-              suggestedQuestions: data.suggested_questions,
-            };
-            return updatedMessages;
-          }
-          return prev;
+    // Tạo lại phiên mới ngay để người dùng gõ tiếp được luôn.
+    if (enabled && (scope === 'MASTER' || courseId)) {
+      try {
+        const session = await getOrCreateChatSession({
+          scope,
+          courseId: scope === 'MASTER' ? null : courseId,
+          lessonId: scope === 'LESSON' ? lessonId : null,
         });
+        setSessionId(session.sessionId);
+      } catch (error) {
+        console.error('Không tạo lại được phiên chat:', error);
       }
-    },
-  });
+    }
+  }, [sessionId, initialMessages, enabled, scope, courseId, lessonId]);
 
-  const { mutate: sendMessage, isPending: isMutationPending } = useMutation({
-    mutationFn: queryFn,
-    onSuccess: (data, variables) => {
-      const botMessage: ChatMessage = {
-        id: `bot-${Date.now()}`,
-        text: data.answer,
-        sender: 'bot',
-        sources: data.sources,
-        suggestedQuestions: [],
-        voice: data.voice,
-        isFallbackPrompt: data.is_fallback_prompt,
-        originalQuery: variables.query,
-        uiWidget: data.ui_widget,
-      };
-      setMessages((prev) => [...prev, botMessage]);
-      getSuggestions({
-        previous_response: data.answer,
-        query: variables.query.replace(/^duythai\s*/, ''),
+  /* ---------------------------------------------------------------------
+     Câu hỏi gợi ý
+     ------------------------------------------------------------------- */
+  const loadSuggestions = useCallback(
+    async (previousResponse: string, query: string, botMsgId: string) => {
+      const data = await fetchSuggestedQuestions({
+        previous_response: previousResponse,
+        query,
       });
-    },
-    onError: (error) => {
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        text: `Xin lỗi, tôi không thể trả lời lúc này: ${(error as Error).message}`,
-        sender: 'bot',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    },
-  });
-
-  const isTyping = isMutationPending || isStreaming;
-
-  const addUserMessage = useCallback(
-    (text: string, use_general_knowledge: boolean = false) => {
-      if (!text.trim()) return;
-
-      // Xóa các câu hỏi gợi ý cũ của AI khi người dùng gửi câu hỏi mới
+      if (!data.suggested_questions?.length) return;
       setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, suggestedQuestions: [], isFallbackPrompt: false }))
+        prev.map((msg) =>
+          msg.id === botMsgId
+            ? { ...msg, suggestedQuestions: data.suggested_questions }
+            : msg
+        )
       );
+    },
+    []
+  );
 
-      if (!use_general_knowledge) {
-        const userMessage: ChatMessage = {
-          id: `user-${Date.now()}`,
-          text: text,
-          sender: 'user',
-        };
-        setMessages((prev) => [...prev, userMessage]);
-      }
+  /* ---------------------------------------------------------------------
+     Gửi tin nhắn
+     ------------------------------------------------------------------- */
+  const addUserMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
 
-      const currentMessages = use_general_knowledge ? messages : [...messages, { id: '', text, sender: 'user' as const }];
-      const chat_history: ChatHistoryPair[] = [];
-      for (let i = 0; i < currentMessages.length - 1; i++) {
-        if (
-          currentMessages[i].sender === 'user' &&
-          i + 1 < currentMessages.length &&
-          currentMessages[i + 1].sender === 'bot'
-        ) {
-          chat_history.push({
-            question: currentMessages[i].text,
-            answer: currentMessages[i + 1].text,
-          });
-          i++;
-        }
-      }
-      const recent_history = chat_history.slice(-5);
-
-      if (useStreaming && !use_general_knowledge) {
-        const botMsgId = `bot-${Date.now()}`;
-        setIsStreaming(true);
-
+      if (!sessionId) {
         setMessages((prev) => [
           ...prev,
           {
-            id: botMsgId,
-            text: '',
+            id: `error-${Date.now()}`,
+            text: 'Chưa kết nối được phiên trò chuyện. Vui lòng tải lại trang.',
             sender: 'bot',
-            suggestedQuestions: [],
           },
         ]);
+        return;
+      }
 
-        // Reset typewriter buffer queue for new response
+      // Xóa gợi ý cũ và thêm tin nhắn của người dùng.
+      setMessages((prev) => [
+        ...prev.map((msg) => ({
+          ...msg,
+          suggestedQuestions: [],
+          isFallbackPrompt: false,
+        })),
+        { id: `user-${Date.now()}`, text: trimmed, sender: 'user' as const },
+      ]);
+
+      const botMsgId = `bot-${Date.now()}`;
+
+      /* ★ KHÔNG dựng và KHÔNG gửi chat_history nữa.
+         Bản cũ ghép mảng lịch sử từ state rồi gửi kèm mỗi request — chính là
+         đường đi của prompt injection. Backend nay tự đọc 5 lượt gần nhất từ
+         bảng ChatMessages, nơi người dùng không chạm tới được. */
+
+      if (useStreaming) {
+        setIsStreaming(true);
+        setMessages((prev) => [
+          ...prev,
+          { id: botMsgId, text: '', sender: 'bot', suggestedQuestions: [] },
+        ]);
+
         tokenQueueRef.current = [];
         if (typewriterTimerRef.current) {
           clearInterval(typewriterTimerRef.current);
@@ -204,11 +269,15 @@ export const useChatbot = ({
         }
         streamDoneDataRef.current = { isDone: false };
 
-        // Bật luồng interval 15ms (~60-70 chữ/giây) để nhả từng ký tự đều đặn mượt mà
+        // Nhả chữ đều đặn ~60-70 ký tự/giây cho mượt mắt.
         typewriterTimerRef.current = setInterval(() => {
           if (tokenQueueRef.current.length > 0) {
-            // Tối ưu số chữ nén ra theo độ dài buffer để vừa mịn vừa kịp tốc độ stream
-            const count = tokenQueueRef.current.length > 80 ? 8 : tokenQueueRef.current.length > 30 ? 4 : 2;
+            const count =
+              tokenQueueRef.current.length > 80
+                ? 8
+                : tokenQueueRef.current.length > 30
+                  ? 4
+                  : 2;
             const chunk = tokenQueueRef.current.splice(0, count).join('');
             setMessages((prev) =>
               prev.map((msg) =>
@@ -218,12 +287,11 @@ export const useChatbot = ({
               )
             );
           } else if (streamDoneDataRef.current.isDone) {
-            if (typewriterTimerRef.current) {
-              clearInterval(typewriterTimerRef.current);
-              typewriterTimerRef.current = null;
-            }
+            clearInterval(typewriterTimerRef.current);
+            typewriterTimerRef.current = null;
             setIsStreaming(false);
-            const suggestions = streamDoneDataRef.current.suggestedQuestions || [];
+            const suggestions =
+              streamDoneDataRef.current.suggestedQuestions || [];
             if (suggestions.length > 0) {
               setMessages((prev) =>
                 prev.map((msg) =>
@@ -236,25 +304,27 @@ export const useChatbot = ({
           }
         }, 16);
 
-        streamAgentAI(
-          {
-            query: text,
-            chat_history: recent_history,
-            use_general_knowledge,
-            ...queryContext,
-          },
+        abortRef.current?.abort();
+        abortRef.current = new AbortController();
+
+        await streamChatMessage(
+          sessionId,
+          trimmed,
           {
             onMetadata: (data) => {
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === botMsgId
-                    ? { ...msg, sources: data.sources, uiWidget: data.ui_widget as any }
+                    ? {
+                        ...msg,
+                        sources: data.sources as any,
+                        uiWidget: data.ui_widget as any,
+                      }
                     : msg
                 )
               );
             },
             onToken: (tokenText) => {
-              // Nén các ký tự vào buffer queue thay vì nhét thẳng vào state thô bạo
               tokenQueueRef.current.push(...Array.from(tokenText));
             },
             onDone: (data) => {
@@ -273,44 +343,86 @@ export const useChatbot = ({
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === botMsgId
-                    ? { ...msg, text: (msg.text || '') + `\n\n⚠️ [Lỗi kết nối AI Streaming: ${err}]` }
+                    ? {
+                        ...msg,
+                        // Nối vào phần đã nhả được thay vì thay thế: người dùng
+                        // vẫn giữ được nửa câu trả lời đã nhận.
+                        text: (msg.text || '') + `\n\n⚠️ ${err}`,
+                      }
                     : msg
                 )
               );
             },
-          }
+          },
+          abortRef.current.signal
         );
       } else {
-        sendMessage({
-          query: text,
-          chat_history: recent_history,
-          use_general_knowledge,
-          ...queryContext,
-        });
+        setIsSending(true);
+        try {
+          const data = await sendChatMessage(sessionId, trimmed);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              text: data.answer,
+              sender: 'bot',
+              sources: data.sources,
+              suggestedQuestions: data.suggestedQuestions || [],
+              voice: data.voice,
+              uiWidget: data.uiWidget,
+              originalQuery: trimmed,
+            },
+          ]);
+          if (!data.suggestedQuestions?.length) {
+            loadSuggestions(data.answer, trimmed, botMsgId);
+          }
+        } catch (error) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `error-${Date.now()}`,
+              text: `Xin lỗi, tôi không thể trả lời lúc này: ${(error as Error).message}`,
+              sender: 'bot',
+            },
+          ]);
+        } finally {
+          setIsSending(false);
+        }
       }
     },
-    [messages, sendMessage, useStreaming, queryContext]
+    [sessionId, useStreaming, loadSuggestions]
   );
 
-  const confirmFallback = useCallback((originalQuery: string) => {
-    setMessages((prev) => prev.filter(msg => !msg.isFallbackPrompt));
-    addUserMessage(originalQuery, true);
-  }, [addUserMessage]);
+  /**
+   * Giữ lại để hai component gọi hook không phải sửa.
+   * Cơ chế "hỏi lại bằng kiến thức tổng quát" cũ dựa trên cờ
+   * `use_general_knowledge` gửi kèm request — nay backend không nhận trường đó
+   * nữa (schema Joi từ chối khóa lạ), nên đơn giản là gửi lại câu hỏi.
+   */
+  const confirmFallback = useCallback(
+    (originalQuery: string) => {
+      setMessages((prev) => prev.filter((msg) => !msg.isFallbackPrompt));
+      addUserMessage(originalQuery);
+    },
+    [addUserMessage]
+  );
 
-  const pushBotMessage = useCallback((text: string, uiWidget?: UIWidgetData) => {
-    const botMessage: ChatMessage = {
-      id: `bot-${Date.now()}`,
-      text,
-      sender: 'bot',
-      uiWidget,
-    };
-    setMessages((prev) => [...prev, botMessage]);
-  }, []);
+  const pushBotMessage = useCallback(
+    (text: string, uiWidget?: UIWidgetData) => {
+      setMessages((prev) => [
+        ...prev,
+        { id: `bot-${Date.now()}`, text, sender: 'bot', uiWidget },
+      ]);
+    },
+    []
+  );
 
   return {
     messages,
     setMessages,
-    isTyping,
+    isTyping: isStreaming || isSending,
+    isLoadingHistory,
+    sessionId,
     addUserMessage,
     confirmFallback,
     pushBotMessage,

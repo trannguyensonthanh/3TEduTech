@@ -116,5 +116,12 @@ export const deleteSubtitle = async (
   await apiHelper.delete(`/lessons/${lessonId}/subtitles/${subtitleId}`);
 };
 
-// Thêm hàm updateSubtitle nếu backend hỗ trợ sửa URL/Name
-// export const updateSubtitle = async (lessonId: number, subtitleId: number, data: UpdateSubtitleData): Promise<Subtitle> => { ... }
+/**
+ * Instructor/Admin: Kích hoạt tạo phụ đề tự động từ video bằng AI (On-Demand Nút bấm).
+ * @param {number} lessonId - ID bài học.
+ */
+export const generateAiSubtitle = async (
+  lessonId: number
+): Promise<{ message: string }> => {
+  return apiHelper.post(`/lessons/${lessonId}/subtitles/generate-ai`, {});
+};

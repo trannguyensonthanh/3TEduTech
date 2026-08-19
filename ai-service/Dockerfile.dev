@@ -1,18 +1,71 @@
+# =============================================================================
+# AI Service — image cho MÔI TRƯỜNG PHÁT TRIỂN (docker-compose.dev.yml)
+# =============================================================================
+# Khác bản production (`Dockerfile`) ở hai điểm:
+#
+#   • Dùng `python:3.12` đầy đủ thay vì `-slim`: nặng hơn ~700MB nhưng có sẵn
+#     trình biên dịch và thư viện hệ thống, nên `uv pip install` không gãy giữa
+#     chừng khi thử thêm một gói mới lúc đang phát triển.
+#   • Cài uv bằng `pip install uv` thay vì tải script qua curl — ít phụ thuộc
+#     vào mạng ra ngoài hơn, hợp với máy cá nhân.
+#
+# Mã nguồn được bind-mount từ máy thật (xem `volumes:` trong
+# docker-compose.dev.yml), nên hot-reload của uvicorn hoạt động bình thường —
+# sửa tệp trong `src/` là dịch vụ tự nạp lại.
+# =============================================================================
+
 FROM python:3.12
+
+# Giống Dockerfile production: mặc định KHÔNG cài whisper.
+#
+# Trên máy dev cũng vậy — LLM_PROVIDER=gemini thì phiên âm không được gọi tới,
+# mà faster-whisper lại nặng ~500MB và mất nhiều phút để tải về. Muốn thử phiên
+# âm trên máy có card 3050 thì build lại với:
+#
+#   docker compose -f docker-compose.dev.yml build \
+#     --build-arg INSTALL_EXTRAS="whisper,gpu" ai-service
+ARG INSTALL_EXTRAS=""
 
 # Dùng pip để cài uv thay vì dùng curl + apt-get (tránh lỗi mạng)
 RUN pip install uv
+
+# `curl` cho healthcheck của Docker Compose. Image python:3.12 (không -slim) đã
+# có sẵn curl, nhưng khai báo tường minh để nếu sau này đổi base image thì
+# healthcheck không lặng lẽ hỏng.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv pip install --system -r pyproject.toml
+# Cùng một logic với Dockerfile production — xem chú thích đầy đủ ở tệp đó.
+RUN set -e; \
+    EXTRA_ARGS=""; \
+    for extra in $(echo "${INSTALL_EXTRAS}" | tr ',' ' '); do \
+      [ -n "$extra" ] && EXTRA_ARGS="$EXTRA_ARGS --extra $extra"; \
+    done; \
+    echo "📦 [dev] Cài phụ thuộc với:${EXTRA_ARGS:- (chỉ nhóm bắt buộc)}"; \
+    uv pip install --system -r pyproject.toml $EXTRA_ARGS
+
+ENV LD_LIBRARY_PATH="/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib:${LD_LIBRARY_PATH}"
 
 ENV PYTHONUNBUFFERED=1
 ENV PORT=2111
+ENV AI_SERVICE_BUILD_EXTRAS="${INSTALL_EXTRAS}"
 
 EXPOSE 2111
 
-# Run.py đã cấu hình reload=True, nên sẽ tự hot-reload
-CMD ["uv", "run", "run.py"]
+# =============================================================================
+# [SỬA 18/08/2026] `python run.py` THAY CHO `uv run run.py`
+#
+# `uv run` thấy pyproject.toml + uv.lock trong /app (được bind-mount vào) nên nó
+# tạo một `.venv` mới rồi cài lại TOÀN BỘ phụ thuộc ngay lúc container khởi
+# động — bỏ phí hoàn toàn bước `uv pip install --system` ở trên, và bắt phải chờ
+# vài phút mỗi lần container được tạo lại. Trên máy dev điều đó nghĩa là mỗi lần
+# `docker compose up` lại ngồi đợi cài gói.
+#
+# Hot-reload KHÔNG phụ thuộc vào `uv run` — nó do `reload=True` trong run.py lo,
+# và vẫn chạy y nguyên với `python run.py`.
+# =============================================================================
+CMD ["python", "run.py"]

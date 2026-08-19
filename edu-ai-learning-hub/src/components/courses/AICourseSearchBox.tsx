@@ -34,7 +34,11 @@ export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({ onSelectCo
     setError(null);
 
     try {
-      const data = await searchCoursesWithAI({ query: targetQuery, top_k: 5 });
+      /* [SỬA 19/08/2026] `top_k` -> `topK`. Backend nhận `topK`
+         (chat.validation.js) rồi mới tự đổi sang `top_k` khi gọi AI Service
+         (chat.controller.js dòng 93). Gửi `top_k` thì Joi bỏ qua trường lạ và
+         số kết quả luôn rơi về mặc định — sai lặng lẽ, không báo lỗi. */
+      const data = await searchCoursesWithAI({ query: targetQuery, topK: 5 });
       setResult(data);
     } catch (err: any) {
       setError(err.message || 'Không thể kết nối đến Trợ lý AI. Vui lòng thử lại.');

@@ -11,14 +11,14 @@ import { useTranslation } from 'react-i18next';
 import { useChatbot, ChatMessage } from '@/hooks/useChatbot'; // <-- IMPORT HOOK MỚI
 import ReactMarkdown from 'react-markdown'; // Cần cài đặt: npm install react-markdown
 import remarkGfm from 'remark-gfm'; // Cần cài đặt: npm install remark-gfm (để hỗ trợ table, strikethrough...)
-import { queryAgentAI } from '@/services/ai.service';
+// [SỬA 17/08/2026 — LEVEL 3] Không còn gọi thẳng AI Service nữa; useChatbot
+// tự quản lý phiên qua backend /v1/ai/*.
 import { 
   CourseCarouselWidget, 
   ChatPaymentSelectorWidget, 
   CheckoutRedirectWidget,
   EnrollmentSuccessWidget
 } from './widgets';
-import { useMyEnrollments } from '@/hooks/queries/enrollment.queries';
 import { Trash2 } from 'lucide-react';
 
 const ChatbotUI: React.FC = () => {
@@ -26,12 +26,15 @@ const ChatbotUI: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
-  const { data: enrollmentData } = useMyEnrollments({}, { placeholderData: (prev) => prev });
-  const enrolledCourses = (enrollmentData?.enrollments || []).map((e: any) => ({
-    courseId: e.courseId,
-    courseName: e.courseName,
-    slug: e.slug
-  }));
+  /* [GỠ 17/08/2026 — LEVEL 3] Đã bỏ khối lấy `enrolledCourses`.
+     Nó chỉ tồn tại để nhét vào `queryContext: { enrolled_courses }` gửi kèm
+     request AI. Nhưng schema AgentRequest phía AI Service chỉ nhận
+     query/chat_history/top_k, và Pydantic mặc định LƯỢC BỎ mọi khóa lạ — nghĩa
+     là trường đó chưa bao giờ tới được mô hình. Giữ lại chỉ tốn thêm một lượt
+     gọi API danh sách ghi danh mỗi lần mở trang chủ mà không đem lại gì.
+     (Nếu sau này muốn AI thật sự biết học viên đã mua khóa nào, phải bổ sung
+      trường vào AgentRequest ở ai-service và cho backend tự truy vấn — client
+      không được phép tự khai, vì đó lại là một dạng dữ liệu giả mạo được.) */
 
   const initialMessage: ChatMessage = {
     id: 'init-bot-msg',
@@ -50,10 +53,23 @@ const ChatbotUI: React.FC = () => {
     voice: '', // Dữ liệu audio base64 nếu có
   };
 
+  /* [SỬA 17/08/2026 — LEVEL 3]
+     scope='MASTER' → chatbot tổng ở trang chủ có phiên RIÊNG, tách hẳn khỏi
+     trợ lý AI bên trong khóa học (scope='COURSE'). Trước đây cả hai dùng chung
+     một khóa localStorage nên lịch sử lẫn vào nhau.
+
+     Đã bỏ `queryFn` và `queryContext`:
+       - queryFn: hook nay tự gọi backend, không cần truyền hàm gọi API vào.
+       - queryContext ({ enrolled_courses }): trường này VỐN ĐÃ bị bỏ qua —
+         schema AgentRequest phía AI Service chỉ nhận query/chat_history/top_k
+         và Pydantic mặc định lược bỏ khóa lạ. Nên gỡ đi không làm mất tính
+         năng nào; giữ lại thì nay còn bị Joi ở backend từ chối thẳng. */
   const { messages, isTyping, addUserMessage, confirmFallback, pushBotMessage, clearChatHistory } = useChatbot({
     initialMessages: [initialMessage],
-    queryFn: queryAgentAI, // AI Agent thống nhất (Intent Router + Hybrid Search + Commerce)
-    queryContext: { enrolled_courses: enrolledCourses }, // Context bổ sung chứa danh sách khóa học người dùng đã mua
+    scope: 'MASTER',
+    // Chỉ khởi tạo phiên khi người dùng thực sự mở khung chat — tránh tạo phiên
+    // rỗng cho mọi lượt truy cập trang chủ.
+    enabled: isOpen,
   });
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);

@@ -173,6 +173,18 @@ router.post(
   courseController.createUpdateSession
 );
 
+/* [THÊM 17/08/2026 — Course Versioning]
+   Xem lịch sử phiên bản của một dòng khóa học.
+   Quyền được kiểm tra sâu hơn trong service: Admin và giảng viên sở hữu xem
+   được mọi thứ; học viên chỉ xem được nếu đã ghi danh, và không thấy số lượng
+   học viên của từng phiên bản (thông tin kinh doanh). */
+router.get(
+  '/:courseId/versions',
+  authenticate,
+  validate(courseValidation.deleteCourse), // chỉ cần lấy param courseId
+  courseController.getCourseVersionHistory
+);
+
 // API hủy phiên cập nhật
 router.post(
   '/:updateCourseId/cancel-update',

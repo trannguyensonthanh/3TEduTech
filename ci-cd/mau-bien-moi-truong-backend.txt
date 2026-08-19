@@ -1,0 +1,164 @@
+##############################################################################
+# MẪU NỘI DUNG CHO GITHUB SECRET:  BACKEND_ENV_PRODUCTION
+##############################################################################
+#
+# Chép TOÀN BỘ nội dung dưới đây (sau khi điền giá trị thật) vào một secret duy
+# nhất trên GitHub:
+#     Settings → Secrets and variables → Actions → New repository secret
+#     Name:   BACKEND_ENV_PRODUCTION
+#     Secret: (dán toàn bộ, giữ nguyên xuống dòng)
+#
+# CI/CD sẽ ghi nội dung này thành /opt/3t-edu-tech/3t-edu-tech-backend/.env.production
+# ở mỗi lần deploy.
+#
+# ⚠️ TỆP NÀY LÀ MẪU — ĐỪNG ĐIỀN GIÁ TRỊ THẬT VÀO ĐÂY RỒI COMMIT.
+#    Điền trực tiếp trong ô nhập của GitHub Secrets.
+#
+##############################################################################
+# ★ SO VỚI .env.production HIỆN TẠI, MẪU NÀY THÊM 6 BIẾN CÒN THIẾU
+#
+#   AI_SERVICE_INTERNAL_KEY  — THIẾU BIẾN NÀY LÀ MẤT HẲN LỚP BẢO VỆ.
+#       AI Service được thiết kế "chưa đặt khóa thì không kiểm tra" để tránh
+#       làm chết hệ thống khi ai đó quên đặt biến. Nghĩa là bỏ trống KHÔNG gây
+#       lỗi nào — nó chỉ lặng lẽ tắt xác thực. Ai chạm được tới cổng 2111 đều
+#       gọi được và đốt token Gemini có trả phí.
+#       PHẢI TRÙNG KHỚP với INTERNAL_API_KEY bên ai-service.
+#
+#   CERTIFICATE_SECRET       — dùng để ký mã xác minh chứng chỉ hoàn thành.
+#       Đổi giá trị này sẽ làm MỌI chứng chỉ đã cấp không xác minh được nữa.
+#
+#   IMPORT_*                 — hạn mức cho tính năng nhập khóa học từ ZIP.
+#       (IMPORT_TEMP_DIR và FAQ_DOCS_DIR do docker-compose đặt, không cần ở đây)
+#
+##############################################################################
+
+NODE_ENV=production
+PORT=5000
+
+# ---- Địa chỉ công khai ----
+# Giai đoạn đầu (chưa có tên miền): http://<ip-cong-cong-cua-ec2>
+# Sau khi bật HTTPS:                https://<ten-mien>.duckdns.org
+SERVER_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN
+FRONTEND_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN
+
+# ⚠️ Đây là biến BẮT BUỘC (Joi .required()). Thiếu nó backend không khởi động
+#    nổi và log chỉ hiện "Config validation error" — không nói rõ thiếu cái gì
+#    nếu bạn không đọc kỹ.
+# Nhiều nguồn thì ngăn cách bằng dấu phẩy, KHÔNG có khoảng trắng thừa.
+CORS_ALLOWED_ORIGINS=https://DOI-THANH-TEN-MIEN-CUA-BAN
+
+# ---- Cơ sở dữ liệu (RDS SQL Server) ----
+# DB_HOST là ENDPOINT của RDS, không phải IP, và KHÔNG kèm cổng ở cuối.
+# Dạng: ten-instance.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com
+DB_HOST=DOI-THANH-ENDPOINT-RDS
+DB_PORT=1433
+DB_USER=admin
+DB_PASSWORD=DOI-THANH-MAT-KHAU-RDS
+DB_NAME=ThreeTEduTechLMS
+
+# RDS dùng chứng chỉ do AWS cấp. Bật mã hóa nhưng không kiểm tra chuỗi tin cậy
+# — đủ để dữ liệu không đi ở dạng thô trên đường truyền trong VPC.
+DB_ENCRYPT=true
+DB_TRUST_SERVER_CERTIFICATE=true
+
+# ---- JWT ----
+# Sinh mới bằng: openssl rand -base64 48
+# ⚠️ Đổi giá trị này sẽ ĐĂNG XUẤT toàn bộ người dùng ngay lập tức.
+JWT_SECRET=DOI-THANH-CHUOI-NGAU-NHIEN-DAI
+JWT_ACCESS_EXPIRATION_MINUTES=30
+JWT_REFRESH_EXPIRATION_DAYS=30
+
+# ---- Chứng chỉ hoàn thành khóa học ----
+# Sinh mới bằng: openssl rand -hex 32
+CERTIFICATE_SECRET=DOI-THANH-CHUOI-NGAU-NHIEN-KHAC
+
+# ---- Redis ----
+# `edutech-redis` là TÊN SERVICE trong docker-compose.cpu-ec2.yml — Docker tự
+# phân giải DNS nội bộ. Mật khẩu phải khớp secret REDIS_PASSWORD trên GitHub.
+REDIS_URL=redis://:DOI-THANH-MAT-KHAU-REDIS@edutech-redis:6379
+
+# ---- AI Service ----
+# ⚠️ Dòng AI_SERVICE_URL ở đây SẼ BỊ GHI ĐÈ bởi docker-compose.cpu-ec2.yml
+#    (Compose ưu tiên `environment:` hơn `env_file:`). Giữ lại cho đủ bộ, nhưng
+#    muốn đổi đích thật thì sửa biến AI_SERVICE_URL trong .env ở gốc máy chủ.
+AI_SERVICE_URL=http://ai-service:2111
+
+# ★ BẮT BUỘC ĐẶT — xem giải thích ở đầu tệp.
+# Sinh mới bằng: openssl rand -hex 24
+# PHẢI TRÙNG với INTERNAL_API_KEY trong AI_ENV_PRODUCTION.
+AI_SERVICE_INTERNAL_KEY=DOI-THANH-KHOA-NOI-BO-32-KY-TU
+
+# ---- Nhập khóa học từ ZIP ----
+# IMPORT_TEMP_DIR do docker-compose đặt (trỏ vào named volume) — đừng đặt ở đây.
+IMPORT_MAX_ZIP_MB=200
+IMPORT_MAX_TOTAL_MB=500
+IMPORT_MAX_FILE_MB=200
+IMPORT_MAX_FILES=1000
+IMPORT_MIN_FREE_DISK_GB=5
+IMPORT_TTL_HOURS=48
+IMPORT_MAX_CONCURRENT_PER_USER=1
+IMPORT_JOB_TIMEOUT_MINUTES=30
+
+# ---- Email ----
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=DOI-THANH-EMAIL
+MAIL_PASSWORD=DOI-THANH-MAT-KHAU-UNG-DUNG
+MAIL_FROM=3T EduTech <DOI-THANH-EMAIL>
+MAIL_ENCRYPTION=tls
+
+# ---- Cloudinary ----
+CLOUDINARY_CLOUD_NAME=DOI-THANH
+CLOUDINARY_API_KEY=DOI-THANH
+CLOUDINARY_API_SECRET=DOI-THANH
+
+# ---- VNPay ----
+# ⚠️ VNP_RETURN_URL và VNP_IPN_URL PHẢI dùng đúng tên miền công khai và phải
+#    được khai báo lại trong cổng quản trị của VNPay. Đây là chỗ hay quên nhất
+#    khi đổi từ IP sang tên miền: thanh toán vẫn trừ tiền nhưng đơn hàng không
+#    bao giờ chuyển sang trạng thái đã thanh toán.
+VNP_TMNCODE=DOI-THANH
+VNP_HASHSECRET=DOI-THANH
+VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNP_API_URL=https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+VNP_RETURN_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN/payment/vnpay-return
+VNP_IPN_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN/webhooks/vnpay-ipn
+
+# ---- Đăng nhập mạng xã hội ----
+# ⚠️ Google BẮT BUỘC HTTPS cho redirect URI (trừ localhost). Chưa có HTTPS thì
+#    đăng nhập Google sẽ không hoạt động — đây là lý do chính nên bật HTTPS sớm.
+GOOGLE_CLIENT_ID=DOI-THANH
+GOOGLE_CLIENT_SECRET=DOI-THANH
+GOOGLE_CALLBACK_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN/v1/auth/google/callback
+
+FACEBOOK_APP_ID=DOI-THANH
+FACEBOOK_APP_SECRET=DOI-THANH
+FACEBOOK_CALLBACK_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN/v1/auth/facebook/callback
+
+# ---- Cổng thanh toán quốc tế ----
+STRIPE_PUBLIC_KEY=DOI-THANH
+STRIPE_SECRET_KEY=DOI-THANH
+STRIPE_WEBHOOK_SECRET=DOI-THANH
+
+PAYPAL_CLIENT_ID=DOI-THANH
+PAYPAL_CLIENT_SECRET=DOI-THANH
+PAYPAL_API_URL=https://api-m.sandbox.paypal.com
+
+MOMO_PARTNER_CODE=DOI-THANH
+MOMO_ACCESS_KEY=DOI-THANH
+MOMO_SECRET_KEY=DOI-THANH
+MOMO_API_URL=https://test-payment.momo.vn/v2/gateway/api/create
+
+NOWPAYMENTS_API_KEY=DOI-THANH
+NOWPAYMENTS_IPN_SECRET=DOI-THANH
+NOWPAYMENTS_API_URL=https://api.nowpayments.io/v1
+
+# ---- Dịch vụ ngoài ----
+# ⚠️ KHÓA YOUTUBE CŨ ĐÃ LỘ TRONG LỊCH SỬ GIT — PHẢI TẠO KHÓA MỚI.
+#    Xóa khỏi mã nguồn là chưa đủ: ai clone kho về đều đọc được commit cũ.
+YOUTUBE_API_KEY=DOI-THANH-KHOA-MOI
+EXCHANGE_RATE_API_KEY=DOI-THANH
+
+# ---- Đơn hàng ----
+PENDING_ORDER_TIMEOUT_MINUTES=30
+CANCEL_PENDING_ORDERS_CRON_SCHEDULE=*/15 * * * *

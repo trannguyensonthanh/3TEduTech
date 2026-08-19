@@ -66,5 +66,7 @@ export const useInstructorAnalytics = (period?: string) => {
     queryKey: adminKeys.instructorAnalytics(period),
     queryFn: () => getInstructorAnalytics(period),
     staleTime: 1000 * 60 * 5,
+    placeholderData: (prev) => prev,
+    refetchOnWindowFocus: false,
   });
 };

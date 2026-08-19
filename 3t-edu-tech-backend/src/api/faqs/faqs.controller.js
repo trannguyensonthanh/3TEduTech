@@ -1,5 +1,6 @@
 const httpStatus = require('http-status').status;
 const faqService = require('./faqs.service');
+const faqDocumentService = require('./faqDocuments.service');
 const { catchAsync } = require('../../utils/catchAsync');
 const { clearCache } = require('../../middlewares/cache.middleware');
 
@@ -43,29 +44,56 @@ const deleteFAQ = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
-const uploadPdf = catchAsync(async (req, res) => {
-  const file = req.file;
-  if (!file) {
-    throw new Error('Vui lòng cung cấp file PDF.');
-  }
-  
-  if (file.mimetype !== 'application/pdf') {
-    throw new Error('Chỉ hỗ trợ định dạng file PDF.');
-  }
+/* ============================================================================
+ * TÀI LIỆU CHÍNH SÁCH  [THÊM 18/08/2026]
+ *
+ * ★ `uploadPdf` CŨ ĐÃ BỊ THAY — và nó chưa từng chạy được.
+ *
+ * Bản cũ gọi `require('pdf-parse')` NGAY TRONG THÂN HÀM. Hai vấn đề:
+ *
+ *   1. `pdf-parse` KHÔNG có trong package.json. Endpoint ném
+ *      MODULE_NOT_FOUND ở mọi lần gọi. Vì require nằm trong hàm chứ không ở
+ *      đầu tệp, lỗi chỉ nổ lúc có người bấm nút — không phải lúc khởi động,
+ *      nên nó nằm im cho tới khi ra mắt.
+ *   2. Kể cả có cài, nó cũng chỉ TRẢ VỀ text rồi thôi: không lưu tệp gốc,
+ *      không nạp vào ChromaDB, không ghi lại gì. Tức là chưa làm được đúng
+ *      việc mà tính năng FAQ cần.
+ *
+ * Nay việc bóc text do AI Service (Python) đảm nhiệm — cùng một endpoint mà
+ * luồng nhập khóa học đang dùng, đã có sẵn hàng rào bảo vệ RAM và chống XXE.
+ * Backend Node không phải thêm một phụ thuộc đọc PDF nào.
+ * ========================================================================== */
 
-  const pdfParse = require('pdf-parse');
-  const pdfData = await pdfParse(file.buffer);
-  
-  // Clean up some basic spacing if needed
-  const text = pdfData.text.replace(/\n\s*\n/g, '\n\n').trim();
+const uploadDocument = catchAsync(async (req, res) => {
+  const doc = await faqDocumentService.uploadDocument(req.file, {
+    title: req.body?.title,
+    category: req.body?.category,
+    // `req.user` do middleware `authenticate` gắn vào. Ghi lại ai tải lên để
+    // sau này truy được nguồn gốc một chính sách sai.
+    uploadedBy: req.user?.accountId ?? req.user?.AccountID ?? null,
+  });
 
+  await clearCache('cache:/v1/faqs*');
+  res.status(httpStatus.CREATED).json({ status: 'success', data: doc });
+});
+
+const listDocuments = catchAsync(async (req, res) => {
+  const documents = await faqDocumentService.listDocuments();
+  res.status(httpStatus.OK).json({ status: 'success', data: documents });
+});
+
+const getDocumentText = catchAsync(async (req, res) => {
+  const text = await faqDocumentService.getDocumentText(req.params.docId);
   res.status(httpStatus.OK).json({
     status: 'success',
-    data: {
-      text,
-      fileName: file.originalname
-    }
+    data: { docId: req.params.docId, text },
   });
+});
+
+const deleteDocument = catchAsync(async (req, res) => {
+  await faqDocumentService.deleteDocument(req.params.docId);
+  await clearCache('cache:/v1/faqs*');
+  res.status(httpStatus.NO_CONTENT).send();
 });
 
 module.exports = {
@@ -74,5 +102,8 @@ module.exports = {
   createFAQ,
   updateFAQ,
   deleteFAQ,
-  uploadPdf,
+  uploadDocument,
+  listDocuments,
+  getDocumentText,
+  deleteDocument,
 };

@@ -39,7 +39,22 @@ const createNotification = async (
     const notification =
       await notificationRepository.createNotification(notificationData);
     logger.info(`Notification created for user ${recipientId}, type: ${type}`);
-    if (type === 'COURSE_SUBMITTED') {
+
+    /* ========================================================================
+       [SỬA 17/08/2026] BẬT ĐẨY REAL-TIME CHO MỌI LOẠI THÔNG BÁO
+       ------------------------------------------------------------------------
+       TRƯỚC ĐÂY:  if (type === 'COURSE_SUBMITTED') { ...gửi SSE... }
+       Đây là NƠI DUY NHẤT trong toàn bộ backend gọi eventManager.sendEvent*,
+       nên chỉ đúng 1 loại thông báo được đẩy tức thời. Tất cả các loại còn lại
+       (SYSTEM — gồm cả nhắc nhở AI theo tiến độ, COURSE_APPROVED,
+       COURSE_ENROLLED, NEW_REPLY...) chỉ ghi xuống DB và người dùng phải tự
+       tải lại trang mới thấy.
+
+       Bỏ điều kiện `if` để mọi thông báo đều tới người dùng theo thời gian thực.
+       Việc gửi được bọc try/catch riêng: nếu kênh SSE lỗi thì thông báo vẫn đã
+       được lưu vào DB, không được phép làm hỏng luồng nghiệp vụ gọi hàm này.
+       ======================================================================== */
+    try {
       const unreadCount = await countUnreadNotifications(recipientId);
       eventManager.sendEventToUsers(
         recipientId.toString(),
@@ -49,7 +64,12 @@ const createNotification = async (
           unreadCount,
         }
       );
+    } catch (pushError) {
+      logger.warn(
+        `Đã lưu thông báo nhưng không đẩy được real-time cho user ${recipientId}: ${pushError.message}`
+      );
     }
+
     return notification;
   } catch (error) {
     logger.error(

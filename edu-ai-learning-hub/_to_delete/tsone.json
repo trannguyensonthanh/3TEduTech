@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [],
+  "files": [
+    "src/vite-env.d.ts",
+    "src/pages/instructor/InstructorAnalytics.tsx",
+    "src/pages/InstructorProfilePage.tsx"
+  ]
+}

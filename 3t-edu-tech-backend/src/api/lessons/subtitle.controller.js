@@ -67,10 +67,22 @@ const handleAiSubtitleWebhook = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(result || { status: 'processed' });
 });
 
+/**
+ * Nút bấm Giảng viên ra lệnh Kích hoạt AI tạo phụ đề tự động
+ */
+const triggerAiSubtitleOnDemand = catchAsync(async (req, res) => {
+  const result = await subtitleService.generateAiSubtitleOnDemand(
+    Number(req.params.lessonId),
+    req.user
+  );
+  res.status(httpStatus.ACCEPTED).send(result);
+});
+
 module.exports = {
   getSubtitles,
   addSubtitle,
   setPrimarySubtitle,
   deleteSubtitle,
   handleAiSubtitleWebhook,
+  triggerAiSubtitleOnDemand,
 };

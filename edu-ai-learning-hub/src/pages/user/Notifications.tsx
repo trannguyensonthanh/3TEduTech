@@ -370,7 +370,16 @@ const NotificationsPage: React.FC = () => {
                 </TabsList>
 
                 <div className="min-h-[350px] md:min-h-[400px]">
-                  {isLoading && !notificationsData?.pages.length ? (
+                  {/* [SỬA 19/08/2026] Bỏ vế "&& !notificationsData?.pages.length".
+                      react-query v5 khai UseInfiniteQueryResult là UNION CÓ PHÂN
+                      BIỆT: nhánh đang tải ghi thẳng `data: undefined`. Vế
+                      `isLoading` đứng trước đã thu hẹp union về đúng nhánh đó,
+                      nên ở vế sau `notificationsData` không phải "có thể
+                      undefined" mà là CHẮC CHẮN undefined — mã chết, và là
+                      nguồn của lỗi TS18048.
+                      `isLoading` một mình đã đúng nghĩa "đang tải lần đầu, chưa
+                      có gì trong tay" (v5: isLoading = isPending && isFetching). */}
+                  {isLoading ? (
                     <Table>
                       <TableBody>
                         {renderSkeletons(NOTIFICATIONS_PER_PAGE)}

@@ -137,12 +137,39 @@ export const updateLesson = async (
   return apiHelper.patch(`/lessons/${lessonId}`, data);
 };
 
+/* ============================================================================
+ * [THÊM 18/08/2026] Gắn video YouTube cho một bài học
+ *
+ * Dùng ở bước 4 của luồng nhập khóa học từ ZIP, cho những video quá nặng để
+ * tải lên Cloudinary (gói miễn phí chặn ở 100MB mỗi tệp).
+ *
+ * ★ KHÔNG cần endpoint mới. `PATCH /lessons/:id` đã xử lý sẵn toàn bộ:
+ *   - `extractYoutubeId()` lấy videoId từ đủ mọi dạng link (youtu.be/xxx,
+ *     watch?v=xxx, /embed/xxx...), nên giảng viên dán kiểu nào cũng được
+ *   - gọi YouTube Data API lấy THỜI LƯỢNG thật, điền vào VideoDurationSeconds
+ *   - từ chối link sai định dạng bằng lỗi rõ ràng
+ *
+ * ⚠️ Máy chủ BẮT BUỘC có `externalVideoInput` khi `lessonType = VIDEO`
+ *    (xem lessons.validation.js). Gửi thiếu sẽ nhận 400 với thông báo về
+ *    "nguồn video", nghe rất khó hiểu nếu không biết ràng buộc này.
+ * ========================================================================== */
+export const setLessonYoutubeVideo = async (
+  lessonId: number,
+  youtubeUrlOrId: string
+): Promise<Lesson> => {
+  return apiHelper.patch(`/lessons/${lessonId}`, {
+    lessonType: 'VIDEO',
+    videoSourceType: 'YOUTUBE',
+    externalVideoInput: youtubeUrlOrId.trim(),
+  });
+};
+
 /** Xóa lesson */
 export const deleteLesson = async (lessonId: number): Promise<void> => {
   await apiHelper.delete(`/lessons/${lessonId}`);
 };
 
-/** Upload/Cập nhật video bài học */
+/** Upload/Cập nhật video bài học (Cơ chế cũ qua bộ đệm server) */
 export const updateLessonVideo = async (
   lessonId: number,
   file: File
@@ -154,6 +181,86 @@ export const updateLessonVideo = async (
   return fetchWithAuth(url, {
     method: 'PATCH',
     body: formData,
+  });
+};
+
+export interface VideoUploadToken {
+  signature: string;
+  timestamp: number;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+  resourceType: string;
+  type: string;
+}
+
+/** Lấy chữ ký bảo mật từ Backend để chuẩn bị Direct Upload */
+export const getLessonVideoUploadToken = async (
+  lessonId: number
+): Promise<VideoUploadToken> => {
+  return apiHelper.post(`/lessons/${lessonId}/video-upload-token`, {});
+};
+
+/** Xác nhận hoàn tất upload video với Backend & kích hoạt AI Transcribing */
+export const confirmLessonVideoUpload = async (
+  lessonId: number,
+  publicId: string,
+  duration: number
+): Promise<Lesson> => {
+  return apiHelper.put(`/lessons/${lessonId}/confirm-video`, { publicId, duration });
+};
+
+/** Thực hiện trọn gói luồng Direct Signed Upload từ Trình duyệt thẳng lên Cloudinary */
+export const uploadLessonVideoDirect = async (
+  lessonId: number,
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<Lesson> => {
+  // 1. Xin token/chữ ký từ Backend (< 15ms, 0MB RAM Server)
+  const token = await getLessonVideoUploadToken(lessonId);
+
+  // 2. Tải trực tiếp lên Cloudinary có theo dõi phần trăm tiến độ
+  return new Promise<Lesson>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${token.cloudName}/${token.resourceType}/upload`;
+
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded * 100) / event.total);
+          onProgress(percent);
+        }
+      };
+    }
+
+    xhr.onload = async () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          const { public_id, duration } = response;
+          // 3. Chốt xác nhận với Backend để cập nhật CSDl và gọi Webhook AI
+          const updatedLesson = await confirmLessonVideoUpload(lessonId, public_id, duration || 0);
+          resolve(updatedLesson);
+        } catch (err) {
+          reject(new Error('Lỗi xử lý phản hồi xác nhận từ Server.'));
+        }
+      } else {
+        reject(new Error(`Cloudinary direct upload failed (${xhr.status}): ${xhr.responseText}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Lỗi kết nối mạng khi tải lên Cloudinary.'));
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', token.apiKey);
+    formData.append('timestamp', String(token.timestamp));
+    formData.append('signature', token.signature);
+    formData.append('folder', token.folder);
+    formData.append('type', token.type);
+
+    xhr.open('POST', uploadUrl, true);
+    xhr.send(formData);
   });
 };
 

@@ -63,6 +63,12 @@ export interface Lesson {
   questions?: {
     questionId: number;
     questionText: string;
+    /* [THÊM 19/08/2026] Backend đã trả hai trường này từ lâu
+       (lessons.repository.js dòng 133-134: explanation, questionOrder) nhưng
+       khai báo ở đây thiếu, nên LessonDialogs.tsx sắp xếp câu hỏi và hiện phần
+       giải thích đều bị TypeScript chặn. */
+    questionOrder?: number;
+    explanation?: string | null;
     options: {
       optionId: number;
       optionText: string;
@@ -70,6 +76,17 @@ export interface Lesson {
       optionOrder?: number;
     }[];
   }[]; // For quiz lessons
+
+  /* --- CHỈ DÙNG Ở BẢN NHÁP TRÊN TRÌNH DUYỆT, KHÔNG GỬI LÊN API ---------
+     [THÊM 19/08/2026] useCourseCurriculum.ts dựng chương trình học trong bộ
+     nhớ trước khi lưu: bài học chưa có lessonId thật nên cần một khóa tạm, và
+     tệp video người dùng vừa chọn phải nằm đâu đó cho tới lúc bấm lưu.
+     Trước đây hook này có kiểu Lesson riêng (nay đã bị chú thích lại ở đầu
+     tệp đó) chứa sẵn hai trường này; khi chuyển sang dùng Lesson dùng chung
+     thì chúng bị rơi mất. Kiểu của tempId theo đúng Section.tempId trong
+     services/section.service.ts để hai bên không lệch nhau. */
+  tempId?: string | number;
+  lessonVideoFile?: File | null;
 }
 
 export interface Section {

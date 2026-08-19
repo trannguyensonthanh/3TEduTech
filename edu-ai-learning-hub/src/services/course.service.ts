@@ -511,3 +511,50 @@ export const getPendingApprovalRequestByCourseId = async (
 ): Promise<ApprovalRequestListItem | null> => {
   return apiHelper.get(`/courses/${courseId}/pending-approval-request`);
 };
+
+/* ==========================================================================
+ * COURSE VERSIONING (thêm 17/08/2026)
+ *
+ * Mô hình: mỗi phiên bản là MỘT khóa học riêng trong DB. Học viên mua v1 thì
+ * courseId trong Enrollments trỏ thẳng vào v1, nên họ được "ghim" vào phiên
+ * bản đã mua mãi mãi. Frontend chỉ cần hiển thị đúng phiên bản đang xem.
+ * ========================================================================== */
+
+/** Một phiên bản trong dòng lịch sử của khóa học */
+export interface CourseVersionItem {
+  courseId: number;
+  courseName: string;
+  slug: string;
+  statusId: string;
+  versionNumber: number;
+  previousVersionId: number | null;
+  isLatestVersion: boolean;
+  versionNotes?: string | null;
+  publishedAt?: IsoDateTimeString | null;
+  archivedAt?: IsoDateTimeString | null;
+  createdAt?: IsoDateTimeString;
+  totalLessons?: number;
+  /** Chỉ Admin và giảng viên sở hữu mới nhận được trường này */
+  studentCount?: number;
+}
+
+export interface CourseVersionHistoryResponse {
+  rootCourseId: number;
+  currentVersionId: number;
+  currentVersionNumber: number;
+  versions: CourseVersionItem[];
+}
+
+/**
+ * Lấy toàn bộ lịch sử phiên bản của một dòng khóa học.
+ * Truyền vào courseId của BẤT KỲ phiên bản nào cũng trả về đủ cả dòng.
+ *
+ * Quyền (backend kiểm tra): Admin và giảng viên sở hữu xem được mọi thứ; học
+ * viên chỉ xem được nếu đã ghi danh vào ít nhất một phiên bản trong dòng, và
+ * không nhận được studentCount vì đó là thông tin kinh doanh.
+ */
+export const getCourseVersionHistory = async (
+  courseId: number
+): Promise<CourseVersionHistoryResponse> => {
+  return apiHelper.get(`/courses/${courseId}/versions`);
+};

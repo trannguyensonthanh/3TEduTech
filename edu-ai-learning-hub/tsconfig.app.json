@@ -12,7 +12,16 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react",
+    /* [SỬA 19/08/2026] "react" -> "react-jsx"
+       Dự án dùng @vitejs/plugin-react-swc + React 18, tức JSX runtime TỰ ĐỘNG:
+       trình biên dịch tự chèn import từ "react/jsx-runtime", nên mã nguồn KHÔNG
+       cần `import React` ở mỗi tệp — và phần lớn tệp trong dự án đúng là không có.
+       Nhưng "jsx": "react" là chế độ CỔ ĐIỂN, nó đòi React phải có trong phạm vi
+       của mọi tệp dùng JSX. Sai lệch này sinh ra ~1250 lỗi
+       TS2686 "'React' refers to a UMD global" — toàn bộ là lỗi giả.
+       Không ai thấy vì `npm run build` chỉ chạy Vite (esbuild xóa kiểu, không
+       kiểm tra kiểu) và tsconfig.json gốc thì rỗng. */
+    "jsx": "react-jsx",
 
     /* Linting */
     "strict": false,

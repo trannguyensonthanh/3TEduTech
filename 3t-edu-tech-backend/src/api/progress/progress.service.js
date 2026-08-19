@@ -6,6 +6,43 @@ const enrollmentRepository = require('../enrollments/enrollments.repository');
 const ApiError = require('../../core/errors/ApiError');
 const logger = require('../../utils/logger');
 const Roles = require('../../core/enums/Roles');
+// [THÊM 17/08/2026 — LEVEL 2] Cấp chứng chỉ tự động khi hoàn thành khóa học.
+const certificateService = require('../certificates/certificates.service');
+
+/* ============================================================================
+   [THÊM 17/08/2026 — LEVEL 2] TỰ ĐỘNG CẤP CHỨNG CHỈ
+
+   Trong file này có ĐÚNG HAI chỗ khóa cứng enrollment thành "đã hoàn thành":
+     1. markLessonCompletion  — học viên bấm xong bài cuối cùng
+     2. getCourseProgress     — chốt lại khi mở trang (chống race condition)
+
+   Cả hai đều phải cấp chứng chỉ, nếu không sẽ có học viên đạt 100% qua đường
+   thứ hai mà mãi không có chứng chỉ. Gom vào một hàm dùng chung để hai nhánh
+   không bao giờ lệch hành vi.
+
+   ⚠️ CỐ Ý KHÔNG `await`. Cấp chứng chỉ gồm vài truy vấn cộng thêm việc gửi
+   email qua SMTP — có thể mất vài giây. Học viên vừa bấm "hoàn thành bài học"
+   không có lý do gì phải ngồi nhìn màn hình quay chờ SMTP. Việc cấp chạy nền,
+   và `tryIssueCertificateSilently` được thiết kế để KHÔNG BAO GIỜ ném lỗi, nên
+   `.catch()` ở đây chỉ là lớp bảo hiểm cuối cùng chống unhandled rejection.
+============================================================================ */
+const issueCertificateInBackground = (accountId, courseId) => {
+  certificateService
+    .tryIssueCertificateSilently(accountId, courseId)
+    .then((certificate) => {
+      if (certificate) {
+        logger.info(
+          `🎓 [Certificates] Đã cấp ${certificate.certificateCode} cho account ${accountId} (course ${courseId}).`
+        );
+      }
+    })
+    .catch((error) =>
+      logger.error(
+        `[Certificates] Lỗi ngoài dự kiến khi cấp chứng chỉ nền cho account ${accountId}, course ${courseId}:`,
+        error
+      )
+    );
+};
 
 /**
  * Đánh dấu bài học là hoàn thành/chưa hoàn thành.
@@ -87,6 +124,13 @@ const markLessonCompletion = async (user, lessonId, isCompleted) => {
           logger.info(
             `🎓 Course ${lesson.CourseID} COMPLETED & LOCKED for user ${accountId}! (${completedLessons}/${totalLessons} lessons)`
           );
+        }
+        /* Gọi cả khi `locked` là false: enrollment có thể đã được đánh dấu hoàn
+           thành từ một lần trước mà chứng chỉ chưa được cấp (ví dụ học viên đã
+           tốt nghiệp trước khi tính năng chứng chỉ ra đời). Hàm cấp là
+           idempotent nên gọi thừa hoàn toàn vô hại. */
+        if (completedLessons >= totalLessons && totalLessons > 0) {
+          issueCertificateInBackground(accountId, lesson.CourseID);
         }
       }
     } catch (lockError) {
@@ -220,6 +264,10 @@ const getCourseProgress = async (user, courseId) => {
   // - Thông tin bài bổ sung mới được tách riêng qua bonusContent
   // ============================================================
   if (enrollment && enrollment.IsCompleted) {
+    // Lưới an toàn: học viên đã tốt nghiệp từ trước khi có tính năng chứng chỉ
+    // sẽ được cấp ngay lần đầu mở lại trang khóa học.
+    issueCertificateInBackground(accountId, courseId);
+
     const uncompletedNewLessons = totalLessons - completedLessons;
     return {
       totalLessons,
@@ -259,6 +307,7 @@ const getCourseProgress = async (user, courseId) => {
           `🎓 Course ${courseId} auto-locked as COMPLETED for user ${accountId} during progress query.`
         );
       }
+      issueCertificateInBackground(accountId, courseId);
     } catch (lockError) {
       logger.error(
         `Error auto-locking completion during getCourseProgress:`,

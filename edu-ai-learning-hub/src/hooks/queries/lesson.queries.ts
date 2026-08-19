@@ -28,6 +28,7 @@ import {
   UpdateQuestionData,
   updateQuizQuestion,
   deleteQuizQuestion,
+  uploadLessonVideoDirect,
   Lesson,
 } from '@/services/lesson.service'; // Đảm bảo service export đủ
 import { courseKeys } from './course.queries'; // Cần để invalidate course detail
@@ -236,7 +237,7 @@ export const useDeleteLesson = (
   });
 };
 
-/** Hook cập nhật video bài học */
+/** Hook cập nhật video bài học (Cổ điển qua Server Buffer) */
 export const useUpdateLessonVideo = (
   options?: UseMutationOptions<Lesson, Error, { lessonId: number; file: File }>
 ) => {
@@ -248,11 +249,42 @@ export const useUpdateLessonVideo = (
         lessonKeys.detail(Number(updatedLesson.lessonId)),
         updatedLesson
       );
-      queryClient.invalidateQueries({ queryKey: courseKeys.details() }); // Invalidate course chứa lesson
+      queryClient.invalidateQueries({ queryKey: courseKeys.details() });
       console.log('Lesson video updated successfully.');
     },
     onError: (error) => {
       console.error('Lesson video update failed:', error.message);
+    },
+    ...options,
+  });
+};
+
+/** Hook tải trực tiếp video bài học từ Client sang Cloudinary kèm theo dõi phần trăm tiến độ */
+export const useUploadLessonVideoDirect = (
+  options?: UseMutationOptions<
+    Lesson,
+    Error,
+    { lessonId: number; file: File; onProgress?: (percent: number) => void }
+  >
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    Lesson,
+    Error,
+    { lessonId: number; file: File; onProgress?: (percent: number) => void }
+  >({
+    mutationFn: ({ lessonId, file, onProgress }) =>
+      uploadLessonVideoDirect(lessonId, file, onProgress),
+    onSuccess: (updatedLesson) => {
+      queryClient.setQueryData(
+        lessonKeys.detail(Number(updatedLesson.lessonId)),
+        updatedLesson
+      );
+      queryClient.invalidateQueries({ queryKey: courseKeys.details() });
+      console.log('Lesson video directly uploaded to Cloudinary successfully.');
+    },
+    onError: (error) => {
+      console.error('Lesson direct video upload failed:', error.message);
     },
     ...options,
   });

@@ -46,21 +46,21 @@ export const useMyInfiniteNotifications = (
     UseInfiniteQueryOptions<
       NotificationListResponse, // Từng page
       Error,
-      NotificationListResponse[], // Dạng `select` sau khi xử lý (nếu có)
+      InfiniteData<NotificationListResponse, number>, // Dạng `select` sau khi xử lý (nếu có)
       NotificationListResponse, // Kết quả cuối cùng m muốn trả ra
       ReadonlyArray<string | Record<string, unknown> | undefined>, // Query key
       number // PageParam
     >,
     'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
   >
-): UseInfiniteQueryResult<NotificationListResponse[], Error> => {
+): UseInfiniteQueryResult<InfiniteData<NotificationListResponse, number>, Error> => {
   const queryKey = notificationKeys.myList({ ...params, infinite: true }); // Thêm cờ để phân biệt
   const limit = params.limit || 10; // Số item mỗi page
 
   return useInfiniteQuery<
     NotificationListResponse, // Kiểu dữ liệu API trả về cho 1 page
     Error,
-    NotificationListResponse[], // Kiểu dữ liệu của data.pages
+    InfiniteData<NotificationListResponse, number>, // Kiểu dữ liệu của data.pages
     ReadonlyArray<string | Record<string, any> | undefined>,
     number // Kiểu của pageParam (là số trang tiếp theo)
   >({

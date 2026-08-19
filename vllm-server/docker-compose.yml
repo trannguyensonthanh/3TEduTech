@@ -1,0 +1,68 @@
+# ===================================================
+# GPU EC2 #1 (g6.xlarge, 24GB L4) — vLLM + Qwen 3.6 27B
+# ===================================================
+# Usage:
+#   export HF_TOKEN=your_huggingface_token (nếu model cần auth)
+#   export VLLM_API_KEY=not-needed (hoặc đặt key bảo mật)
+#   docker compose up -d
+#
+# Lần đầu chạy sẽ download model (~15-20 phút tùy mạng).
+# Model sẽ được cache trong volume 'vllm-models'.
+#
+# Test:
+#   curl http://localhost:8000/v1/models
+#   curl http://localhost:8000/v1/completions \
+#     -H "Content-Type: application/json" \
+#     -d '{"model":"Qwen/Qwen3.6-27B-AWQ","prompt":"Xin chào","max_tokens":50}'
+# ===================================================
+
+services:
+  vllm:
+    # [SỬA 17/08/2026] Ghim phiên bản thay vì :latest.
+    # vLLM phát hành rất dày và thường xuyên đổi tham số dòng lệnh cũng như
+    # mức hỗ trợ quantization. Một lần `docker compose pull` vô tình có thể kéo
+    # về bản mới làm hỏng cả trạm suy luận — trong khi mô hình Qwen 27B mất
+    # 15-20 phút để tải lại. Đổi tag ở đây phải là quyết định có chủ đích.
+    # Kiểm tra tag khả dụng: https://hub.docker.com/r/vllm/vllm-openai/tags
+    image: vllm/vllm-openai:${VLLM_VERSION:-v0.6.3}
+    container_name: edutech-vllm
+    ports:
+      - "8000:8000"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - vllm-models:/root/.cache/huggingface
+    # [THÊM 17/08/2026] vLLM dùng bộ nhớ chia sẻ POSIX cho tensor parallel và
+    # KV cache. Mặc định Docker chỉ cấp /dev/shm 64MB → nạp mô hình 27B sẽ lỗi
+    # "Bus error (core dumped)". Đây là cấu hình bắt buộc, không phải tối ưu.
+    ipc: host
+    command: >
+      --model Qwen/Qwen3.6-27B-AWQ
+      --max-model-len 8192
+      --gpu-memory-utilization 0.90
+      --dtype auto
+      --trust-remote-code
+      --port 8000
+      --api-key ${VLLM_API_KEY:-not-needed}
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s  # Model loading có thể mất 3-5 phút
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  vllm-models:

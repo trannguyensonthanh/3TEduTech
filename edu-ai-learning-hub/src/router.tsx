@@ -37,6 +37,8 @@ const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentCanceled = lazy(() => import('./pages/PaymentCanceled'));
 const OrderHistory = lazy(() => import('@/pages/OrderHistory'));
 const Certificates = lazy(() => import('@/pages/Certificates'));
+// [THÊM 17/08/2026 — LEVEL 2] Trang xác minh chứng chỉ CÔNG KHAI (không cần đăng nhập).
+const VerifyCertificate = lazy(() => import('@/pages/VerifyCertificate'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 const CourseLearningPage = lazy(() => import('@/pages/CourseLearningPage'));
 const LearningReportPage = lazy(() => import('@/pages/LearningReportPage'));
@@ -48,6 +50,8 @@ const InstructorDashboard = lazy(() => import('./pages/instructor/InstructorDash
 const InstructorCourses = lazy(() => import('./pages/instructor/InstructorCourses'));
 const CourseCreation = lazy(() => import('./pages/instructor/CourseCreation'));
 const CourseEdit = lazy(() => import('@/pages/instructor/CourseEdit'));
+// [THÊM 18/08/2026 — COURSE IMPORT] Nhập khóa học từ tệp ZIP.
+const CourseImport = lazy(() => import('@/pages/instructor/CourseImport'));
 const InstructorStudents = lazy(() => import('./pages/instructor/InstructorStudents'));
 const InstructorEarnings = lazy(() => import('./pages/instructor/InstructorEarnings'));
 const InstructorProfile = lazy(() => import('./pages/instructor/InstructorProfile'));
@@ -74,9 +78,9 @@ const PayoutManagement = lazy(() => import('./pages/admin/PayoutManagement'));
 // Utility Pages
 // === INTRO VERSION SWITCH ===
 // Uncomment dòng dưới để dùng Intro cũ (Cây Tri Thức):
-// const IntroPage = lazy(() => import('@/pages/IntroPage'));
+const IntroPage = lazy(() => import('@/pages/IntroPage'));
 // Intro mới (Cuốn Sách Tri Thức):
-const IntroPage = lazy(() => import('@/pages/IntroPageV2'));
+// const IntroPage = lazy(() => import('@/pages/IntroPageV2'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized')); 
 const CryptoPaymentPage = lazy(() => import('@/pages/CryptoPaymentPage'));
@@ -112,6 +116,12 @@ const AppRouter = () => {
         <Route path='/about' element={<About />} />
         <Route path='/privacy' element={<Privacy />} />
         <Route path='/terms-instructor' element={<TermsInstructor />} />
+        {/* [THÊM 17/08/2026 — LEVEL 2] Đích đến của mã QR in trên chứng chỉ.
+            CỐ Ý đặt ở nhóm Public: nhà tuyển dụng quét mã sẽ không có tài khoản,
+            bắt đăng nhập ở đây là phá hỏng đúng mục đích của tính năng.
+            Khai báo cả hai dạng: có mã trên URL (quét QR) và không mã (tự nhập). */}
+        <Route path='/verify-certificate' element={<VerifyCertificate />} />
+        <Route path='/verify-certificate/:code' element={<VerifyCertificate />} />
         <Route path='/ai-master' element={<AiMasterChat />} />
         <Route path='/ai-chat' element={<AiMasterChat />} />
 
@@ -152,7 +162,7 @@ const AppRouter = () => {
         <Route element={<ProtectedRoute allowedRoles={['GV', 'AD', 'SA']} />}>
           <Route
             path='/instructor'
-            element={<Navigate to='/instructor/earnings' replace />}
+            element={<Navigate to='/instructor/dashboard' replace />}
           />
           <Route
             path='/instructor/dashboard'
@@ -163,6 +173,11 @@ const AppRouter = () => {
             path='/instructor/courses/create'
             element={<CourseCreation />}
           />
+          {/* [THÊM 18/08/2026 — COURSE IMPORT]
+              Khai báo TRƯỚC '/instructor/courses/:courseSlug/edit'? Không cần —
+              hai đường dẫn không đụng nhau vì '/import' chỉ có MỘT đoạn sau
+              'courses', còn mẫu kia yêu cầu thêm đoạn '/edit' phía sau. */}
+          <Route path='/instructor/courses/import' element={<CourseImport />} />
           <Route
             path='/instructor/courses/:courseSlug/edit'
             element={<CourseEdit />}

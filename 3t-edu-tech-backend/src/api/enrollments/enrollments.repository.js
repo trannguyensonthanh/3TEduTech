@@ -138,6 +138,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
                   JOIN Lessons l ON lp.LessonID = l.LessonID
                   JOIN Sections s ON l.SectionID = s.SectionID
                   WHERE lp.AccountID = @AccountID AND s.CourseID = c.CourseID AND lp.IsCompleted = 1
+                    AND l.IsArchived = 0 AND s.IsArchived = 0
                 ) AS FLOAT
               ) / NULLIF(
                 (
@@ -145,6 +146,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
                   FROM Lessons l
                   JOIN Sections s ON l.SectionID = s.SectionID
                   WHERE s.CourseID = c.CourseID
+                    AND l.IsArchived = 0 AND s.IsArchived = 0
                 ), 0
               ) DESC
           `;
@@ -159,6 +161,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
                   JOIN Lessons l ON lp.LessonID = l.LessonID
                   JOIN Sections s ON l.SectionID = s.SectionID
                   WHERE lp.AccountID = @AccountID AND s.CourseID = c.CourseID AND lp.IsCompleted = 1
+                    AND l.IsArchived = 0 AND s.IsArchived = 0
                 ) AS FLOAT
               ) / NULLIF(
                 (
@@ -166,6 +169,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
                   FROM Lessons l
                   JOIN Sections s ON l.SectionID = s.SectionID
                   WHERE s.CourseID = c.CourseID
+                    AND l.IsArchived = 0 AND s.IsArchived = 0
                 ), 0
               ) ASC
           `;
@@ -176,16 +180,38 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
     }
     request.input('Limit', sql.Int, limit);
     request.input('Offset', sql.Int, offset);
+    /* [SỬA 17/08/2026] Toàn bộ subquery đếm bài học trong hàm này (kể cả 2 khối
+       ORDER BY progress_asc/desc ở trên) đã bổ sung `IsArchived = 0`.
+       Trước đây mẫu số tính cả bài đã lưu trữ → % tiến độ ở trang "Khóa học của tôi"
+       thấp hơn thực tế và học viên không bao giờ đạt 100%. */
     const dataResult = await request.query(`
   SELECT
     e.EnrollmentID, e.EnrolledAt, e.PurchasePrice, e.IsCompleted, e.CompletedAt,
     c.CourseID, c.CourseName, c.Slug, c.ThumbnailUrl, c.ShortDescription,
     up.FullName as InstructorName,
+    /* [THÊM 17/08/2026 — Course Versioning]
+       Học viên được ghim vào đúng phiên bản đã mua (chính là c.CourseID —
+       không cần thêm cột VersionID vào Enrollments). Ba trường dưới đây để
+       giao diện hiển thị nhãn kiểu:
+           "Bạn đang học phiên bản 1 — đã có phiên bản 2"
+       LatestVersionSlug cho phép đặt liên kết trỏ tới phiên bản mới nếu học
+       viên muốn xem, mà KHÔNG tự động chuyển họ sang đó. */
+    ISNULL(c.VersionNumber, 1)   AS VersionNumber,
+    ISNULL(c.IsLatestVersion, 1) AS IsLatestVersion,
     (
-      SELECT COUNT(*) 
+      SELECT TOP 1 newer.Slug
+      FROM Courses newer
+      WHERE newer.RootCourseID = ISNULL(c.RootCourseID, c.CourseID)
+        AND newer.LiveCourseID IS NULL
+        AND newer.IsLatestVersion = 1
+        AND newer.CourseID <> c.CourseID
+    ) AS LatestVersionSlug,
+    (
+      SELECT COUNT(*)
       FROM Lessons l
       JOIN Sections s ON l.SectionID = s.SectionID
       WHERE s.CourseID = c.CourseID
+        AND l.IsArchived = 0 AND s.IsArchived = 0
     ) AS TotalLessons,
     (
       SELECT COUNT(*) 
@@ -193,6 +219,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
       JOIN Lessons l ON lp.LessonID = l.LessonID
       JOIN Sections s ON l.SectionID = s.SectionID
       WHERE lp.AccountID = @AccountID AND s.CourseID = c.CourseID AND lp.IsCompleted = 1
+        AND l.IsArchived = 0 AND s.IsArchived = 0
     ) AS CompletedLessons,
     (
       SELECT MAX(lp.CompletedAt)
@@ -200,6 +227,7 @@ const findEnrollmentsByAccountId = async (accountId, options = {}) => {
       JOIN Lessons l ON lp.LessonID = l.LessonID
       JOIN Sections s ON l.SectionID = s.SectionID
       WHERE lp.AccountID = @AccountID AND s.CourseID = c.CourseID AND lp.IsCompleted = 1
+        AND l.IsArchived = 0 AND s.IsArchived = 0
     ) AS LastCompletedLessonAt
   ${commonQuery}
   ${orderByClause}
