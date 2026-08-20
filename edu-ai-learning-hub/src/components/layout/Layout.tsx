@@ -5,14 +5,18 @@ import ChatbotUI from '../chatbot/ChatbotUI';
 
 interface LayoutProps {
   children: ReactNode;
+  hideFooter?: boolean;
+  fullScreen?: boolean;
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, hideFooter = false, fullScreen = false }: LayoutProps) => {
   return (
-    <div className='flex flex-col min-h-screen'>
+    <div className={`flex flex-col ${fullScreen ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <Navbar />
-      <main className='flex-grow'>{children}</main>
-      <Footer />
+      <main className={`flex-grow flex flex-col ${fullScreen ? 'min-h-0 overflow-hidden' : ''}`}>
+        {children}
+      </main>
+      {!hideFooter && <Footer />}
       <ChatbotUI />
     </div>
   );

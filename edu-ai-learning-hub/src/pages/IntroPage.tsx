@@ -66,26 +66,29 @@ const TREE_WIDTH_DEPTH_MULTIPLIER = 1.0;
 const SLOGAN_TEXT_MAIN = '3TEduTech';
 const SLOGAN_TEXT_SUB = 'Khơi Nguồn Tri Thức, Kiến Tạo Tương Lai';
 const FONT_URL = '/fonts/Inter_Bold.json';
-const PALETTE = {
+/* Bảng màu của CẢNH 3D, không phải màu giao diện.
+   Đây là giá trị truyền thẳng cho three.js (ánh sáng, vật liệu, hạt) nên không
+   thể dùng lớp Tailwind. Bản trước trộn bốn tông khác nhau (đào, tím, hồng,
+   vàng kim); nay tất cả rút về đúng một tông của màu nhấn (lam) cộng với các
+   sắc trung tính. Mọi phần giao diện HTML phủ lên canvas đều dùng token. */
+/* Bảng màu của CẢNH 3D — cố ý nằm ngoài hệ token giao diện.
+   Đây là màu vật liệu, ánh sáng và hạt trong three.js, không phải màu của các
+   khối HTML. Người dùng giữ nguyên cảnh này theo chủ đích nghệ thuật: ánh sáng
+   chính ngả đào ấm, ánh phụ tím, hạt lấp lánh hồng — nên KHÔNG rút về một tông
+   như phần giao diện. Chỉ lớp HTML phủ lên trên (hộp tải, nút, gợi ý) mới dùng
+   token. */
+const SCENE = {
   background3D: '#070410',
   ambientLight: 0.12,
   mainLightColor: '#FFDAB9',
   fillLightColor: '#A89BFF',
   rimLightColor: '#DDEEFF',
   starSaturation: 0,
-  loaderSpinner: 'text-purple-400',
-  loaderTextPrimary: 'text-gray-300',
-  loaderTextSecondary: 'text-purple-300',
   magicParticlesColor: '#b0c0ff',
   sloganTitleColor: '#E0E8FF',
   sloganSubtitleColor: '#C8D8F8',
-  flourishParticleColor: '#FFC0CB',
-  buttonText: 'text-gray-200',
-  buttonBorder: 'border-gray-500/60',
-  buttonHoverText: 'text-white',
-  buttonHoverBorder: 'border-white/80',
-  buttonHoverBg: 'bg-white/15',
-  skipHintText: 'text-gray-400/90',
+  accentParticleColor: '#FFC0CB',
+  accentPointLight: '#FFDAB9',
 };
 
 // --- Helper Components ---
@@ -97,21 +100,14 @@ const Loader: React.FC = React.memo(() => {
       wrapperClass='loader-wrapper fixed inset-0 flex items-center justify-center z-50'
     >
       {' '}
-      <div className='text-center p-6 bg-black/75 rounded-2xl backdrop-blur-xl shadow-2xl'>
-        {' '}
-        <Icons.spinner
-          className={`h-16 w-16 animate-spin ${PALETTE.loaderSpinner} mx-auto`}
-        />{' '}
-        <p
-          className={`${PALETTE.loaderTextPrimary} mt-5 text-lg sm:text-xl tracking-wide`}
-        >
+      <div className='rounded-xl border border-border bg-card p-6 text-center shadow-lg'>
+        <Icons.spinner className='mx-auto h-12 w-12 animate-spin text-primary' />
+        <p className='mt-5 text-base text-muted-foreground sm:text-lg'>
           Đang khám phá không gian tri thức...
-        </p>{' '}
-        <p
-          className={`${PALETTE.loaderTextSecondary} text-3xl sm:text-4xl font-bold mt-2`}
-        >
+        </p>
+        <p className='mt-2 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl'>
           {Math.round(progress)}%
-        </p>{' '}
+        </p>
       </div>{' '}
     </Html>
   );
@@ -195,7 +191,7 @@ const MagicParticles: React.FC<{ count: number; isActiveNow: boolean }> =
       >
         <PointMaterial
           transparent
-          color={PALETTE.magicParticlesColor}
+          color={SCENE.magicParticlesColor}
           size={0.042} // Kích thước hạt lớn hơn chút
           sizeAttenuation
           depthWrite={false}
@@ -256,8 +252,8 @@ const IntroSlogan: React.FC<{
             {title}{' '}
             <animated.meshStandardMaterial
               attach='material'
-              color={PALETTE.sloganTitleColor}
-              emissive={PALETTE.sloganTitleColor}
+              color={SCENE.sloganTitleColor}
+              emissive={SCENE.sloganTitleColor}
               emissiveIntensity={springProps.opacity.to((o) => o * 0.95)}
               roughness={0.08}
               metalness={0.88}
@@ -282,8 +278,8 @@ const IntroSlogan: React.FC<{
               {slogan}{' '}
               <animated.meshStandardMaterial
                 attach='material'
-                color={PALETTE.sloganSubtitleColor}
-                emissive={PALETTE.sloganSubtitleColor}
+                color={SCENE.sloganSubtitleColor}
+                emissive={SCENE.sloganSubtitleColor}
                 emissiveIntensity={springProps.opacity.to((o) => o * 0.75)}
                 roughness={0.12}
                 metalness={0.8}
@@ -524,7 +520,7 @@ const IntroPage = () => {
   return (
     <div
       className={cn(
-        'relative w-screen h-screen bg-gradient-to-br from-[#06030c] via-[#100a22] to-[#0a0616] overflow-hidden',
+        'relative h-screen w-screen overflow-hidden bg-background',
         'transition-opacity duration-1000 ease-out',
         isFadingOut ? 'opacity-0' : 'opacity-100',
         (introState === 'idle' || introState === 'seedActivating') &&
@@ -551,12 +547,12 @@ const IntroPage = () => {
               finalTreeHeight={FINAL_TRUNK_HEIGHT}
               currentTreeScale={treeAppearSpring.scale.get()}
             />
-            <color attach='background' args={[PALETTE.background3D]} />
-            <ambientLight intensity={PALETTE.ambientLight} />
+            <color attach='background' args={[SCENE.background3D]} />
+            <ambientLight intensity={SCENE.ambientLight} />
             <animated.pointLight
               name='mainPointLight'
               position={[8.5, FINAL_TRUNK_HEIGHT * 0.98, 8.5]}
-              color={PALETTE.mainLightColor}
+              color={SCENE.mainLightColor}
               intensity={lightSpring.intensity.to(
                 (base) => base * treeShineSpring.mainLightIntensityFactor.get()
               )}
@@ -569,7 +565,7 @@ const IntroPage = () => {
             <animated.directionalLight
               name='fillLight'
               position={[-12.5, FINAL_TRUNK_HEIGHT * 1.35, -9.5]}
-              color={PALETTE.fillLightColor}
+              color={SCENE.fillLightColor}
               intensity={treeShineSpring.mainLightIntensityFactor.to(
                 (f) => 0.55 * f
               )}
@@ -578,7 +574,7 @@ const IntroPage = () => {
               name='rimLight'
               position={[-7.5, FINAL_TRUNK_HEIGHT * 0.68, -13.5]}
               intensity={2.1}
-              color={PALETTE.rimLightColor}
+              color={SCENE.rimLightColor}
               distance={105}
               decay={1.35}
             />
@@ -587,7 +583,7 @@ const IntroPage = () => {
               depth={135}
               count={7500}
               factor={4.8}
-              saturation={PALETTE.starSaturation}
+              saturation={SCENE.starSaturation}
               fade
               speed={0.018}
             />
@@ -626,7 +622,7 @@ const IntroPage = () => {
                     <pointLight
                       position={[-10, -5, 2]} // Tọa độ tương đối với gốc cây
                       intensity={Math.random() * 0.5 + 0.3} // Cường độ ngẫu nhiên nhẹ
-                      color='#FFEECC'
+                      color={SCENE.accentPointLight}
                       distance={3}
                       decay={2}
                     />
@@ -663,7 +659,7 @@ const IntroPage = () => {
                   1
                 }
                 count={800} // Tăng số lượng hạt
-                particleBaseColor={'#FFD700'} // Màu vàng gold cho lấp lánh
+                particleBaseColor={SCENE.accentParticleColor} // Một tông của màu nhấn
                 particleSize={0.08} // Kích thước hạt
                 lifespanRange={[
                   (FLOURISH_PARTICLES_DURATION * 0.7) / 1000, // Sống ngắn hơn để tạo hiệu ứng "lóe sáng"
@@ -720,15 +716,9 @@ const IntroPage = () => {
             {' '}
             <Button
               onClick={handleSkipIntro}
-              variant='outline'
               size='lg'
               disabled={isFadingOut || introState === 'exiting'}
-              className={cn(
-                `${PALETTE.buttonText} hover:${PALETTE.buttonHoverText} font-medium tracking-wider`,
-                `bg-black/20 ${PALETTE.buttonHoverBg} backdrop-blur-lg`,
-                `${PALETTE.buttonBorder} hover:${PALETTE.buttonHoverBorder}`,
-                'px-8 sm:px-10 py-3.5 sm:py-4 rounded-xl text-base sm:text-lg shadow-xl hover:shadow-2xl transition-all duration-300 group'
-              )}
+              className='group rounded-xl px-8 text-base sm:px-10 sm:text-lg'
             >
               {' '}
               Vào Trang Chủ{' '}
@@ -740,15 +730,13 @@ const IntroPage = () => {
             <img
               src='/images/logo/3telogo.jpeg '
               alt='3TEduTech Logo'
-              className='h-11 sm:h-12 opacity-90 hover:opacity-100 transition-opacity duration-300 filter drop-shadow-lg'
+              className='h-11 rounded-lg transition-opacity duration-300 sm:h-12'
             />{' '}
           </div>
           {showSkipHint && introState === 'idle' && (
             <div className='absolute bottom-36 sm:bottom-40 right-8 sm:right-10 z-20 text-right'>
               {' '}
-              <p
-                className={`text-xs sm:text-sm ${PALETTE.skipHintText} opacity-75 animate-[pulse_3.5s_cubic-bezier(0.4,0,0.6,1)_infinite]`}
-              >
+              <p className='rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm'>
                 {' '}
                 Click vào khối tinh thể để bắt đầu, <br className='sm:hidden' />{' '}
                 hoặc vào trang chủ.{' '}

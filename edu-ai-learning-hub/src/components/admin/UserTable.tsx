@@ -8,17 +8,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Check, Edit, Eye, MoreHorizontal, Trash } from 'lucide-react';
-import Badge from './Badge';
+import {
+  Ban,
+  CheckCircle2,
+  Clock,
+  Edit,
+  Eye,
+  GraduationCap,
+  MinusCircle,
+  Shield,
+  ShieldCheck,
+  Trash,
+  User as UserIcon,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { UserProfile } from '@/services/user.service';
 
 // Define types based on the provided database schema
@@ -61,6 +65,38 @@ export interface User {
   socialLinks?: SocialLink[];
 }
 
+/* Vai trò là phân loại, không phải trạng thái: giữ màu trung tính, phân biệt
+   bằng biểu tượng và nhãn chữ. */
+const roleIcon: Record<string, React.ElementType> = {
+  SA: ShieldCheck,
+  AD: Shield,
+  GV: GraduationCap,
+  NU: UserIcon,
+};
+
+/* Trạng thái dùng màu token và luôn kèm biểu tượng + nhãn chữ. */
+const statusStyle: Record<
+  string,
+  { className: string; icon: React.ElementType }
+> = {
+  ACTIVE: {
+    className: 'bg-success-soft text-success border-transparent',
+    icon: CheckCircle2,
+  },
+  INACTIVE: {
+    className: 'bg-muted text-muted-foreground border-transparent',
+    icon: MinusCircle,
+  },
+  BANNED: {
+    className: 'bg-danger-soft text-danger border-transparent',
+    icon: Ban,
+  },
+  PENDING_VERIFICATION: {
+    className: 'bg-warning-soft text-warning border-transparent',
+    icon: Clock,
+  },
+};
+
 interface UserTableProps {
   users: UserProfile[]; // Use the UserProfile type from your service
   onViewUser: (user: UserProfile) => void;
@@ -78,7 +114,7 @@ const UserTable: React.FC<UserTableProps> = ({
   const { t } = useTranslation();
   console.log('UserTable users:', users); // Debugging line
   return (
-    <div className='border rounded-md'>
+    <div className='rounded-xl border border-border bg-card'>
       <Table>
         <TableHeader>
           <TableRow>
@@ -98,34 +134,35 @@ const UserTable: React.FC<UserTableProps> = ({
               <TableCell className='font-medium'>{user.fullName}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
-                <Badge
-                  className={
-                    user.roleId === 'SA'
-                      ? 'bg-red-500'
-                      : user.roleId === 'AD'
-                        ? 'bg-blue-500'
-                        : user.roleId === 'GV'
-                          ? 'bg-purple-500'
-                          : 'bg-gray-500'
-                  }
-                >
-                  {t(`userTable.role.${user.roleId}`)}
-                </Badge>
+                {(() => {
+                  const RoleIcon = roleIcon[user.roleId] ?? UserIcon;
+                  return (
+                    <Badge
+                      variant='outline'
+                      className='gap-1 bg-muted text-foreground border-transparent'
+                    >
+                      <RoleIcon className='h-3 w-3' aria-hidden='true' />
+                      {t(`userTable.role.${user.roleId}`)}
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell>
-                <Badge
-                  className={
-                    user.status === 'ACTIVE'
-                      ? 'bg-green-500'
-                      : user.status === 'INACTIVE'
-                        ? 'bg-yellow-500'
-                        : user.status === 'BANNED'
-                          ? 'bg-red-500'
-                          : 'bg-gray-400'
-                  }
-                >
-                  {t(`userTable.status.${user.status}`)}
-                </Badge>
+                {(() => {
+                  const style =
+                    statusStyle[user.status] ??
+                    statusStyle.PENDING_VERIFICATION;
+                  const StatusIcon = style.icon;
+                  return (
+                    <Badge
+                      variant='outline'
+                      className={`gap-1 ${style.className}`}
+                    >
+                      <StatusIcon className='h-3 w-3' aria-hidden='true' />
+                      {t(`userTable.status.${user.status}`)}
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell>
                 {user.createdAt
@@ -277,7 +314,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="text-red-600"
+                        className="text-danger"
                         onClick={() => onDeleteUser(user.AccountID)}
                       >
                         <Trash className="mr-2 h-4 w-4" /> Delete User

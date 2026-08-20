@@ -1,6 +1,5 @@
-// src/components/editor/MenuBar.jsx
-import React from 'react';
-// Import icons của bạn như cũ
+// src/components/editor/MenuBar.tsx
+// Icon của trình soạn thảo
 import {
   BoldIcon,
   ItalicIcon,
@@ -11,14 +10,27 @@ import {
   ListBulletIcon,
 } from './Icons';
 
+/**
+ * Thanh công cụ của trình soạn thảo.
+ *
+ * Bản trước tự viết thang xám riêng (`bg-gray-100`, `dark:bg-gray-800`…) nên
+ * thanh này lệch tông với mọi thanh công cụ khác trong ứng dụng. Nay dùng token
+ * chung, và chế độ tối tự đúng mà không cần biến thể `dark:`.
+ */
+/* Màu của NỘI DUNG văn bản, không phải màu giao diện: giá trị được ghi thẳng
+   vào tài liệu người dùng soạn nên bắt buộc là màu tuyệt đối, không thể là token. */
+const HIGHLIGHT_COLOR = '#FFF3A3';
+const DEFAULT_TEXT_COLOR = '#000000';
+
 const MenuBarButton = ({ onClick, isActive, title, disabled, children }) => (
   <button
     type="button" // Quan trọng để không submit form nếu editor nằm trong form
     onClick={onClick}
-    className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 ${
-      isActive ? 'bg-gray-200 dark:bg-gray-700' : ''
-    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    className={`rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
+      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+    } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
     title={title}
+    aria-pressed={isActive}
     disabled={disabled}
   >
     {children}
@@ -30,7 +42,7 @@ const MenuBarSelect = ({ onChange, value, title, children }) => (
     onChange={onChange}
     value={value}
     title={title}
-    className="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mx-1"
+    className="mx-1 h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
     {children}
   </select>
@@ -43,7 +55,7 @@ const MenuBar = ({ editor }) => {
 
   const setLink = () => {
     const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
+    const url = window.prompt('Địa chỉ liên kết (URL)', previousUrl);
     if (url === null) return;
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -53,18 +65,18 @@ const MenuBar = ({ editor }) => {
   };
 
   const addImage = () => {
-    const url = window.prompt('Image URL');
+    const url = window.prompt('Địa chỉ ảnh (URL)');
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 rounded-t-md">
+    <div className="flex flex-wrap items-center gap-1 rounded-t-md border-b border-border bg-muted/40 p-2">
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={editor.isActive('bold')}
-        title="Bold"
+        title="Chữ đậm"
         disabled={false}
       >
         <BoldIcon />
@@ -72,7 +84,7 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleItalic().run()}
         isActive={editor.isActive('italic')}
-        title="Italic"
+        title="Chữ nghiêng"
         disabled={false}
       >
         <ItalicIcon />
@@ -80,7 +92,7 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         isActive={editor.isActive('underline')}
-        title="Underline"
+        title="Gạch chân"
         disabled={false}
       >
         <UnderlineIcon />
@@ -88,7 +100,7 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleStrike().run()}
         isActive={editor.isActive('strike')}
-        title="Strikethrough"
+        title="Gạch ngang"
         disabled={false}
       >
         <StrikeIcon />
@@ -111,18 +123,18 @@ const MenuBar = ({ editor }) => {
             ? 3
             : 0
         }
-        title="Heading"
+        title="Cấp tiêu đề"
       >
-        <option value="0">Paragraph</option>
-        <option value="1">H1</option>
-        <option value="2">H2</option>
-        <option value="3">H3</option>
+        <option value="0">Đoạn văn</option>
+        <option value="1">Tiêu đề 1</option>
+        <option value="2">Tiêu đề 2</option>
+        <option value="3">Tiêu đề 3</option>
       </MenuBarSelect>
 
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         isActive={editor.isActive('bulletList')}
-        title="Bullet List"
+        title="Danh sách dấu chấm"
         disabled={false}
       >
         <ListBulletIcon />
@@ -130,7 +142,7 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         isActive={editor.isActive('orderedList')}
-        title="Ordered List"
+        title="Danh sách đánh số"
         disabled={false}
       >
         <ListOrderedIcon />
@@ -139,7 +151,7 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={setLink}
         isActive={editor.isActive('link')}
-        title="Set Link"
+        title="Chèn liên kết"
         disabled={false}
       >
         <LinkIcon />
@@ -147,64 +159,64 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().unsetLink().run()}
         disabled={!editor.isActive('link')}
-        title="Unset Link"
+        title="Bỏ liên kết"
         isActive={false}
       >
-        Unlink
+        Bỏ liên kết
       </MenuBarButton>
 
       <MenuBarButton
         onClick={addImage}
-        title="Add Image"
+        title="Chèn ảnh"
         disabled={false}
         isActive={false}
       >
-        Image
+        Ảnh
       </MenuBarButton>
 
-      {/* Text Align */}
+      {/* Căn lề */}
       <MenuBarButton
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
         isActive={editor.isActive({ textAlign: 'left' })}
-        title="Align Left"
+        title="Căn trái"
         disabled={false}
       >
-        Left
+        Trái
       </MenuBarButton>
       <MenuBarButton
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
         isActive={editor.isActive({ textAlign: 'center' })}
-        title="Align Center"
+        title="Căn giữa"
         disabled={false}
       >
-        Center
+        Giữa
       </MenuBarButton>
       <MenuBarButton
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
         isActive={editor.isActive({ textAlign: 'right' })}
-        title="Align Right"
+        title="Căn phải"
         disabled={false}
       >
-        Right
+        Phải
       </MenuBarButton>
       <MenuBarButton
         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
         isActive={editor.isActive({ textAlign: 'justify' })}
-        title="Align Justify"
+        title="Căn đều hai bên"
         disabled={false}
       >
-        Justify
+        Đều
       </MenuBarButton>
 
       <MenuBarButton
         onClick={() =>
-          editor.chain().focus().toggleHighlight({ color: '#FFF3A3' }).run()
+          editor.chain().focus().toggleHighlight({ color: HIGHLIGHT_COLOR }).run()
         }
-        isActive={editor.isActive('highlight', { color: '#FFF3A3' })}
-        title="Highlight"
+        isActive={editor.isActive('highlight', { color: HIGHLIGHT_COLOR })}
+        title="Tô nền chữ"
         disabled={false}
       >
-        Highlight
+        Tô nền
       </MenuBarButton>
       <input
         type="color"
@@ -215,9 +227,10 @@ const MenuBar = ({ editor }) => {
             .setColor((event.target as HTMLInputElement).value)
             .run()
         }
-        value={editor.getAttributes('textStyle').color || '#000000'}
-        title="Text Color"
-        className="w-8 h-8 p-0 border-none rounded cursor-pointer mx-1 bg-transparent" // bg-transparent để không che màu của input color
+        value={editor.getAttributes('textStyle').color || DEFAULT_TEXT_COLOR}
+        title="Màu chữ"
+        aria-label="Màu chữ"
+        className="mx-1 h-8 w-8 cursor-pointer rounded-md border border-border bg-transparent p-0" // bg-transparent để không che màu của input color
       />
       <MenuBarSelect
         onChange={(e) =>
@@ -226,9 +239,9 @@ const MenuBar = ({ editor }) => {
             : editor.chain().focus().unsetFontFamily().run()
         }
         value={editor.getAttributes('textStyle').fontFamily || ''}
-        title="Font Family"
+        title="Phông chữ"
       >
-        <option value="">Default</option>
+        <option value="">Mặc định</option>
         <option value="Inter">Inter</option>
         <option value="Arial">Arial</option>
         <option value="Georgia">Georgia</option>
@@ -239,18 +252,18 @@ const MenuBar = ({ editor }) => {
       <MenuBarButton
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().undo()}
-        title="Undo"
+        title="Hoàn tác"
         isActive={false}
       >
-        Undo
+        Hoàn tác
       </MenuBarButton>
       <MenuBarButton
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().redo()}
-        title="Redo"
+        title="Làm lại"
         isActive={false}
       >
-        Redo
+        Làm lại
       </MenuBarButton>
     </div>
   );

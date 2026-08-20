@@ -16,7 +16,6 @@ import {
   Video,
   BookOpen,
   MessageSquare,
-  Info,
   Menu,
   X as CloseIcon,
   ArrowLeft,
@@ -148,12 +147,12 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
 
   const getLessonIcon = (lessonType: Lesson['lessonType']) => {
     if (lessonType === 'VIDEO')
-      return <Video size={16} className='text-blue-500 shrink-0' />;
+      return <Video size={16} className='text-muted-foreground shrink-0' />;
     if (lessonType === 'TEXT')
-      return <FileText size={16} className='text-green-500 shrink-0' />;
+      return <FileText size={16} className='text-muted-foreground shrink-0' />;
     if (lessonType === 'QUIZ')
-      return <BookOpen size={16} className='text-purple-500 shrink-0' />;
-    return <div className='w-4 h-4 bg-gray-300 rounded-sm shrink-0'></div>;
+      return <BookOpen size={16} className='text-muted-foreground shrink-0' />;
+    return <div className='w-4 h-4 bg-muted rounded-sm shrink-0'></div>;
   };
 
   return (
@@ -232,7 +231,7 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
                   return (
                     <div key={section.sectionId} className='mb-1'>
                       <button
-                        className='w-full flex items-center justify-between p-2.5 text-left rounded-md hover:bg-muted dark:hover:bg-muted/50 transition-colors'
+                        className='w-full flex items-center justify-between p-2.5 text-left rounded-md hover:bg-muted transition-colors'
                         onClick={() => toggleSectionExpand(section.sectionId)}
                         aria-expanded={expandedSections.has(section.sectionId)}
                       >
@@ -256,7 +255,7 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
                             <span title={t('sidebar.sectionCompleted')}>
                               <CheckCircle
                                 size={14}
-                                className='text-green-500'
+                                className='text-success'
                               />
                             </span>
                           )}
@@ -300,8 +299,8 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
                                   className={cn(
                                     'w-full flex items-center justify-between p-2 text-left rounded-md text-xs transition-colors',
                                     isLessonActive
-                                      ? 'bg-primary/10 text-primary font-semibold'
-                                      : 'hover:bg-muted/50 dark:hover:bg-muted/20 text-muted-foreground hover:text-foreground',
+                                      ? 'bg-accent text-primary font-semibold'
+                                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                                     !canAccess &&
                                       'opacity-60 cursor-not-allowed'
                                   )}
@@ -335,7 +334,7 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
                                       <span title={t('sidebar.completed')}>
                                         <CheckCircle
                                           size={14}
-                                          className='text-green-500'
+                                          className='text-success'
                                         />
                                       </span>
                                     ) : !canAccess ? (

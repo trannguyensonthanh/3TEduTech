@@ -353,17 +353,17 @@ const VideoAttachPanel: React.FC<Props> = ({
               key={m.lesson.lessonId}
               className={`rounded-xl border p-4 transition-colors ${
                 m.trangThai === 'DONE'
-                  ? 'border-emerald-200 bg-emerald-50/50'
+                  ? 'border-border bg-success-soft'
                   : m.trangThai === 'FAILED'
-                    ? 'border-red-200 bg-red-50/40'
-                    : 'bg-card'
+                    ? 'border-border bg-danger-soft'
+                    : 'border-border bg-card'
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {m.trangThai === 'DONE' && (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                     )}
                     <p className="truncate font-semibold">{m.lesson.lessonName}</p>
                   </div>
@@ -402,8 +402,8 @@ const VideoAttachPanel: React.FC<Props> = ({
 
               {/* Gợi ý khi video gốc đã biết là quá nặng */}
               {m.nguon === 'NONE' && goiYYoutube && (
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700">
-                  <AlertTriangle className="h-3.5 w-3.5" />
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-warning">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                   Video này nặng hơn {limits.maxVideoUploadMb}MB — nên dùng link
                   YouTube.
                 </p>
@@ -426,7 +426,7 @@ const VideoAttachPanel: React.FC<Props> = ({
                   />
                   {m.file && (
                     <p
-                      className={`text-xs ${vuotTran ? 'font-medium text-red-600' : 'text-muted-foreground'}`}
+                      className={`text-xs ${vuotTran ? 'font-medium text-danger' : 'text-muted-foreground'}`}
                     >
                       {m.file.name} · {dinhDangDungLuong(m.file.size)}
                       {vuotTran &&
@@ -452,7 +452,7 @@ const VideoAttachPanel: React.FC<Props> = ({
                   />
                   {m.youtubeUrl.trim() &&
                     !LA_LINK_YOUTUBE.test(m.youtubeUrl.trim()) && (
-                      <p className="text-xs text-amber-700">
+                      <p className="text-xs text-warning">
                         Trông không giống link YouTube. Máy chủ sẽ kiểm tra lại
                         khi bạn xác nhận.
                       </p>
@@ -473,8 +473,8 @@ const VideoAttachPanel: React.FC<Props> = ({
               )}
 
               {m.trangThai === 'FAILED' && m.loi && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600">
-                  <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-danger">
+                  <X className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   {m.loi}
                 </p>
               )}
@@ -484,12 +484,12 @@ const VideoAttachPanel: React.FC<Props> = ({
       </div>
 
       {/* ---------------- Thanh hành động ---------------- */}
-      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4">
         <p className="text-sm text-muted-foreground">
           {thongKe.xong}/{thongKe.tong} bài đã có video
           {thongKe.daChon > 0 && ` · ${thongKe.daChon} bài đang chờ xác nhận`}
           {thongKe.vuotTran > 0 && (
-            <span className="ml-1 font-medium text-red-600">
+            <span className="ml-1 font-medium text-danger">
               · {thongKe.vuotTran} tệp vượt trần
             </span>
           )}

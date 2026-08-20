@@ -8,16 +8,33 @@ from functools import lru_cache
 class Settings(BaseSettings):
     """AI Service configuration loaded from environment variables."""
 
-    # --- LLM Provider Selection ---
-    # "gemini" = Always use Gemini API (cloud, uses tokens)
-    # "qwen"  = Always use Qwen local via vLLM (free, needs GPU EC2 #1)
-    # "auto"  = Prefer Qwen, auto-fallback to Gemini if vLLM is down
-    llm_provider: str = "gemini"
+    # --- Chọn mô hình ngôn ngữ ---------------------------------------------
+    # [SỬA 19/08/2026] Mặc định đổi "gemini" -> "auto", VÀ ngữ nghĩa của "auto"
+    # cũng đổi. Giải thích đầy đủ nằm ở đầu src/core/llm_provider.py.
+    #
+    #   "auto"       Gemini trước; chuyển Qwen khi không có khóa Gemini hoặc
+    #                khi Gemini báo hết hạn mức. <-- dùng cho cả dev và prod
+    #   "gemini"     Chỉ Gemini, không dự phòng.
+    #   "qwen"       Chỉ Qwen (vLLM trên GPU EC2 #1).
+    #   "qwen-first" Qwen trước, Gemini vớt. Đây là hành vi CŨ của "auto".
+    #
+    # Vì sao "auto" là mặc định: máy dev không cắm khóa Gemini vẫn chạy được
+    # (rơi thẳng sang Qwen), còn production thì tiêu hạn mức miễn phí của
+    # Gemini trước rồi mới nhờ tới GPU tính tiền theo giờ.
+    llm_provider: str = "auto"
 
-    # --- vLLM / Qwen Configuration (GPU EC2 #1) ---
+    # Sau khi Gemini báo hết hạn mức, ngưng gọi nó trong bao lâu (giây).
+    # 15 phút: hạn mức đôi khi chỉ là giới hạn theo phút chứ không cạn cả ngày,
+    # nên ta muốn quay lại Gemini sớm; nhưng cũng đủ dài để không gọi lại liên
+    # tục vào một cánh cửa đang đóng.
+    llm_gemini_cooldown_seconds: int = 900
+
+    # --- vLLM / Qwen (GPU EC2 #1) ------------------------------------------
     vllm_base_url: str = "http://127.0.0.1:8000/v1"
     vllm_model_name: str = "Qwen/Qwen3.6-27B-AWQ"
     vllm_api_key: str = "not-needed"
+    # Mô hình lớn chạy trên GPU chia sẻ có thể mất hơn một phút cho câu dài.
+    vllm_timeout_seconds: float = 180.0
 
     # --- Gemini AI: Router Model (Intent Classification & Tool Calling) ---
     # Fast, cheap model for classifying user intent (~10-30 tokens/call)
@@ -71,14 +88,27 @@ class Settings(BaseSettings):
     rag_chunk_size: int = 1000
     rag_chunk_overlap: int = 200
 
-    # --- Whisper (Speech-to-Text / SRT Generation, GPU EC2 #2) ---
-    # Mặc định an toàn cho local/dev (không có GPU): model nhỏ, chạy CPU.
-    # Trên GPU EC2 #2 (production), .env.production override thành
-    # WHISPER_MODEL_SIZE=medium / WHISPER_DEVICE=cuda / WHISPER_COMPUTE_TYPE=float16
-    # để tận dụng card NVIDIA T4 (xem ai-service/src/core/transcription.py).
+    # --- Whisper (chuyển giọng nói thành phụ đề, GPU EC2 #2) ---------------
+    # Mặc định ở đây là mặc định cho MÁY DEV: mô hình nhỏ, chạy CPU, không đòi
+    # GPU. Đừng đổi ba dòng này để "chạy tốt hơn trên server" — server có tệp
+    # .env.production riêng, đổi ở đây là bắt máy dev tải về mô hình 3GB.
+    #
+    # Trên GPU EC2 #2 (g4dn.xlarge, card T4 16GB) đặt trong .env.production:
+    #     WHISPER_MODEL_SIZE=large-v3
+    #     WHISPER_DEVICE=cuda
+    #     WHISPER_COMPUTE_TYPE=float16
+    #
+    # Vì sao large-v3 vừa với T4: ở float16 nó chiếm khoảng 3.1GB VRAM, còn dư
+    # rất nhiều trong 16GB. Máy này chỉ chạy AI Service (không có mô hình thị
+    # giác nào), nên không phải chia VRAM với ai. Chênh lệch chất lượng với
+    # tiếng Việt giữa "small" và "large-v3" là rất lớn — đây đúng chỗ đáng tiêu
+    # tài nguyên.
     whisper_model_size: str = "small"  # "small" | "medium" | "large-v3"
-    whisper_device: str = "cpu"  # "cuda" trên GPU EC2 #2, "cpu" khi không có GPU
-    whisper_compute_type: str = "int8"  # "float16" khi dùng cuda, "int8" khi dùng cpu
+    whisper_device: str = "cpu"  # "cuda" trên GPU EC2 #2
+    whisper_compute_type: str = "int8"  # "float16" khi dùng cuda
+
+    # Số luồng CPU cho whisper khi KHÔNG có GPU. 0 = để thư viện tự quyết.
+    whisper_cpu_threads: int = 0
 
     # --- Xác thực nội bộ (THÊM 17/08/2026 — LEVEL 3) ---
     # Khóa chia sẻ giữa backend Node.js và AI Service. Chỉ backend được phép

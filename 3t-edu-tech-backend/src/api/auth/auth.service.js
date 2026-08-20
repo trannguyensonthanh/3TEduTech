@@ -226,6 +226,17 @@ const login = async (email, password) => {
  */
 const refreshAuth = async (providedRefreshToken) => {
   const payload = await verifyToken(providedRefreshToken);
+
+  /* [THÊM 19/08/2026] Chỉ chấp nhận thẻ đúng loại. Thẻ cũ cấp trước khi bổ
+     sung nhãn không có trường type nên vẫn được chấp nhận, tránh làm mọi
+     phiên đăng nhập hiện có bị đăng xuất ngay khi triển khai bản này. */
+  if (payload && payload.type && payload.type !== 'refresh') {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'Cần thẻ làm mới hợp lệ để thực hiện thao tác này.'
+    );
+  }
+
   if (!payload || !payload.accountId) {
     throw new ApiError(
       httpStatus.UNAUTHORIZED,
@@ -314,7 +325,8 @@ const requestPasswordReset = async (email) => {
     );
   }
   logger.info(
-    `Password reset requested for ${email}. Token generated (for debugging): ${resetToken}`
+    // [SỬA 19/08/2026] Không bao giờ ghi thẻ đặt lại mật khẩu ra nhật ký.
+    `Password reset requested for ${email}.`
   );
 };
 
@@ -678,6 +690,19 @@ const loginWithGoogle = async (idToken) => {
     if (!payload) {
       throw new Error('Invalid ID token payload.');
     }
+    /* [THÊM 19/08/2026] Bắt buộc Google đã xác minh địa chỉ thư điện tử.
+
+       Không có phép kiểm này, kẻ tấn công dùng một tên miền tự quản trên
+       Google Workspace tạo địa chỉ trùng với email nạn nhân; nhánh liên kết
+       tự động phía dưới sẽ gắn phương thức đăng nhập đó vào tài khoản có sẵn
+       mà không đòi bất kỳ bằng chứng sở hữu nào. */
+    if (payload.email_verified === false) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Địa chỉ thư điện tử của tài khoản Google này chưa được xác minh.'
+      );
+    }
+
     const googleProfileData = {
       provider: LoginType.GOOGLE,
       externalId: payload.sub,

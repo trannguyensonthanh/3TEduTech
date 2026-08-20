@@ -62,7 +62,7 @@ const InstructorTermsPage = () => {
       id: 'introduction',
       title: '1. Welcome to the 3TEduTech Instructor Community',
       icon: (
-        <FileSignature className="h-7 w-7 mr-3 text-blue-600 dark:text-blue-400" />
+        <FileSignature className="h-7 w-7 mr-3 text-primary" />
       ),
       content: [
         'These Instructor Terms ("Terms") govern your participation as an instructor ("Instructor", "you", or "your") on the 3TEduTech online learning platform (the "Platform"), operated by 3TEduTech ("we", "us", or "our"). By registering as an Instructor and submitting content, you agree to be bound by these Terms, our general <a href=\'/terms\' class=\'text-primary hover:underline font-medium\'>Terms of Service</a>, and our <a href=\'/privacy\' class=\'text-primary hover:underline font-medium\'>Privacy Policy</a>.',
@@ -73,7 +73,7 @@ const InstructorTermsPage = () => {
       id: 'definitions',
       title: '2. Key Definitions',
       icon: (
-        <Icons.bookOpen className="h-7 w-7 mr-3 text-indigo-600 dark:text-indigo-400" />
+        <Icons.bookOpen className="h-7 w-7 mr-3 text-primary" />
       ),
       list: [
         '<strong>Instructor:</strong> An individual or entity approved by 3TEduTech to create, submit, and manage educational content on the Platform.',
@@ -88,7 +88,7 @@ const InstructorTermsPage = () => {
       id: 'instructor-obligations',
       title: '3. Your Responsibilities as an Instructor',
       icon: (
-        <Users className="h-7 w-7 mr-3 text-green-600 dark:text-green-400" />
+        <Users className="h-7 w-7 mr-3 text-primary" />
       ),
       description:
         'As a valued member of our instructor community, you agree to:',
@@ -106,7 +106,7 @@ const InstructorTermsPage = () => {
       id: 'content-submission-and-quality',
       title: '4. Submitted Content: Standards and Review',
       icon: (
-        <BookOpenCheck className="h-7 w-7 mr-3 text-teal-600 dark:text-teal-400" />
+        <BookOpenCheck className="h-7 w-7 mr-3 text-primary" />
       ),
       content: [
         "All Submitted Content must adhere to 3TEduTech's course quality checklist and content guidelines. We aim to provide a high-value learning experience for all Students.",
@@ -124,7 +124,7 @@ const InstructorTermsPage = () => {
       id: 'revenue-share-and-payments',
       title: '5. Revenue Share, Pricing, and Payments',
       icon: (
-        <BarChartBig className="h-7 w-7 mr-3 text-orange-500 dark:text-orange-400" />
+        <BarChartBig className="h-7 w-7 mr-3 text-primary" />
       ),
       description: 'We believe in a fair partnership with our instructors.',
       subSections: [
@@ -152,7 +152,7 @@ const InstructorTermsPage = () => {
       id: 'intellectual-property-rights',
       title: '6. Intellectual Property Rights',
       icon: (
-        <Copyright className="h-7 w-7 mr-3 text-yellow-500 dark:text-yellow-400" />
+        <Copyright className="h-7 w-7 mr-3 text-primary" />
       ),
       content: [
         '<strong>Your Content, Your Ownership:</strong> You retain all intellectual property rights to your Submitted Content. We do not claim any ownership rights to your materials.',
@@ -163,7 +163,7 @@ const InstructorTermsPage = () => {
     {
       id: 'termination',
       title: '7. Termination and Account Deactivation',
-      icon: <UserX className="h-7 w-7 mr-3 text-pink-600 dark:text-pink-400" />,
+      icon: <UserX className="h-7 w-7 mr-3 text-primary" />,
       list: [
         '<strong>By You:</strong> You may terminate your instructor relationship with 3TEduTech at any time by providing written notice and unpublishing your courses, subject to any ongoing obligations to enrolled Students.',
         '<strong>By 3TEduTech:</strong> We reserve the right to terminate or suspend your Instructor account and access to the Platform, with or without prior notice, for any breach of these Terms, including but not limited to: violations of content standards, intellectual property infringement, fraudulent activities, prolonged inactivity, or conduct detrimental to the 3TEduTech community.',
@@ -174,7 +174,7 @@ const InstructorTermsPage = () => {
       id: 'modifications-to-terms',
       title: '8. Modifications to These Terms',
       icon: (
-        <History className="h-7 w-7 mr-3 text-gray-600 dark:text-gray-400" />
+        <History className="h-7 w-7 mr-3 text-primary" />
       ),
       content: [
         '3TEduTech reserves the right to modify or replace these Instructor Terms at any time at its sole discretion. We will provide reasonable notice of any material changes, typically by posting the updated Terms on the Platform and/or sending an email notification to your registered email address. The "Last Updated" date at the top of these Terms will indicate when the latest modifications were made.',
@@ -185,7 +185,7 @@ const InstructorTermsPage = () => {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-b from-slate-100 via-background to-background dark:from-slate-900 dark:via-slate-800 dark:to-slate-850/80 ">
+      <div className="border-b border-border bg-muted/40">
         <div className="container mx-auto px-4 py-10 md:py-16 ">
           <motion.nav
             initial={{ opacity: 0, y: -20 }}
@@ -211,8 +211,8 @@ const InstructorTermsPage = () => {
             transition={{ delay: 0.2 }}
             className="mb-12 md:mb-16 text-center"
           >
-            <FileSignature className="h-16 w-16 md:h-20 md:w-20 mx-auto mb-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-800 dark:text-slate-50">
+            <FileSignature className="h-16 w-16 md:h-20 md:w-20 mx-auto mb-5 text-primary" />
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
               Instructor Terms of Service
             </h1>
             <p className="mt-3 text-base text-muted-foreground">
@@ -238,19 +238,19 @@ const InstructorTermsPage = () => {
               className="mb-10 md:mb-12 scroll-mt-24"
               id={section.id}
             >
-              <Card className="overflow-hidden shadow-lg hover:shadow-xl dark:bg-slate-800/60 border dark:border-slate-700/50 rounded-xl transition-shadow duration-300">
-                <CardHeader className="border-b dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 p-5 md:p-6">
-                  <CardTitle className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+              <Card className="overflow-hidden rounded-xl border border-border bg-card shadow-none">
+                <CardHeader className="border-b border-border bg-muted/40 p-5 md:p-6">
+                  <CardTitle className="flex items-center text-xl font-semibold text-foreground md:text-2xl">
                     {section.icon}
                     {section.title}
                   </CardTitle>
                   {section.description && (
-                    <CardDescription className="text-base pt-1 !mt-1.5 text-slate-600 dark:text-slate-400">
+                    <CardDescription className="!mt-1.5 pt-1 text-base text-muted-foreground">
                       {section.description}
                     </CardDescription>
                   )}
                 </CardHeader>
-                <CardContent className="p-5 md:p-6 text-slate-700 dark:text-slate-300 space-y-4 leading-relaxed text-base">
+                <CardContent className="space-y-4 p-5 text-base leading-relaxed text-foreground md:p-6">
                   {section.content?.map((paragraph, pIndex) => (
                     <p
                       key={pIndex}
@@ -269,12 +269,11 @@ const InstructorTermsPage = () => {
                     <div
                       key={sIndex}
                       className={cn(
-                        sIndex > 0 &&
-                          'mt-6 pt-5 border-t dark:border-slate-700/40'
+                        sIndex > 0 && 'mt-6 border-t border-border pt-5'
                       )}
                     >
                       <h3
-                        className="text-xl font-semibold mt-0 mb-3 text-foreground dark:text-slate-200"
+                        className="mb-3 mt-0 text-lg font-semibold text-foreground"
                         dangerouslySetInnerHTML={{
                           __html: sub.title.replace(
                             /\*\*(.*?)\*\*/g,
@@ -297,7 +296,7 @@ const InstructorTermsPage = () => {
                       ))}
                       {/* KIỂM TRA sub.list TRƯỚC KHI MAP */}
                       {sub?.list && (
-                        <ul className="list-disc space-y-2.5 pl-5 md:pl-6 marker:text-primary dark:marker:text-primary/80">
+                        <ul className="list-disc space-y-2.5 pl-5 marker:text-primary md:pl-6">
                           {sub?.list.map((item, lIndex) => (
                             <li
                               key={lIndex}
@@ -316,7 +315,7 @@ const InstructorTermsPage = () => {
 
                   {/* Render section.list nếu không có subSections */}
                   {section.list && !section.subSections && (
-                    <ul className="list-disc space-y-2.5 pl-5 md:pl-6 marker:text-primary dark:marker:text-primary/80">
+                    <ul className="list-disc space-y-2.5 pl-5 marker:text-primary md:pl-6">
                       {section.list.map((item, lIndex) => (
                         <li
                           key={lIndex}
@@ -332,7 +331,7 @@ const InstructorTermsPage = () => {
                   )}
                   {section.footerContent && (
                     <p
-                      className="mt-5 pt-4 border-t dark:border-slate-700/50 text-sm italic text-muted-foreground"
+                      className="mt-5 border-t border-border pt-4 text-sm italic text-muted-foreground"
                       dangerouslySetInnerHTML={{
                         __html: section.footerContent.replace(
                           /\*\*(.*?)\*\*/g,
@@ -352,7 +351,7 @@ const InstructorTermsPage = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
-            className="mt-12 md:mt-16 pt-8 md:pt-10 border-t dark:border-slate-700/60 text-center bg-slate-100 dark:bg-slate-800/50 p-8 rounded-xl shadow-inner"
+            className="mt-12 rounded-xl border border-border bg-muted/40 p-8 text-center md:mt-16"
           >
             <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
               Questions Regarding These Terms?
@@ -364,7 +363,7 @@ const InstructorTermsPage = () => {
             <Button
               asChild
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 text-base group"
+              className="group h-12 px-8 text-base"
             >
               <a href="mailto:legal@3tedutech.com">
                 {' '}

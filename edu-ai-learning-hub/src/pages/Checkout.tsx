@@ -12,10 +12,18 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 import { useToast } from '@/hooks/use-toast';
 import { useMyCart } from '@/hooks/queries/cart.queries';
-import { useCreateOrderFromCart } from '@/hooks/queries/order.queries';
+import { useCreateOrderFromCart, useMyOrderDetail } from '@/hooks/queries/order.queries';
 import { useValidatePromotionCode } from '@/hooks/queries/promotion.queries';
 import { ValidatedPromotionInfo } from '@/types/cart.types';
 import { ChevronLeft, CreditCard, Loader2, XCircle } from 'lucide-react';
@@ -26,6 +34,7 @@ import {
   useCreateVnpayUrl,
 } from '@/hooks/queries/payment.queries';
 import { CartDetails } from '@/services/cart.service';
+import apiHelper from '@/services/apiHelper';
 
 import { Icons } from '@/components/common/Icons';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -50,7 +59,7 @@ const PaymentMethodItem: React.FC<{
     onClick={onSelect}
     disabled={disabled}
     className={`w-full p-3 sm:p-4 border rounded-lg flex items-center space-x-3 transition-all text-left
-      ${isSelected ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-md' : 'hover:border-foreground/30 bg-card hover:bg-muted/50'}
+      ${isSelected ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted/50'}
       ${disabled ? 'opacity-50 cursor-not-allowed bg-muted/30' : 'cursor-pointer'}`}
   >
     <div
@@ -91,6 +100,12 @@ const CheckoutPage: React.FC = () => {
       location.state?.validatedPromoInfo || null
     );
 
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const orderIdFromUrl = queryParams.get('orderId');
+  const numericOrderId = orderIdFromUrl ? parseInt(orderIdFromUrl, 10) : undefined;
+
+  const { data: orderData, isLoading: isLoadingOrder, isError: isOrderError } = useMyOrderDetail(numericOrderId, { enabled: !!numericOrderId });
+
   const {
     data: liveCartData,
     isLoading: isLoadingCart,
@@ -98,7 +113,7 @@ const CheckoutPage: React.FC = () => {
     error: cartError,
     refetch: refetchCart,
   } = useMyCart({
-    enabled: !initialCartDataFromState,
+    enabled: !initialCartDataFromState && !numericOrderId,
     placeholderData: initialCartDataFromState
       ? () => initialCartDataFromState
       : undefined,
@@ -107,7 +122,34 @@ const CheckoutPage: React.FC = () => {
   });
 
   const cartToUse = liveCartData || initialCartDataFromState;
-  const items = useMemo(() => cartToUse?.items || [], [cartToUse]);
+  
+  const orderItemsAsCartItems = useMemo(() => {
+    if (!orderData || !orderData.items) return [];
+    return orderData.items.map((item: any) => {
+      // API order item uses pricing.display.price, while CartItem expects originalPrice/discountedPrice
+      const itemPrice = item.pricing?.display?.price ?? item.priceAtOrder ?? 0;
+      return {
+        cartItemId: item.orderItemId || item.courseId,
+        courseId: item.courseId,
+        slug: item.slug || '',
+        courseName: item.courseName || '',
+        thumbnailUrl: item.thumbnailUrl || '',
+        pricing: {
+          display: {
+            originalPrice: itemPrice,
+            discountedPrice: itemPrice,
+            currency: item.pricing?.display?.currency ?? currency
+          }
+        }
+      };
+    });
+  }, [orderData, currency]);
+
+  const items = useMemo(() => {
+    if (numericOrderId && orderData) return orderItemsAsCartItems;
+    return cartToUse?.items || [];
+  }, [cartToUse, numericOrderId, orderData, orderItemsAsCartItems]);
+
   const summary = cartToUse?.summary;
 
   const [promoCodeInput, setPromoCodeInput] = useState(
@@ -120,6 +162,9 @@ const CheckoutPage: React.FC = () => {
   >('null');
   const [selectedCrypto, setSelectedCrypto] = useState<string>('usdttrc20');
   const [createdOrder, setCreatedOrder] = useState<boolean>(true);
+  
+  const [isMockPaymentDialogOpen, setIsMockPaymentDialogOpen] = useState(false);
+  const [mockOrderId, setMockOrderId] = useState<number | null>(null);
   /* [SỬA 19/08/2026] Trước đây useMemo không có chú thích kiểu, nên TypeScript
      suy ra kiểu phần tử CHÍNH XÁC theo mảng chữ — không có trường `disabled`,
      và dòng `disabled={method.disabled}` bên dưới thành lỗi TS2339. Khai báo
@@ -162,20 +207,26 @@ const CheckoutPage: React.FC = () => {
       {
         id: 'STRIPE',
         name: 'Stripe (Thẻ Quốc Tế)',
-        icon: <CreditCard size={22} className='text-purple-600 dark:text-purple-400' />,
+        icon: <CreditCard size={22} className='text-primary' />,
         description: 'Thẻ Visa / Master / Amex (Hỗ trợ quy đổi tỷ giá song song).',
       },
       {
         id: 'PAYPAL',
         name: 'PayPal',
-        icon: <Icons.paypal className='h-6 w-6 text-blue-600 dark:text-blue-400' />,
+        icon: <Icons.paypal className='h-6 w-6 text-primary' />,
         description: 'Thanh toán bảo mật qua tài khoản PayPal (Quy đổi song song).',
       },
       {
         id: 'CRYPTO',
-        name: 'Pay with Crypto (Web3)',
-        icon: <Icons.bitcoin size={22} className='text-amber-500' />,
+        name: 'Thanh toán bằng tiền mã hóa (Web3)',
+        icon: <Icons.bitcoin size={22} className='text-primary' />,
         description: 'Thanh toán tiền điện tử BTC, ETH, USDT (TRC20).',
+      },
+      {
+        id: 'MOCK_TEST',
+        name: 'Thanh toán giả lập (Mock Test)',
+        icon: <Icons.wallet size={22} className='text-amber-500' />,
+        description: 'Dành cho việc test nhanh luồng thanh toán.',
       },
     ];
   }, []);
@@ -221,10 +272,10 @@ const CheckoutPage: React.FC = () => {
     isCreatingMomoUrl;
 
   useEffect(() => {
-    if (!isLoadingCart && (!cartToUse || items.length === 0) && !createdOrder) {
+    if (!numericOrderId && !isLoadingCart && (!cartToUse || items.length === 0) && !createdOrder) {
       navigate('/cart', { replace: true });
     }
-  }, [cartToUse, items, isLoadingCart, navigate, toast, createdOrder]);
+  }, [cartToUse, items, isLoadingCart, navigate, toast, createdOrder, numericOrderId]);
 
   const handleApplyPromo = () => {
     if (!promoCodeInput.trim() || isValidatingPromo) return;
@@ -241,14 +292,16 @@ const CheckoutPage: React.FC = () => {
             });
             toast({
               title:
-                data.discountAmount > 0 ? 'Promo Applied' : 'Promo Code Valid',
+                data.discountAmount > 0
+                  ? 'Đã áp dụng mã giảm giá'
+                  : 'Mã giảm giá hợp lệ',
               description: data.message,
             });
           } else {
             setValidatedPromo(null);
             toast({
-              title: 'Invalid Promo',
-              description: data.message || 'This promo code is not valid.',
+              title: 'Mã giảm giá không hợp lệ',
+              description: data.message || 'Mã giảm giá này không dùng được.',
               variant: 'destructive',
             });
           }
@@ -256,11 +309,11 @@ const CheckoutPage: React.FC = () => {
         onError: (error: any) => {
           setValidatedPromo(null);
           toast({
-            title: 'Error Validating Promo',
+            title: 'Lỗi khi kiểm tra mã giảm giá',
             description:
               error.response?.data?.message ||
               error.message ||
-              'Could not validate promo code.',
+              'Không kiểm tra được mã giảm giá.',
             variant: 'destructive',
           });
         },
@@ -270,8 +323,7 @@ const CheckoutPage: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (
-      !cartToUse ||
-      items.length === 0 ||
+      (!numericOrderId && (!cartToUse || items.length === 0)) ||
       isProcessingPaymentAction ||
       !selectedPaymentMethodId
     ) {
@@ -281,34 +333,41 @@ const CheckoutPage: React.FC = () => {
     const promotionCodePayload = validatedPromo?.discountCode || null;
     try {
       toast({
-        title: 'Placing your order...',
+        title: numericOrderId ? 'Đang khởi tạo thanh toán…' : 'Đang tạo đơn hàng…',
         duration: 10000,
       });
 
-      const createdOrder = await createOrderMutateAsync(promotionCodePayload);
-      console.log('Order created successfully:', createdOrder);
+      let orderIdForPayment = numericOrderId;
 
-      if (!createdOrder || !createdOrder.orderId) {
-        throw new Error(
-          'Order creation failed or did not return a valid order ID.'
-        );
+      if (!orderIdForPayment) {
+        const createdOrderResponse = await createOrderMutateAsync(promotionCodePayload);
+        console.log('Order created successfully:', createdOrderResponse);
+
+        if (!createdOrderResponse || !createdOrderResponse.orderId) {
+          throw new Error(
+            'Tạo đơn hàng không thành công hoặc không nhận được mã đơn hợp lệ.'
+          );
+        }
+        orderIdForPayment = createdOrderResponse.orderId;
+        // Update URL so if payment creation fails, the page shows the order details instead of an empty cart
+        navigate(`/checkout?orderId=${orderIdForPayment}`, { replace: true });
       }
 
       toast({
-        title: 'Order placed!',
-        description: 'Redirecting to payment...',
+        title: numericOrderId ? 'Sẵn sàng thanh toán' : 'Đã tạo đơn hàng',
+        description: 'Đang chuyển sang trang thanh toán…',
         variant: 'default',
       });
 
       if (selectedPaymentMethodId === 'VNPAY') {
-        await createVnpayUrlMutateAsync({ orderId: createdOrder.orderId });
+        await createVnpayUrlMutateAsync({ orderId: orderIdForPayment });
       } else if (selectedPaymentMethodId === 'STRIPE') {
         await createStripeSessionMutateAsync({
-          orderId: createdOrder.orderId,
+          orderId: orderIdForPayment,
         });
       } else if (selectedPaymentMethodId === 'CRYPTO') {
         const invoiceInfo = await createCryptoInvoiceMutateAsync({
-          orderId: createdOrder.orderId,
+          orderId: orderIdForPayment,
           cryptoCurrency: selectedCrypto,
         });
 
@@ -321,72 +380,88 @@ const CheckoutPage: React.FC = () => {
         // 2. Điều hướng đến trang thanh toán crypto
         navigate('/payment/crypto');
       } else if (selectedPaymentMethodId === 'MOMO') {
-        await createMomoUrlMutateAsync({ orderId: createdOrder.orderId });
+        await createMomoUrlMutateAsync({ orderId: orderIdForPayment });
+      } else if (selectedPaymentMethodId === 'MOCK_TEST') {
+        // Hiển thị dialog chọn thành công hoặc thất bại
+        setIsMockPaymentDialogOpen(true);
+        setMockOrderId(orderIdForPayment);
       } else {
-        throw new Error('Selected payment method is not supported.');
+        throw new Error('Phương thức thanh toán đã chọn chưa được hỗ trợ.');
       }
     } catch (error: any) {
       console.error('Checkout process error:', error);
       toast({
-        title: 'Error',
+        title: 'Lỗi',
         description:
-          error.message || 'An unexpected error occurred during checkout.',
+          error.message || 'Đã xảy ra lỗi ngoài dự kiến trong lúc thanh toán.',
         variant: 'destructive',
       });
     }
   };
 
-  const subtotal = summary?.finalPrice || 0;
-  const promoDiscount = validatedPromo?.discountAmount || 0;
-  const finalTotal = Math.max(0, subtotal - promoDiscount);
+  const subtotal = numericOrderId && orderData ? (orderData.originalTotalPrice ?? (orderData as any).OriginalTotalPrice ?? 0) : (summary?.finalPrice || 0);
+  const promoDiscount = numericOrderId && orderData ? (orderData.discountAmount ?? (orderData as any).DiscountAmount ?? 0) : (validatedPromo?.discountAmount || 0);
+  const finalTotal = numericOrderId && orderData ? (orderData.finalAmount ?? (orderData as any).FinalAmount ?? 0) : Math.max(0, subtotal - promoDiscount);
 
-  if (isLoadingCart && !initialCartDataFromState) {
+  if ((isLoadingCart && !initialCartDataFromState && !numericOrderId) || (numericOrderId && isLoadingOrder)) {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center'>
           <Loader2 className='h-12 w-12 animate-spin text-primary mx-auto' />
-          <p className='mt-4 text-muted-foreground'>Loading checkout...</p>
+          <p className='mt-4 text-muted-foreground'>Đang tải trang thanh toán…</p>
         </div>
       </Layout>
     );
   }
-  if (isCartError && !initialCartDataFromState) {
+  if (isCartError && !initialCartDataFromState && !numericOrderId) {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center text-destructive'>
           <XCircle className='h-12 w-12 mx-auto mb-2' />
-          <p className='font-semibold'>Error loading checkout</p>
+          <p className='font-semibold'>Không tải được trang thanh toán</p>
           <p className='text-sm'>
-            {cartError?.message || 'Please try again later.'}
+            {cartError?.message || 'Bạn thử lại sau nhé.'}
           </p>
         </div>
       </Layout>
     );
   }
 
-  if ((!cartToUse || items.length === 0) && !createdOrder) {
+  if (numericOrderId && isOrderError) {
+    return (
+      <Layout>
+        <div className='container mx-auto p-12 text-center text-destructive'>
+          <XCircle className='h-12 w-12 mx-auto mb-2' />
+          <p className='font-semibold'>Không tìm thấy đơn hàng</p>
+          <p className='text-sm'>Vui lòng kiểm tra lại mã đơn hàng của bạn.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!numericOrderId && (!cartToUse || items.length === 0) && !createdOrder) {
     return (
       <Layout>
         <div className='container mx-auto flex flex-col items-center justify-center py-20'>
           <img
             src='/images/empty-cart.svg'
-            alt='Empty cart'
+            alt='Giỏ hàng trống'
             className='w-40 h-40 mb-6'
           />
-          <h2 className='text-2xl font-semibold mb-2'>Your cart is empty</h2>
+          <h2 className='text-2xl font-semibold mb-2'>Giỏ hàng đang trống</h2>
           <p className='text-muted-foreground mb-6'>
-            Looks like you have no items in your cart.
+            Có vẻ bạn chưa thêm khóa học nào vào giỏ.
           </p>
           <div className='flex gap-4'>
             <Button asChild>
-              <Link to='/cart'>Go to Cart</Link>
+              <Link to='/cart'>Xem giỏ hàng</Link>
             </Button>
             <Button variant='outline' asChild>
-              <Link to='/'>Back to Home</Link>
+              <Link to='/'>Về trang chủ</Link>
             </Button>
           </div>
           <p className='text-xs text-muted-foreground mt-8'>
-            You will be redirected to your cart in a few seconds...
+            Bạn sẽ được chuyển về giỏ hàng sau vài giây…
           </p>
         </div>
       </Layout>
@@ -403,22 +478,20 @@ const CheckoutPage: React.FC = () => {
           className='mb-6 text-sm group'
         >
           <ChevronLeft className='h-4 w-4 mr-1.5 group-hover:-translate-x-1 transition-transform' />{' '}
-          Back
+          Quay lại
         </Button>
-        <h1 className='text-3xl lg:text-4xl font-bold mb-8 tracking-tight'>
-          Secure Checkout
-        </h1>
+        <h1 className='mb-8'>Thanh toán an toàn</h1>
 
         <div className='grid lg:grid-cols-3 gap-8 items-start'>
           <div className='lg:col-span-2 space-y-6'>
-            <Card className='shadow-lg border-border/60'>
+            <Card className='rounded-xl border border-border bg-card shadow-none'>
               <CardHeader>
                 <CardTitle className='text-xl flex items-center gap-2'>
-                  <CreditCard size={24} className='text-primary' /> Select
-                  Payment Method
+                  <CreditCard size={24} className='text-primary' /> Chọn
+                  phương thức thanh toán
                 </CardTitle>
                 <CardDescription>
-                  Choose your preferred way to pay.
+                  Chọn cách thanh toán bạn thấy tiện nhất.
                 </CardDescription>
               </CardHeader>
               <CardContent className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
@@ -437,11 +510,11 @@ const CheckoutPage: React.FC = () => {
             {selectedPaymentMethodId === 'CRYPTO' && (
               <Card>
                 <CardHeader>
-                  <CardTitle className='text-lg'>Choose your coin</CardTitle>
+                  <CardTitle className='text-lg'>Chọn đồng tiền mã hóa</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className='text-sm text-muted-foreground mb-4'>
-                    You will pay with a stablecoin to avoid price volatility.
+                    Bạn sẽ thanh toán bằng stablecoin để tránh biến động giá.
                   </p>
                   <div className='flex flex-wrap gap-2'>
                     <Button
@@ -647,6 +720,51 @@ const CheckoutPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <Dialog open={isMockPaymentDialogOpen} onOpenChange={setIsMockPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mô phỏng thanh toán (Mock Test)</DialogTitle>
+            <DialogDescription>
+              Bạn muốn đơn hàng này thanh toán thành công hay thất bại? Việc này sẽ cập nhật trực tiếp vào hệ thống (giả lập webhook từ cổng thanh toán).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end mt-4">
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                try {
+                  setIsMockPaymentDialogOpen(false);
+                  toast({ title: 'Đang xử lý...', description: 'Vui lòng đợi' });
+                  await apiHelper.post(`/orders/${mockOrderId}/mock-payment`, { status: 'failed' });
+                  toast({ title: 'Đã hủy đơn hàng', variant: 'default' });
+                  navigate('/my-courses');
+                } catch (e: any) {
+                  toast({ title: 'Lỗi', description: e.message || 'Lỗi xử lý', variant: 'destructive' });
+                }
+              }}
+            >
+              Thất bại (Hủy đơn)
+            </Button>
+            <Button
+              variant="default"
+              onClick={async () => {
+                try {
+                  setIsMockPaymentDialogOpen(false);
+                  toast({ title: 'Đang xử lý...', description: 'Vui lòng đợi' });
+                  await apiHelper.post(`/orders/${mockOrderId}/mock-payment`, { status: 'success' });
+                  toast({ title: 'Thanh toán thành công!', variant: 'default' });
+                  navigate('/my-courses');
+                } catch (e: any) {
+                  toast({ title: 'Lỗi', description: e.message || 'Lỗi xử lý', variant: 'destructive' });
+                }
+              }}
+            >
+              Thành công (Kích hoạt)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

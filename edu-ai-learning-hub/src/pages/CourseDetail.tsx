@@ -1,12 +1,11 @@
 // src/pages/CourseDetailPage.tsx
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Icons } from '@/components/common/Icons';
 import { useToast } from '@/hooks/use-toast';
 
 import FreePreviewModal from '@/components/courses/FreePreviewModal';
@@ -15,27 +14,19 @@ import {
   CreateReviewPayload,
   UserLessonProgress,
   Lesson,
-  CourseReview,
 } from '@/types/common.types';
 import { useCourseDetailBySlug } from '@/hooks/queries/course.queries';
 import {
   Star,
   Clock,
   Users,
-  BookOpen as CourseContentIcon,
   ChevronDown,
   ChevronUp,
   PlayCircle,
   Lock,
-  ShoppingCart,
-  Zap,
   CheckCircle,
-  MessageSquare,
-  Edit2,
   Trash2,
-  AlertTriangle,
   Loader2,
-  Award,
   Video as VideoIconLucide,
   FileText as TextIconLucide,
   HelpCircle as QuizIconLucide,
@@ -46,7 +37,6 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,9 +47,7 @@ import {
   getVimeoEmbedUrl,
   extractVimeoId,
 } from '@/utils/video.util';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
 import PaginationControls from '@/components/admin/PaginationControls';
-import { useLessonVideoUrl } from '@/hooks/queries/lesson.queries';
 import {
   useCreateOrUpdateReview,
   useDeleteReview,
@@ -67,7 +55,6 @@ import {
   useReviewsByCourse,
 } from '@/hooks/queries/review.queries';
 import { Label } from '@/components/ui/label';
-import { useAddCourseToCart, useMyCart } from '@/hooks/queries/cart.queries';
 import { useInstructorPublicProfile } from '@/hooks/queries/instructor.queries';
 import { Review } from '@/services/review.service';
 import { Section } from '@/services/section.service';
@@ -97,17 +84,17 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
   );
   const getLessonIcon = (type: Lesson['lessonType']) => {
     if (type === 'VIDEO')
-      return <VideoIconLucide className='h-4 w-4 text-blue-500 shrink-0' />;
+      return <VideoIconLucide className='h-4 w-4 shrink-0 text-muted-foreground' />;
     if (type === 'TEXT')
-      return <TextIconLucide className='h-4 w-4 text-green-500 shrink-0' />;
+      return <TextIconLucide className='h-4 w-4 shrink-0 text-muted-foreground' />;
     if (type === 'QUIZ')
-      return <QuizIconLucide className='h-4 w-4 text-purple-500 shrink-0' />;
+      return <QuizIconLucide className='h-4 w-4 shrink-0 text-muted-foreground' />;
     return <FileIcon className='h-4 w-4 text-muted-foreground shrink-0' />;
   };
   return (
-    <div className='border-b last:border-b-0'>
+    <div className='border-b border-border last:border-b-0'>
       <button
-        className='w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 dark:hover:bg-muted/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+        className='flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
       >
@@ -121,16 +108,16 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
             className='font-semibold text-base md:text-lg truncate'
             title={section.sectionName}
           >
-            {section.sectionName || 'Untitled Section'}
+            {section.sectionName || 'Phần chưa đặt tên'}
           </h3>
         </div>
         <div className='text-xs text-muted-foreground whitespace-nowrap shrink-0 ml-2'>
-          {section.lessons.length} lessons
+          {section.lessons.length} bài học
           {totalDuration > 0 && ` • ${formatDurationShort(totalDuration)}`}
         </div>
       </button>
       {isExpanded && (
-        <div className='divide-y divide-border border-t bg-background/30 dark:bg-background/10'>
+        <div className='divide-y divide-border border-t border-border bg-muted/30'>
           {section.lessons
             .sort((a, b) => a.lessonOrder - b.lessonOrder)
             .map((lesson) => (
@@ -138,7 +125,7 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
                 key={lesson.lessonId || lesson.tempId}
                 className={`flex items-center justify-between p-3 pl-10 pr-4 transition-colors ${
                   lesson.isFreePreview || isEnrolled
-                    ? 'hover:bg-primary/5 cursor-pointer'
+                    ? 'cursor-pointer hover:bg-accent'
                     : 'opacity-60 cursor-not-allowed'
                 }`}
                 onClick={() =>
@@ -146,8 +133,8 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
                 }
                 title={
                   lesson.isFreePreview || isEnrolled
-                    ? `View: ${lesson.lessonName}`
-                    : 'Enroll to access this lesson'
+                    ? `Xem: ${lesson.lessonName}`
+                    : 'Ghi danh để mở bài học này'
                 }
               >
                 <div className='flex items-center gap-2.5 min-w-0'>
@@ -159,10 +146,10 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
                     {lesson.lessonName}
                   </span>
                   {userProgress?.[lesson.lessonId]?.isCompleted && (
-                    <span title='Completed'>
+                    <span title='Đã hoàn thành'>
                       <CheckCircle
                         size={14}
-                        className='text-green-500 shrink-0'
+                        className='shrink-0 text-success'
                       />
                     </span>
                   )}
@@ -170,11 +157,11 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
                 <div className='flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-2'>
                   {lesson.isFreePreview && (
                     <Badge variant='success' className='text-xs px-1.5 py-0.5'>
-                      Free Preview
+                      Học thử
                     </Badge>
                   )}
                   {!(lesson.isFreePreview || isEnrolled) && (
-                    <span title='Locked'>
+                    <span title='Chưa mở'>
                       <Lock size={12} />
                     </span>
                   )}
@@ -205,7 +192,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   onDelete,
   isDeleting,
 }) => (
-  <div className='border-b py-6 last:border-b-0'>
+  <div className='border-b border-border py-6 last:border-b-0'>
     <div className='flex items-start space-x-3 sm:space-x-4'>
       <Avatar className='h-10 w-10 sm:h-11 sm:w-11'>
         <AvatarImage
@@ -220,7 +207,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1'>
           <h4 className='font-semibold text-sm'>{review.userFullName}</h4>
           <span className='text-xs text-muted-foreground mt-0.5 sm:mt-0'>
-            {format(parseISO(review.reviewedAt), 'MMM d, yyyy')}
+            {format(parseISO(review.reviewedAt), 'dd/MM/yyyy')}
           </span>
         </div>
         <div className='flex mt-0.5 mb-2'>
@@ -230,7 +217,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
               size={16}
               className={`mr-0.5 ${
                 i < review.rating
-                  ? 'fill-yellow-400 text-yellow-400'
+                  ? 'fill-warning text-warning'
                   : 'fill-muted stroke-muted-foreground'
               }`}
             />
@@ -254,7 +241,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
             ) : (
               <Trash2 size={12} className='mr-1' />
             )}{' '}
-            Delete My Review
+            Xóa đánh giá của tôi
           </Button>
         )}
       </div>
@@ -291,8 +278,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   const handleSubmitReview = () => {
     if (rating === 0) {
       toast({
-        title: 'Rating Required',
-        description: 'Please select a star rating.',
+        title: 'Chưa chấm điểm',
+        description: 'Vui lòng chọn số sao trước khi gửi.',
         variant: 'destructive',
       });
       return;
@@ -305,8 +292,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         },
         onError: (error) => {
           toast({
-            title: 'Submission Failed',
-            description: error.message || 'Could not submit review.',
+            title: 'Gửi đánh giá thất bại',
+            description: error.message || 'Không gửi được đánh giá.',
             variant: 'destructive',
           });
         },
@@ -315,27 +302,29 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   };
 
   return (
-    <div className='p-4 sm:p-6 border rounded-lg bg-card shadow-sm'>
+    <div className='rounded-xl border border-border bg-card p-4 sm:p-6'>
       <h3 className='text-lg sm:text-xl font-semibold mb-3'>
-        {currentMyReview ? 'Update Your Review' : 'Write a Review'}
+        {currentMyReview ? 'Sửa đánh giá của bạn' : 'Viết đánh giá'}
       </h3>
       <div className='mb-4'>
-        <Label className='block mb-1.5 text-sm font-medium'>Your Rating*</Label>
+        <Label className='mb-1.5 block text-sm font-medium'>
+            Điểm bạn chấm *
+          </Label>
         <div className='flex items-center space-x-0.5'>
           {[1, 2, 3, 4, 5].map((star) => (
             <Button
               key={star}
               variant='ghost'
               size='icon'
-              className={`h-7 w-7 sm:h-8 sm:w-8 p-0 hover:scale-110 transition-transform ${
+              className={`h-7 w-7 p-0 transition-colors sm:h-8 sm:w-8 ${
                 (hoverRating || rating) >= star
-                  ? 'text-yellow-400'
-                  : 'text-gray-300 dark:text-gray-600'
+                  ? 'text-warning'
+                  : 'text-muted-foreground'
               }`}
               onMouseEnter={() => setHoverRating(star)}
               onMouseLeave={() => setHoverRating(0)}
               onClick={() => setRating(star)}
-              aria-label={`Rate ${star} out of 5 stars`}
+              aria-label={`Chấm ${star} trên 5 sao`}
             >
               <Star
                 size={20}
@@ -354,20 +343,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           htmlFor='reviewComment'
           className='block mb-1.5 text-sm font-medium'
         >
-          Your Review (Optional)
+          Nhận xét (không bắt buộc)
         </Label>
         <Textarea
           id='reviewComment'
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder='Share your thoughts about the course...'
+          placeholder='Chia sẻ cảm nhận của bạn về khóa học...'
           rows={4}
           className='resize-none'
         />
       </div>
       <Button onClick={handleSubmitReview} disabled={isPending || rating === 0}>
         {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-        {currentMyReview ? 'Update Review' : 'Submit Review'}
+        {currentMyReview ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
       </Button>
     </div>
   );
@@ -449,15 +438,15 @@ const CourseDetailPage: React.FC = () => {
       );
     } else {
       toast({
-        title: 'Content Locked',
-        description: 'Enroll in the course to access this lesson.',
+        title: 'Nội dung chưa mở',
+        description: 'Bạn cần ghi danh khóa học để xem bài học này.',
       });
     }
   };
 
   const handleDeleteMyReview = (reviewId: number) => {
     if (!course?.courseId) return;
-    if (window.confirm('Delete your review? This cannot be undone.')) {
+    if (window.confirm('Xóa đánh giá của bạn? Thao tác này không thể hoàn tác.')) {
       deleteReviewMutate(
         { courseId: Number(course.courseId), reviewId },
         {
@@ -529,12 +518,14 @@ const CourseDetailPage: React.FC = () => {
       <Layout>
         <div className='container mx-auto py-12 text-center'>
           <XCircle className='h-16 w-16 mx-auto mb-4 text-destructive' />
-          <h1 className='text-2xl font-bold'>Course Not Found</h1>
+          <h1 className='text-2xl font-semibold tracking-tight'>
+            Không tìm thấy khóa học
+          </h1>
           <p className='mt-2 text-muted-foreground'>
-            "{slug}" could not be found.
+            Không tìm thấy khóa học "{slug}".
           </p>
           <Button asChild className='mt-6'>
-            <Link to='/courses'>Browse Courses</Link>
+            <Link to='/courses'>Xem danh sách khóa học</Link>
           </Button>
         </div>
       </Layout>
@@ -543,7 +534,7 @@ const CourseDetailPage: React.FC = () => {
 
   return (
     <Layout>
-      <section className='bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-white pt-12 pb-10 md:pt-16 md:pb-14'>
+      <section className='border-b border-border bg-muted/40 pb-10 pt-12 md:pb-14 md:pt-16'>
         <div className='container mx-auto px-4 md:px-6'>
           <div className='grid lg:grid-cols-3 gap-8 xl:gap-12 items-center'>
             <div className='lg:col-span-2'>
@@ -553,21 +544,21 @@ const CourseDetailPage: React.FC = () => {
                     course.categoryId ||
                     course.categoryName.toLowerCase().replace(/\s+/g, '-')
                   }`}
-                  className='text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors'
+                  className='text-sm font-medium text-primary transition-colors hover:underline'
                 >
                   {course.categoryName}
                 </Link>
-                <span className='text-gray-500'>•</span>
-                <span className='text-sm text-gray-400'>
+                <span className='text-muted-foreground'>•</span>
+                <span className='text-sm text-muted-foreground'>
                   {course.levelName}
                 </span>
               </div>
-              <h1 className='text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4 leading-tight'>
+              <h1 className='mb-3 text-3xl font-semibold leading-tight tracking-tight sm:mb-4 sm:text-4xl'>
                 {course.courseName}
               </h1>
               {course.shortDescription && (
                 <div
-                  className='text-lg text-gray-300 mb-5 max-w-3xl'
+                  className='mb-5 max-w-3xl text-lg text-muted-foreground'
                   dangerouslySetInnerHTML={{
                     __html: he.decode(course.shortDescription),
                   }}
@@ -576,7 +567,7 @@ const CourseDetailPage: React.FC = () => {
               <div className='flex flex-wrap items-center gap-x-5 gap-y-2 mb-5 text-sm'>
                 {typeof course.averageRating === 'number' && (
                   <div className='flex items-center'>
-                    <span className='mr-1 font-semibold text-yellow-400'>
+                    <span className='mr-1 font-semibold text-foreground'>
                       {course.averageRating.toFixed(1)}
                     </span>{' '}
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -585,19 +576,19 @@ const CourseDetailPage: React.FC = () => {
                         size={16}
                         className={`mr-0.5 ${
                           i < Math.round(course.averageRating || 0)
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'fill-gray-600 text-gray-600'
+                            ? 'fill-warning text-warning'
+                            : 'fill-muted stroke-muted-foreground'
                         }`}
                       />
                     ))}{' '}
-                    <span className='ml-1.5 text-gray-400'>
-                      ({(course.reviewCount || 0).toLocaleString()} ratings)
+                    <span className='ml-1.5 text-muted-foreground'>
+                      ({(course.reviewCount || 0).toLocaleString()} lượt đánh giá)
                     </span>
                   </div>
                 )}
-                <div className='flex items-center text-gray-300'>
+                <div className='flex items-center text-muted-foreground'>
                   <Users size={16} className='mr-1.5' />{' '}
-                  {(course.studentCount || 0).toLocaleString()} students
+                  {(course.studentCount || 0).toLocaleString()} học viên
                 </div>
               </div>
               <div className='flex items-center text-sm mb-3'>
@@ -605,7 +596,7 @@ const CourseDetailPage: React.FC = () => {
                   to={`/instructors/${instructorProfile?.accountId}`}
                   className='flex items-center group'
                 >
-                  <Avatar className='h-9 w-9 mr-2.5 border-2 border-slate-700 group-hover:border-sky-400 transition-all'>
+                  <Avatar className='mr-2.5 h-9 w-9 border border-border transition-colors group-hover:border-primary'>
                     <AvatarImage
                       src={course.instructorAvatar || undefined}
                       alt={course.instructorName}
@@ -614,15 +605,15 @@ const CourseDetailPage: React.FC = () => {
                       {course.instructorName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className='font-medium text-sky-400 group-hover:text-sky-200'>
-                    By {course.instructorName}
+                  <span className='font-medium text-primary group-hover:underline'>
+                    {course.instructorName}
                   </span>
                 </Link>
               </div>
-              <div className='flex items-center gap-x-4 gap-y-1 text-xs text-gray-400'>
+              <div className='flex items-center gap-x-4 gap-y-1 text-xs text-muted-foreground'>
                 <span className='flex items-center'>
                   <Clock size={13} className='mr-1' />
-                  Last updated{' '}
+                  Cập nhật{' '}
                   {format(
                     parseISO(course.createdAt || course.updatedAt),
                     'MM/yyyy'
@@ -655,26 +646,26 @@ const CourseDetailPage: React.FC = () => {
               onValueChange={setActiveContentTab}
               className='w-full'
             >
-              <TabsList className='mb-6 sticky top-[calc(var(--header-height,64px)+1rem)] bg-background/80 backdrop-blur-sm z-10 py-2 px-1.5 border rounded-lg shadow-sm grid w-full grid-cols-2 sm:grid-cols-4 gap-1'>
+              <TabsList className='sticky top-[calc(var(--header-height,64px)+1rem)] z-10 mb-6 grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-background px-1.5 py-2 sm:grid-cols-4'>
                 <TabsTrigger value='overview' className='text-sm h-9'>
-                  Overview
+                  Tổng quan
                 </TabsTrigger>
                 <TabsTrigger value='curriculum' className='text-sm h-9'>
-                  Curriculum
+                  Nội dung
                 </TabsTrigger>
                 <TabsTrigger value='instructor' className='text-sm h-9'>
-                  Instructor
+                  Giảng viên
                 </TabsTrigger>
                 <TabsTrigger value='reviews' className='text-sm h-9'>
-                  Reviews ({course.reviewCount || 0})
+                  Đánh giá ({course.reviewCount || 0})
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value='overview' className='space-y-8'>
                 {course.learningOutcomes && (
                   <section>
-                    <h2 className='text-2xl font-semibold mb-4 border-b pb-2'>
-                      What you'll learn
+                    <h2 className='mb-4 border-b border-border pb-2 text-2xl font-semibold tracking-tight'>
+                      Bạn sẽ học được gì
                     </h2>
                     <div className='grid sm:grid-cols-2 gap-x-6 gap-y-2'>
                       {(typeof course.learningOutcomes === 'string'
@@ -684,7 +675,7 @@ const CourseDetailPage: React.FC = () => {
                         : course.learningOutcomes
                       ).map((outcome: string, index: number) => (
                         <div key={index} className='flex items-start text-sm'>
-                          <CheckCircle className='h-4 w-4 text-green-500 mr-2.5 mt-0.5 shrink-0' />{' '}
+                          <CheckCircle className='mr-2.5 mt-0.5 h-4 w-4 shrink-0 text-success' />{' '}
                           <span
                             dangerouslySetInnerHTML={{
                               __html: he.decode(outcome),
@@ -697,8 +688,8 @@ const CourseDetailPage: React.FC = () => {
                 )}
                 {course.requirements && (
                   <section>
-                    <h2 className='text-2xl font-semibold mb-4 border-b pb-2'>
-                      Requirements
+                    <h2 className='mb-4 border-b border-border pb-2 text-2xl font-semibold tracking-tight'>
+                      Yêu cầu trước khi học
                     </h2>
                     <div
                       className='prose prose-sm dark:prose-invert max-w-none leading-relaxed'
@@ -710,8 +701,8 @@ const CourseDetailPage: React.FC = () => {
                 )}
                 {course.fullDescription && (
                   <section>
-                    <h2 className='text-2xl font-semibold mb-4 border-b pb-2'>
-                      Description
+                    <h2 className='mb-4 border-b border-border pb-2 text-2xl font-semibold tracking-tight'>
+                      Mô tả khóa học
                     </h2>
                     <div
                       className='prose prose-sm dark:prose-invert max-w-none leading-relaxed'
@@ -724,11 +715,13 @@ const CourseDetailPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value='curriculum'>
-                <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 pb-2 border-b gap-2'>
-                  <h2 className='text-2xl font-semibold'>Course Content</h2>
+                <div className='mb-4 flex flex-col items-start justify-between gap-2 border-b border-border pb-2 sm:flex-row sm:items-center'>
+                  <h2 className='text-2xl font-semibold tracking-tight'>
+                    Nội dung khóa học
+                  </h2>
                   <div className='text-sm text-muted-foreground whitespace-nowrap'>
-                    {course.sections.length} sections • {course.totalLessons}{' '}
-                    lessons • {formatDurationShort(course.totalDuration)}
+                    {course.sections.length} phần • {course.totalLessons} bài học{' '}
+                    • {formatDurationShort(course.totalDuration)}
                   </div>
                 </div>
                 {course.isEnrolled && (
@@ -741,14 +734,13 @@ const CourseDetailPage: React.FC = () => {
                           course.sections[0].lessons[0].lessonId
                         )}`}
                       >
-                        <PlayCircle className='mr-2 h-5 w-5' /> Continue
-                        Learning
+                        <PlayCircle className='mr-2 h-5 w-5' /> Tiếp tục học
                       </Link>
                     </Button>
                   </div>
                 )}
                 {course.sections.length > 0 ? (
-                  <div className='border rounded-lg divide-y divide-border overflow-hidden shadow-sm'>
+                  <div className='divide-y divide-border overflow-hidden rounded-xl border border-border'>
                     {course.sections
                       .sort((a, b) => a.sectionOrder - b.sectionOrder)
                       .map((section) => (
@@ -767,16 +759,16 @@ const CourseDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <p className='text-center py-8 text-muted-foreground'>
-                    Curriculum is not available yet.
+                    Chưa có nội dung cho khóa học này.
                   </p>
                 )}
               </TabsContent>
 
               <TabsContent value='instructor'>
-                <div className='p-4 sm:p-6 border rounded-lg bg-card shadow-sm'>
+                <div className='rounded-xl border border-border bg-card p-4 sm:p-6'>
                   <div className='flex flex-col sm:flex-row items-start gap-5 sm:gap-6'>
                     <Link to={`/instructors/${course.instructorId}`}>
-                      <Avatar className='h-24 w-24 sm:h-32 sm:w-32 border-4 border-primary/20 hover:scale-105 transition-transform'>
+                      <Avatar className='h-24 w-24 border border-border sm:h-32 sm:w-32'>
                         <AvatarImage
                           src={course.instructorAvatar || undefined}
                           alt={course.instructorName}
@@ -791,31 +783,31 @@ const CourseDetailPage: React.FC = () => {
                         to={`/instructors/${instructorProfile?.accountId}`}
                         className='hover:underline'
                       >
-                        <h3 className='text-xl sm:text-2xl font-bold text-primary'>
+                        <h3 className='text-xl font-semibold tracking-tight text-foreground sm:text-2xl'>
                           {course.instructorName}
                         </h3>
                       </Link>
                       <p className='text-sm text-muted-foreground mb-2'>
-                        {instructorProfile?.professionalTitle || 'Instructor'}
+                        {instructorProfile?.professionalTitle || 'Giảng viên'}
                       </p>
                       <div className='flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground mb-3'>
                         {typeof course.averageRating === 'number' && (
                           <span className='flex items-center'>
-                            <Star size={14} className='mr-1 text-yellow-400' />{' '}
-                            {course.averageRating.toFixed(1)} Instructor Rating
+                            <Star size={14} className='mr-1 fill-warning text-warning' />{' '}
+                            {course.averageRating.toFixed(1)} điểm đánh giá
                           </span>
                         )}
                         {typeof course.studentCount === 'number' && (
                           <span className='flex items-center'>
                             <Users size={14} className='mr-1' />{' '}
-                            {course.studentCount.toLocaleString()} Students
+                            {course.studentCount.toLocaleString()} học viên
                           </span>
                         )}
                         {typeof instructorProfile?.totalCourses ===
                           'number' && (
                           <span className='flex items-center'>
                             <BookOpen size={14} className='mr-1' />{' '}
-                            {instructorProfile?.totalCourses} Courses
+                            {instructorProfile?.totalCourses} khóa học
                           </span>
                         )}
                       </div>
@@ -831,7 +823,7 @@ const CourseDetailPage: React.FC = () => {
                   </div>
                   {instructorProfile?.aboutMe && (
                     <div
-                      className='mt-6 pt-4 border-t prose prose-sm dark:prose-invert max-w-none'
+                      className='prose prose-sm mt-6 max-w-none border-t border-border pt-4 dark:prose-invert'
                       dangerouslySetInnerHTML={{
                         __html: he.decode(instructorProfile.aboutMe),
                       }}
@@ -841,13 +833,13 @@ const CourseDetailPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value='reviews'>
-                <h2 className='text-2xl font-semibold mb-6 border-b pb-2'>
-                  Student Feedback
+                <h2 className='mb-6 border-b border-border pb-2 text-2xl font-semibold tracking-tight'>
+                  Đánh giá của học viên
                 </h2>
                 {reviewsData && reviewsData.averageRating !== null && (
-                  <div className='mb-8 p-4 sm:p-6 bg-muted/50 rounded-lg flex flex-col sm:flex-row items-center gap-4 sm:gap-6'>
+                  <div className='mb-8 flex flex-col items-center gap-4 rounded-xl border border-border bg-muted/40 p-4 sm:flex-row sm:gap-6 sm:p-6'>
                     <div className='text-center sm:text-left shrink-0'>
-                      <div className='text-5xl font-bold text-yellow-500'>
+                      <div className='text-3xl font-semibold tabular-nums tracking-tight text-foreground'>
                         {reviewsData.averageRating.toFixed(1)}
                       </div>
                       <div className='flex justify-center sm:justify-start mt-1'>
@@ -857,14 +849,14 @@ const CourseDetailPage: React.FC = () => {
                             size={20}
                             className={`mr-0.5 ${
                               i < Math.round(reviewsData.averageRating || 0)
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'fill-gray-300 text-gray-300'
+                                ? 'fill-warning text-warning'
+                                : 'fill-muted stroke-muted-foreground'
                             }`}
                           />
                         ))}
                       </div>
                       <p className='text-sm text-muted-foreground mt-1'>
-                        Overall Rating
+                        Điểm trung bình
                       </p>
                     </div>
                   </div>
@@ -882,14 +874,14 @@ const CourseDetailPage: React.FC = () => {
                 {!userData && (
                   <p className='mb-6 text-sm text-muted-foreground'>
                     <Link to='/' className='text-primary hover:underline'>
-                      Log in
-                    </Link>
-                    to leave a review.
+                      Đăng nhập
+                    </Link>{' '}
+                    để gửi đánh giá.
                   </p>
                 )}
                 {!course.isEnrolled && userData && (
                   <p className='mb-6 text-sm text-muted-foreground'>
-                    You must be enrolled in this course to leave a review.
+                    Bạn cần ghi danh khóa học này để gửi đánh giá.
                   </p>
                 )}
 
@@ -930,7 +922,7 @@ const CourseDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <p className='text-muted-foreground text-center py-8'>
-                    No reviews yet. Be the first!
+                    Chưa có đánh giá nào. Hãy là người đầu tiên!
                   </p>
                 )}
               </TabsContent>

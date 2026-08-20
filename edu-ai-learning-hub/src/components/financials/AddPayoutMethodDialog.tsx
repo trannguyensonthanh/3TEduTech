@@ -20,7 +20,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import {
-  Form,
   FormControl,
   FormField,
   FormItem,
@@ -29,7 +28,6 @@ import {
 } from '@/components/ui/form';
 import { Icons } from '@/components/common/Icons';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 
 // Logic
 import {
@@ -60,7 +58,7 @@ const methodOptions: Record<
   VND: [
     {
       id: 'MOMO',
-      name: 'MoMo E-Wallet',
+      name: 'Ví MoMo',
       icon: (
         <img
           src='/images/payment/momo_logo.png'
@@ -71,7 +69,7 @@ const methodOptions: Record<
     },
     {
       id: 'VNPAY',
-      name: 'VNPay (Bank Transfer)',
+      name: 'VNPay (chuyển khoản ngân hàng)',
       icon: (
         <img
           src='/images/payment/vnpay_logo.jpg'
@@ -85,12 +83,12 @@ const methodOptions: Record<
     {
       id: 'PAYPAL',
       name: 'PayPal',
-      icon: <Icons.paypal className='h-6 w-6 text-blue-600' />,
+      icon: <Icons.paypal className='h-6 w-6 text-foreground' />,
     },
     {
       id: 'STRIPE',
       name: 'Stripe',
-      icon: <Icons.stripe className='h-6 w-6 text-indigo-600' />,
+      icon: <Icons.stripe className='h-6 w-6 text-foreground' />,
     },
   ],
 };
@@ -147,13 +145,15 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
   const onSubmit: SubmitHandler<TPayoutMethodSchema> = (data) => {
     addMethod(data as CreateInstructorPayoutMethodData, {
       onSuccess: (newMethod) => {
-        toast.success('Payout method added successfully.');
+        toast.success('Đã thêm phương thức nhận tiền.');
         onSuccess?.(newMethod);
         onOpenChange(false);
         refetch?.();
       },
       onError: (error) =>
-        toast.error((error as Error).message || 'Failed to add method.'),
+        toast.error(
+          (error as Error).message || 'Không thêm được phương thức nhận tiền.'
+        ),
     });
   };
 
@@ -179,21 +179,21 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-md dark:bg-slate-800/90 backdrop-blur-sm border-slate-700/70'>
+      <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle className='text-2xl font-semibold flex items-center'>
             <Icons.plusCircle className='mr-3 h-6 w-6 text-primary' />
-            Add New Payout Method
+            Thêm phương thức nhận tiền
           </DialogTitle>
           <DialogDescription>
-            Choose your currency to see available payout options.
+            Chọn loại tiền để xem các phương thức nhận tiền khả dụng.
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
             {/* Step 1: Choose Currency */}
             <div className='space-y-2'>
-              <Label>Step 1: Choose Payout Currency</Label>
+              <Label>Bước 1: Chọn loại tiền nhận</Label>
               <div className='grid grid-cols-2 gap-3'>
                 <Button
                   type='button'
@@ -229,7 +229,7 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
                   className='space-y-2'
                 >
                   <Separator />
-                  <Label>Step 2: Choose Payout Method</Label>
+                  <Label>Bước 2: Chọn phương thức nhận tiền</Label>
                   <div className='grid grid-cols-2 gap-3'>
                     {methodOptions[selectedCurrency].map((method) => (
                       <Button
@@ -261,33 +261,33 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
-                  className='space-y-4 pt-4 border-t'
+                  className='space-y-4 pt-4 border-t border-border'
                 >
                   <h4 className='font-semibold text-center'>
-                    Enter {selectedMethodId} Details
+                    Nhập thông tin {selectedMethodId}
                   </h4>
                   {selectedMethodId === 'PAYPAL' &&
                     renderFormField(
                       'details.email',
-                      'PayPal Email',
+                      'Email PayPal',
                       'your.paypal@example.com'
                     )}
                   {selectedMethodId === 'STRIPE' &&
                     renderFormField(
                       'details.accountId',
-                      'Stripe Account ID',
+                      'Mã tài khoản Stripe',
                       'acct_...'
                     )}
                   {selectedMethodId === 'MOMO' && (
                     <>
                       {renderFormField(
                         'details.phoneNumber',
-                        'MoMo Phone Number',
+                        'Số điện thoại MoMo',
                         '090...'
                       )}
                       {renderFormField(
                         'details.accountName',
-                        'Full Name on MoMo',
+                        'Họ tên trên tài khoản MoMo',
                         'NGUYEN VAN A'
                       )}
                     </>
@@ -296,18 +296,18 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
                     <>
                       {renderFormField(
                         'details.accountNumber',
-                        'Bank Account Number',
+                        'Số tài khoản ngân hàng',
                         '123456789'
                       )}
                       {renderFormField(
                         'details.accountName',
-                        'Account Holder Name',
+                        'Tên chủ tài khoản',
                         'NGUYEN VAN A'
                       )}
                       {renderFormField(
                         'details.bankName',
-                        'Bank Name',
-                        'e.g., Vietcombank'
+                        'Tên ngân hàng',
+                        'ví dụ: Vietcombank'
                       )}
                     </>
                   )}
@@ -318,14 +318,14 @@ export const AddPayoutMethodDialog: React.FC<AddPayoutMethodDialogProps> = ({
             <DialogFooter className='pt-6'>
               <DialogClose asChild>
                 <Button type='button' variant='outline' disabled={isPending}>
-                  Cancel
+                  Hủy
                 </Button>
               </DialogClose>
               <Button type='submit' disabled={isPending || !selectedMethodId}>
                 {isPending && (
                   <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
                 )}
-                Save Method
+                Lưu phương thức
               </Button>
             </DialogFooter>
           </form>

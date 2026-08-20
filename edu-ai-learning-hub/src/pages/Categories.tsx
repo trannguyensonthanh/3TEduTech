@@ -70,19 +70,17 @@ const AllCategoriesPage = () => {
 
   return (
     <Layout>
-      <div className="bg-slate-50 dark:bg-slate-900/50">
+      <div className="border-b border-border bg-muted/30">
         <motion.div
           variants={headerVariants}
           initial="hidden"
           animate="visible"
           className="container mx-auto px-4 pt-12 pb-10 md:pt-16 md:pb-12 text-center"
         >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-100 mb-4 tracking-tight">
-            Explore Our Course Categories
-          </h1>
-          <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Dive into a world of knowledge. Find the perfect learning path
-            tailored to your interests and career goals.
+          <h1 className="mb-4 text-foreground">Khám phá các lĩnh vực khóa học</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Bước vào thế giới tri thức. Tìm lộ trình học phù hợp với sở thích và
+            mục tiêu nghề nghiệp của bạn.
           </p>
         </motion.div>
       </div>
@@ -96,23 +94,23 @@ const AllCategoriesPage = () => {
               <Icons.search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search categories (e.g., Programming, Design)"
-                className="pl-11 h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700"
+                placeholder="Tìm lĩnh vực (ví dụ: Lập trình, Thiết kế)"
+                className="pl-11 h-12 text-base rounded-lg border-border bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             {totalCategories > 0 && !isLoading && (
               <p className="text-sm text-muted-foreground">
-                Showing{' '}
+                Đang hiển thị{' '}
                 <span className="font-semibold text-foreground">
                   {categories.length}
                 </span>{' '}
-                of{' '}
+                trong tổng số{' '}
                 <span className="font-semibold text-foreground">
                   {totalCategories}
                 </span>{' '}
-                categories
+                lĩnh vực
               </p>
             )}
           </div>
@@ -126,7 +124,7 @@ const AllCategoriesPage = () => {
               {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
                 <Card
                   key={index}
-                  className="overflow-hidden rounded-xl border dark:border-slate-700"
+                  className="overflow-hidden rounded-xl border border-border bg-card shadow-none"
                 >
                   <Skeleton className="w-full aspect-[16/10]" />
                   <CardContent className="p-5 space-y-3">
@@ -140,20 +138,20 @@ const AllCategoriesPage = () => {
             </motion.div>
           )}
           {error && (
-            <div className="text-center py-16 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-8 rounded-lg">
+            <div className="text-center py-16 rounded-xl border border-border bg-danger-soft p-8 text-danger">
               <Icons.alertTriangle className="h-16 w-16 mx-auto mb-6" />
               <h3 className="text-2xl font-semibold mb-3">
-                Oops! Something went wrong.
+                Rất tiếc, đã có lỗi xảy ra.
               </h3>
-              <p className="text-red-700 dark:text-red-300 mb-6">
-                We couldn't load the categories. Please check your connection or
-                try again later.
+              <p className="text-muted-foreground mb-6">
+                Chúng tôi không tải được danh sách lĩnh vực. Bạn kiểm tra kết nối
+                mạng hoặc thử lại sau nhé.
               </p>
               <Button
                 variant="destructive"
                 onClick={() => window.location.reload()}
               >
-                Try Again
+                Thử lại
               </Button>
             </div>
           )}
@@ -173,22 +171,22 @@ const AllCategoriesPage = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-16 bg-slate-50 dark:bg-slate-800/30 p-8 rounded-lg"
+              className="text-center py-16 rounded-xl border border-border bg-muted/30 p-8"
             >
               <Icons.packageOpen className="h-20 w-20 text-muted-foreground mx-auto mb-6 opacity-70" />
               <h3 className="text-2xl font-semibold text-foreground mb-3">
                 {debouncedSearchTerm
-                  ? 'No Categories Found'
-                  : 'No Categories Available'}
+                  ? 'Không tìm thấy lĩnh vực nào'
+                  : 'Chưa có lĩnh vực nào'}
               </h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 {debouncedSearchTerm
-                  ? `We couldn't find any categories matching "${debouncedSearchTerm}". Try a different search term.`
-                  : 'It seems there are no categories to display at the moment. Please check back later!'}
+                  ? `Không có lĩnh vực nào khớp với "${debouncedSearchTerm}". Bạn thử từ khóa khác xem sao.`
+                  : 'Hiện chưa có lĩnh vực nào để hiển thị. Bạn quay lại sau nhé.'}
               </p>
               {debouncedSearchTerm && (
                 <Button variant="outline" onClick={() => setSearchTerm('')}>
-                  Clear Search & View All
+                  Xóa từ khóa và xem tất cả
                 </Button>
               )}
             </motion.div>

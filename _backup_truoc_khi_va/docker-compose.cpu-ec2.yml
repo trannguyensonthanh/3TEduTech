@@ -1,0 +1,363 @@
+# =============================================================================
+# CPU EC2 (t3.medium) — Frontend + Backend + Redis + AI Service
+# =============================================================================
+# Usage:
+#   export DOCKER_USERNAME=your_dockerhub_username
+#   export REDIS_PASSWORD=your_redis_password
+#   docker compose -f docker-compose.cpu-ec2.yml up -d
+#
+# LƯU Ý: KHÔNG khai báo `version:` — Compose v2 đã bỏ khóa này, để lại chỉ
+# sinh cảnh báo "the attribute `version` is obsolete" mỗi lần chạy.
+#
+# -----------------------------------------------------------------------------
+# [SỬA 18/08/2026] AI SERVICE NAY CHẠY NGAY TRÊN CHÍNH MÁY NÀY
+#
+# ★ Bối cảnh: AWS chưa cấp quota vCPU cho máy GPU, nhưng RDS + EC2 CPU thì đã
+#   tạo được. Nên giai đoạn này chạy AI Service ở chế độ CHỈ DÙNG GEMINI —
+#   không Qwen (cần GPU EC2 #1), không Whisper (cần GPU EC2 #2). Ở dạng đó nó
+#   chỉ là một tiến trình FastAPI gọi API bên ngoài, chiếm ~700MB, thừa sức
+#   nằm cùng backend/redis/frontend trên t3.medium 4GB.
+#
+# ★ KHI CÓ HAI MÁY GPU THÌ CHUYỂN ĐI THẾ NÀO — KHÔNG SỬA MỘT DÒNG NÀO Ở ĐÂY:
+#
+#     1. Trên máy GPU:  docker compose -f docker-compose.gpu-ec2-ai.yml up -d
+#     2. Trên máy này, đặt trong .env:
+#            AI_SERVICE_URL=http://<ip-noi-bo-cua-may-gpu>:2111
+#     3. docker compose -f docker-compose.cpu-ec2.yml up -d --scale ai-service=0
+#
+#   Backend đọc `AI_SERVICE_URL` từ biến môi trường (mặc định trỏ vào service
+#   nội bộ), nên đổi đích chỉ là đổi một dòng trong .env. Đó chính là lý do
+#   dòng `AI_SERVICE_URL` bên dưới viết dạng `${AI_SERVICE_URL:-...}` thay vì
+#   ghi cứng.
+#
+#   ⚠️ Dùng IP NỘI BỘ trong VPC, đừng dùng IP công cộng. Khi hai máy nói chuyện
+#      qua Internet, `INTERNAL_API_KEY` sẽ đi qua đường công cộng và bắt buộc
+#      phải bọc HTTPS. Trong VPC thì không cần.
+#
+# ★ HAI ẢNH DOCKER, HAI THAM SỐ BUILD KHÁC NHAU (xem ai-service/Dockerfile):
+#     máy này  →  docker build ./ai-service                       (~500MB)
+#     máy GPU  →  docker build --build-arg INSTALL_EXTRAS="whisper,gpu" ...
+#   Vì vậy có biến `AI_IMAGE_TAG` riêng: hai máy dùng hai tag khác nhau của
+#   cùng một kho ảnh, không giẫm chân nhau.
+# =============================================================================
+
+services:
+  backend:
+    # [17/08/2026] Cho phép ghim theo tag phiên bản thay vì luôn :latest, để
+    # triển khai tất định và rollback được. CI/CD nên gắn đồng thời 2 tag
+    # (:latest và :<git-sha>), khi deploy chỉ cần đặt IMAGE_TAG=<git-sha>.
+    image: ${DOCKER_USERNAME}/3t-edu-tech-backend:${IMAGE_TAG:-latest}
+    container_name: edutech-backend
+    mem_limit: 1024m
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./3t-edu-tech-backend/.env.production
+    environment:
+      - NODE_ENV=production
+      # ---------------------------------------------------------------
+      # [THÊM 18/08/2026] Địa chỉ AI Service.
+      #
+      # Mặc định `http://ai-service:2111` — tên service trong chính tệp này,
+      # Docker Compose tự phân giải DNS nội bộ. Không đi ra Internet, không cần
+      # mở cổng nào trên Security Group.
+      #
+      # Khi chuyển AI Service sang máy GPU riêng, chỉ cần đặt trong .env:
+      #     AI_SERVICE_URL=http://10.0.x.x:2111
+      # là backend trỏ sang máy mới, không phải dựng lại image hay sửa tệp này.
+      #
+      # ⚠️ Giá trị này GHI ĐÈ dòng cùng tên trong .env.production (Compose ưu
+      #    tiên `environment:` hơn `env_file:`). Có chủ ý: đường dẫn nội bộ giữa
+      #    các container thuộc về tệp mô tả hạ tầng, không thuộc về tệp cấu hình
+      #    ứng dụng.
+      # ---------------------------------------------------------------
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:2111}
+      # ---------------------------------------------------------------
+      # [THÊM 18/08/2026 — COURSE IMPORT] Nhập khóa học từ tệp ZIP.
+      #
+      # Cùng đường dẫn với môi trường dev (docker-compose.dev.yml) — nhờ vậy
+      # mã nguồn không cần biết mình đang chạy ở đâu.
+      #
+      # ⚠️ t3.medium thường chỉ có ổ EBS 20–30GB, lại còn phải chứa Docker
+      # image + log + dữ liệu Redis. Các trần dưới đây đặt khá chặt; muốn nới
+      # thì phải mở rộng EBS trước chứ đừng chỉ sửa con số ở đây.
+      # ---------------------------------------------------------------
+      - IMPORT_TEMP_DIR=/var/lib/3tedu/imports
+      # [GHI CHÚ 18/08/2026] Giữ nguyên 200MB — nay đã là mức dư dả.
+      #
+      # Video không còn đi qua tệp ZIP: giảng viên gắn ở bước cuối, tải thẳng từ
+      # trình duyệt lên Cloudinary hoặc dán link YouTube. Tệp ZIP chỉ còn tài
+      # liệu và phụ đề, thực tế hiếm khi quá 50MB.
+      #
+      # ⚠️ Nếu nâng con số này, PHẢI nâng `client_max_body_size` trong
+      #    nginx/conf.d/locations.inc lên tương ứng (đang đặt 250m). Quên bước
+      #    đó thì Nginx trả 413 và lỗi KHÔNG hề xuất hiện trong log backend —
+      #    rất khó lần ra.
+      - IMPORT_MAX_ZIP_MB=200
+      # Chỉ tính TÀI LIỆU sau khi giải nén; byte của video không được cộng vào.
+      - IMPORT_MAX_TOTAL_MB=500
+      # 5GB trống là ranh giới an toàn. Dưới mức đó, một lần nhập vẫn có thể
+      # làm đầy ổ — mà ổ đầy trên EC2 nghĩa là Docker không ghi được log, Redis
+      # không lưu được RDB: hỏng lan rộng ra ngoài phạm vi tính năng này.
+      - IMPORT_MIN_FREE_DISK_GB=5
+      - IMPORT_TTL_HOURS=48
+      # ---------------------------------------------------------------
+      # [THÊM 18/08/2026] Tài liệu chính sách FAQ (PDF → RAG).
+      #
+      # ⚠️ Thư mục KHÁC HẲN và volume KHÁC HẲN với IMPORT_TEMP_DIR ở trên —
+      # điều này BẮT BUỘC, không phải để cho gọn. Thư mục nhập khóa học bị cron
+      # dọn định kỳ theo IMPORT_TTL_HOURS. Nếu manifest tài liệu chính sách nằm
+      # chung ở đó, sau 48 giờ toàn bộ danh mục tài liệu sẽ bị xóa cùng với tệp
+      # tạm — tệp gốc vẫn còn trên Cloudinary nhưng hệ thống không còn biết
+      # chúng tồn tại, và cũng mất luôn khóa để gỡ vector khỏi ChromaDB.
+      # ---------------------------------------------------------------
+      - FAQ_DOCS_DIR=/var/lib/3tedu/faq-docs
+      - FAQ_DOC_MAX_MB=10
+      - FAQ_DOC_MAX_COUNT=50
+    volumes:
+      # Thư mục tạm giải nén ZIP. Dùng NAMED VOLUME chứ không ghi vào lớp ghi
+      # của container: mỗi lần `docker compose up -d` thay container là lớp đó
+      # mất trắng, mà trong lúc chạy nó lại phình lên bên trong /var/lib/docker
+      # theo cách rất khó nhìn ra. Có volume riêng thì dung lượng đo được, dọn
+      # được, và một bản nháp đang chờ giảng viên duyệt vẫn sống sót qua lần
+      # triển khai kế tiếp.
+      - import-temp:/var/lib/3tedu/imports
+      # Danh mục tài liệu chính sách. KHÁC volume với import-temp: cái trên là
+      # tệp tạm xóa được thoải mái, cái này là DỮ LIỆU THẬT.
+      - faq-docs:/var/lib/3tedu/faq-docs
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    # ---------------------------------------------------------------
+    # Deep healthcheck: GET /v1/ nay thực sự kiểm tra SQL Server + Redis
+    # (xem src/app.js). Trả 503 khi mất DB, 200 "degraded" khi chỉ mất Redis.
+    #
+    # timeout = 8s: handler bên trong có 2 lớp chờ riêng (DB 3s + Redis 2s),
+    # cộng độ trễ mạng tới RDS → mức 5s mà tài liệu gợi ý là quá sát, dễ báo
+    # thất bại giả khi RDS đang bận.
+    # start_period = 30s: cho pool kết nối RDS đủ thời gian khởi tạo.
+    # ---------------------------------------------------------------
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/"]
+      interval: 15s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+    networks:
+      - edutech-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    # Ghim tới dòng phiên bản cụ thể thay vì :7-alpine trôi nổi theo thời gian
+    image: redis:7.4-alpine
+    container_name: edutech-redis
+    mem_limit: 512m
+    ports:
+      # Chỉ bind vào loopback — Redis KHÔNG được phép lộ ra ngoài EC2
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      # `redis-cli ping` trả PONG. Cần -a vì đã bật requirepass.
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      - edutech-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ===========================================================================
+  # [THÊM 18/08/2026] AI Service — bản CHỈ DÙNG GEMINI, chạy tạm trên máy CPU
+  # ===========================================================================
+  ai-service:
+    # Tag riêng, KHÔNG dùng chung `IMAGE_TAG` với backend/frontend.
+    #
+    # Ảnh của AI Service được build khác nhau cho hai loại máy (có/không có
+    # whisper+cuda). Nếu dùng chung một biến tag với backend, một lần deploy
+    # backend theo git-sha sẽ vô tình kéo theo ảnh AI Service cùng sha — mà ảnh
+    # đó có thể là bản GPU nặng 1.6GB, không chạy nổi ở đây.
+    image: ${DOCKER_USERNAME}/3t-edu-tech-ai-service:${AI_IMAGE_TAG:-cpu}
+    container_name: edutech-ai-service
+    # ~700MB là mức đo được của bản Gemini-only (FastAPI + ChromaDB + onnxruntime).
+    # Đặt trần 1024m để có chỗ thở khi nạp lại RAG, nhưng vẫn giữ tổng bốn
+    # container dưới 4GB của t3.medium: 1024 + 512 + 256 + 1024 = 2816m.
+    #
+    # ⚠️ mem_limit là TRẦN chứ không phải chỗ được giữ trước. Bốn container cộng
+    #    lại vẫn có thể vượt RAM thật nếu tất cả cùng chạm trần — lúc đó
+    #    OOM-killer của nhân Linux chọn nạn nhân theo điểm số của nó, không nhất
+    #    thiết giết đúng tiến trình đang ngốn RAM.
+    mem_limit: 1024m
+    ports:
+      # CHỈ bind loopback. Backend gọi qua mạng nội bộ của Docker
+      # (http://ai-service:2111), nên cổng này KHÔNG cần lộ ra ngoài — mở ra chỉ
+      # thêm một bề mặt tấn công, vì AI Service tiêu tốn token Gemini có trả phí
+      # và `INTERNAL_API_KEY` là lớp bảo vệ duy nhất.
+      #
+      # Giữ lại dòng này để `curl http://localhost:2111/health` trên chính máy
+      # chủ vẫn dùng được lúc cần chẩn đoán.
+      - "127.0.0.1:2111:2111"
+    env_file:
+      - ./ai-service/.env.production
+    environment:
+      - PORT=2111
+      # Ghi đè cứng, KHÔNG để phụ thuộc vào .env.production.
+      #
+      # Máy này không có GPU. Nếu .env.production còn sót LLM_PROVIDER=auto hay
+      # =qwen (rất dễ, vì cùng một tệp được chép qua lại giữa các máy), AI
+      # Service sẽ thử gọi vLLM ở 127.0.0.1:8000 — tức là gọi vào chính nó —
+      # rồi chờ hết timeout ở MỖI câu hỏi trước khi fallback sang Gemini. Người
+      # dùng chỉ thấy "chatbot phản hồi rất chậm", không thấy lỗi nào.
+      - LLM_PROVIDER=gemini
+      # Xem chú thích `ai_service_workers` trong ai-service/src/config.py:
+      # nhiều worker = nhiều tiến trình cùng mở một ChromaDB nhúng = lỗi khóa.
+      - AI_SERVICE_WORKERS=1
+      # log_level quyết định chế độ production trong run.py (tắt hot-reload).
+      - LOG_LEVEL=WARNING
+    volumes:
+      # Dữ liệu ChromaDB. Bắt buộc phải là volume: mất thư mục này nghĩa là mất
+      # toàn bộ vector đã nạp (FAQ, mô tả khóa học, phụ đề), và nạp lại tốn cả
+      # tiền lẫn thời gian gọi API embedding của Gemini.
+      - ai-chroma-data:/app/data
+    restart: always
+    # ---------------------------------------------------------------
+    # Không có `depends_on` trỏ tới backend hay redis — CÓ CHỦ Ý.
+    #
+    # AI Service không cần cả hai để khởi động, và quan hệ thật đi theo chiều
+    # ngược lại (backend gọi sang AI Service). Thêm ràng buộc thừa chỉ làm
+    # chuỗi khởi động dài ra và tạo nguy cơ phụ thuộc vòng.
+    #
+    # Backend cũng KHÔNG `depends_on` AI Service: mất chatbot thì cả trang web
+    # vẫn phải bán được khóa học.
+    # ---------------------------------------------------------------
+    healthcheck:
+      # timeout 10s (không phải 5s): /health có truy vấn thống kê ChromaDB và,
+      # khi LLM_PROVIDER=auto, còn gọi thăm dò vLLM với timeout nội bộ 3s.
+      test: ["CMD", "curl", "-f", "http://localhost:2111/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      # 40s: ChromaDB khởi tạo + nạp cấu hình lúc startup. Đặt ngắn hơn thì
+      # Docker giết container ngay giữa lúc nó đang khởi động, rồi lặp vô hạn.
+      start_period: 40s
+    networks:
+      - edutech-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    image: ${DOCKER_USERNAME}/3t-edu-tech-frontend:${IMAGE_TAG:-latest}
+    container_name: edutech-frontend
+    mem_limit: 256m
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # ---------------------------------------------------------------
+      # [SỬA 18/08/2026] Mount CẢ THƯ MỤC conf.d thay vì một tệp đơn.
+      #
+      # Bản cũ: `./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro`
+      #
+      # Nay cấu hình được tách làm ba (00-common.conf ở tầng http,
+      # locations.inc dùng chung, default.conf là khối server) để bản HTTP và
+      # bản HTTPS KHÔNG phải chép tay các `location` — nguyên nhân khiến bản
+      # HTTPS cũ rơi mất /socket.io/ và /v1/events/.
+      #
+      # ⚠️ Mount cả thư mục nghĩa là mọi tệp `*.conf` trong đó đều được nginx
+      # nạp. Đừng để tệp sao lưu kiểu `default.conf.bak` ở đây — `.bak` thì
+      # không sao, nhưng `default-cu.conf` sẽ được nạp và sinh xung đột
+      # "duplicate default server".
+      # ---------------------------------------------------------------
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+      # Thư mục ACME cho Let's Encrypt. Nginx phục vụ tệp thử thách từ đây, còn
+      # certbot trên MÁY CHỦ ghi vào cùng thư mục — nhờ vậy gia hạn chứng chỉ
+      # không cần tắt web (xem scripts/bat-https.sh).
+      - ./certbot-www:/var/www/certbot:ro
+
+      # Chứng chỉ do certbot quản lý trên máy chủ. Chỉ đọc.
+      #
+      # ⚠️ Mount cả /etc/letsencrypt chứ không chỉ thư mục `live/`: bên trong
+      # `live/` chỉ là các liên kết tượng trưng trỏ sang `archive/`. Mount riêng
+      # `live/` thì trong container các liên kết đó trỏ vào hư không và nginx
+      # báo "cannot load certificate" — một lỗi rất khó đoán ra.
+      #
+      # `:z` KHÔNG cần trên Ubuntu (chỉ cần khi host bật SELinux, ví dụ Amazon
+      # Linux hay RHEL).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    # ---------------------------------------------------------------
+    # [THÊM 17/08/2026] Trước đây frontend KHÔNG có healthcheck, nên Nginx có
+    # thể chết vì cấu hình sai mà Docker vẫn báo container "Up".
+    #
+    # ⚠️ Dùng `wget --spider` chứ KHÔNG dùng `curl`: image nginx:alpine không
+    # cài sẵn curl (đúng nguyên nhân đã làm hỏng healthcheck của backend trước
+    # đây), nhưng BusyBox trong Alpine luôn có sẵn wget.
+    # ---------------------------------------------------------------
+    healthcheck:
+      # [SỬA 18/08/2026] `/` → `/nginx-health`.
+      #
+      # Sau khi bật HTTPS, `/` trên cổng 80 trả 301 sang https://localhost —
+      # tên đó không khớp chứng chỉ, `wget --spider` đi theo rồi lỗi TLS, và
+      # container bị đánh dấu "unhealthy" vĩnh viễn dù web vẫn phục vụ bình
+      # thường. `/nginx-health` trả 200 thẳng ở cả hai chế độ.
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - edutech-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  edutech-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+  # [THÊM 18/08/2026 — COURSE IMPORT] Thư mục tạm giải nén ZIP.
+  # Theo dõi dung lượng bằng: docker system df -v | grep import-temp
+  import-temp:
+  # [THÊM 18/08/2026] Vector store của ChromaDB.
+  #
+  # ⚠️ ĐÂY LÀ DỮ LIỆU THẬT, không phải cache. `docker compose down -v` sẽ xóa
+  #    sạch và toàn bộ tri thức của chatbot phải nạp lại từ đầu (tốn lượt gọi
+  #    API embedding của Gemini). Sao lưu bằng:
+  #      docker run --rm -v cnpm_ai-chroma-data:/d -v $PWD:/b alpine \
+  #        tar czf /b/chroma-backup.tgz -C /d .
+  ai-chroma-data:
+  # [THÊM 18/08/2026] Danh mục tài liệu chính sách FAQ (manifest.json + bản text).
+  #
+  # ⚠️ DỮ LIỆU THẬT, không phải tệp tạm. Mất volume này thì tệp PDF vẫn còn trên
+  #    Cloudinary nhưng hệ thống không còn biết chúng tồn tại — và cũng không
+  #    còn khóa `sourceName` để gỡ vector tương ứng khỏi ChromaDB.
+  faq-docs:

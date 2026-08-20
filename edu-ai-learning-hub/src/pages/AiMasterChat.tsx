@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   MessageSquare,
@@ -17,22 +16,18 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
-  Zap,
   BookOpen,
-  Lock,
   RefreshCw,
   Layers,
   ShieldCheck,
   Search,
-  CheckCircle,
-  CreditCard,
-  Volume2,
   Copy,
   Check,
-  Terminal,
 } from 'lucide-react';
 import {
   getOrCreateChatSession,
+  getSessionMessages,
+  archiveChatSession,
   streamChatMessage,
   UIWidgetData,
 } from '@/services/ai.service';
@@ -62,6 +57,29 @@ interface ChatSession {
   createdAt: number;
   updatedAt: number;
   messages: ChatMessage[];
+  /**
+   * [THÊM 20/08/2026] Số hiệu phiên THẬT ở phía máy chủ.
+   *
+   * Trước đây trang này chỉ giữ một `serverSessionIdRef` DUY NHẤT cho cả
+   * trang, và nó luôn trỏ về đúng một phiên MASTER. Hệ quả: mọi "hội thoại"
+   * trong thanh bên chỉ là các mảng tin nhắn khác nhau trong localStorage,
+   * còn phía máy chủ tất cả dùng chung một dòng lịch sử. Bấm "Hội thoại mới"
+   * xong hỏi câu đầu tiên thì mô hình vẫn trả lời tiếp chuyện cũ, vì backend
+   * đọc 5 lượt gần nhất của chính phiên đó từ CSDL.
+   *
+   * Nay mỗi hội thoại trong thanh bên gắn với một phiên riêng.
+   */
+  serverSessionId?: number | null;
+  /**
+   * Chỉ bật cho hội thoại vừa được tạo bằng nút "Hội thoại mới".
+   *
+   * Cần phân biệt với "chưa gắn phiên" nói chung: một hội thoại cũ đọc lên từ
+   * localStorage của bản trước cũng chưa có `serverSessionId`, nhưng nó KHÔNG
+   * nên tạo phiên mới — làm vậy sẽ bỏ rơi lịch sử đang có ở máy chủ. Chỉ khi
+   * người dùng chủ động bấm "Hội thoại mới" thì việc cắt đứt ngữ cảnh cũ mới
+   * đúng ý họ.
+   */
+  forceNewOnFirstMessage?: boolean;
 }
 
 const STORAGE_KEY_SESSIONS = 'agy_master_chat_sessions_v2';
@@ -109,13 +127,40 @@ const AiMasterChat: React.FC = () => {
 
      Tạo lười (chỉ khi gửi tin đầu tiên) để mở trang không kèm một lần gọi API
      thừa. Backend trả về đúng phiên MASTER đang mở nếu đã có. */
-  const serverSessionIdRef = useRef<number | null>(null);
-  const ensureServerSession = async (): Promise<number> => {
-    if (serverSessionIdRef.current !== null) return serverSessionIdRef.current;
-    const session = await getOrCreateChatSession({ scope: 'MASTER' });
-    serverSessionIdRef.current = session.sessionId;
+  const abortRef = useRef<AbortController | null>(null);
+
+  /**
+   * Lấy (hoặc tạo) phiên máy chủ gắn với hội thoại đang mở ở thanh bên.
+   *
+   * `forceNew` chỉ bật cho hội thoại được tạo bằng nút "Hội thoại mới" và chưa
+   * từng gửi tin nào — đó là lúc duy nhất người dùng thực sự muốn một dòng
+   * lịch sử mới. Các lần sau dùng lại đúng phiên đã gắn.
+   */
+  const ensureServerSession = async (localSessionId: string): Promise<number> => {
+    const bound = sessionsRef.current.find((s) => s.id === localSessionId);
+    if (bound?.serverSessionId) return bound.serverSessionId;
+
+    const session = await getOrCreateChatSession({
+      scope: 'MASTER',
+      forceNew: bound?.forceNewOnFirstMessage === true,
+    });
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === localSessionId
+          ? {
+              ...s,
+              serverSessionId: session.sessionId,
+              forceNewOnFirstMessage: false,
+            }
+          : s
+      )
+    );
     return session.sessionId;
   };
+
+  /* Bộ hẹn giờ của nút sao chép. Khai báo cạnh `abortRef` để hiệu ứng dọn dẹp
+     bên dưới nhìn thấy cả hai ở cùng một chỗ. */
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -159,6 +204,15 @@ const AiMasterChat: React.FC = () => {
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
   const messages = activeSession ? activeSession.messages : [];
 
+  /* Bản sao mới nhất của `sessions` dùng trong các hàm bất đồng bộ.
+     Đọc thẳng `sessions` trong một hàm async là đọc giá trị đã đóng băng ở lần
+     render nó được tạo ra — với luồng chat kéo dài vài giây thì giá trị đó gần
+     như chắc chắn đã cũ. */
+  const sessionsRef = useRef<ChatSession[]>(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
   // Save to LocalStorage whenever sessions change
   useEffect(() => {
     try {
@@ -168,7 +222,68 @@ const AiMasterChat: React.FC = () => {
     }
   }, [sessions]);
 
+  /* ------------------------------------------------------------------------
+     Nạp lịch sử THẬT từ máy chủ cho hội thoại đang mở.
+
+     [THÊM 20/08/2026] Trang này trước đây chỉ đọc localStorage. Mở trên máy
+     khác, hay sau khi xóa cache trình duyệt, người dùng thấy khung chat trắng
+     trơn trong khi mô hình vẫn nhớ toàn bộ cuộc trò chuyện — vì lịch sử nằm ở
+     CSDL. Nay hai bên khớp nhau.
+
+     Chỉ nạp khi hội thoại ĐÃ gắn với một phiên máy chủ và đang trống ở phía
+     trình duyệt; hội thoại đã có tin nhắn cục bộ thì giữ nguyên để không ghi đè
+     phần người dùng đang đọc dở. */
+  const hydratedRef = useRef<Set<number>>(new Set());
   useEffect(() => {
+    const current = sessions.find((s) => s.id === activeSessionId);
+    const serverId = current?.serverSessionId;
+    if (!serverId || hydratedRef.current.has(serverId)) return;
+
+    const localCount = (current?.messages || []).filter(
+      (m) => !m.id.startsWith('welcome-')
+    ).length;
+    if (localCount > 0) {
+      hydratedRef.current.add(serverId);
+      return;
+    }
+
+    let active = true;
+    hydratedRef.current.add(serverId);
+    (async () => {
+      try {
+        const { messages: stored } = await getSessionMessages(serverId);
+        if (!active || stored.length === 0) return;
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeSessionId
+              ? {
+                  ...s,
+                  messages: stored.map((m) => ({
+                    id: `db-${m.messageId}`,
+                    text: m.content,
+                    sender: m.role === 'user' ? ('user' as const) : ('bot' as const),
+                    sources: m.sources,
+                    uiWidget: m.uiWidget,
+                    timestamp: new Date(m.createdAt).getTime(),
+                  })),
+                }
+              : s
+          )
+        );
+      } catch (e) {
+        // Không nạp được lịch sử thì vẫn dùng được khung chat — chỉ ghi log.
+        console.error('Không nạp được lịch sử hội thoại từ máy chủ:', e);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSessionId, sessions.find((s) => s.id === activeSessionId)?.serverSessionId]);
+
+  useEffect(() => {
+    // Tự động lướt lên đầu trang khi component mount
+    window.scrollTo({ top: 0, behavior: 'instant' });
     if (activeSessionId) {
       localStorage.setItem(STORAGE_KEY_ACTIVE_ID, activeSessionId);
     }
@@ -184,10 +299,19 @@ const AiMasterChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  // Cleanup timer on unmount
+  /* Dọn khi rời trang.
+
+     [SỬA 20/08/2026] Bản cũ chỉ dọn bộ đếm nhả chữ, KHÔNG hủy luồng SSE. Điều
+     hướng khỏi trang giữa lúc AI đang trả lời (ứng dụng một trang, component bị
+     gỡ nhưng `fetch` vẫn sống) khiến backend không nhận được sự kiện `close`,
+     nên AI Service tiếp tục sinh chữ tới hết câu trả lời cho một người đã bỏ đi
+     — đốt hạn mức mô hình vô ích. Hook `useChatbot` đã làm đúng việc này từ
+     đầu bằng AbortController; riêng trang này bỏ sót. */
   useEffect(() => {
     return () => {
       if (typewriterTimerRef.current) clearInterval(typewriterTimerRef.current);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -200,6 +324,11 @@ const AiMasterChat: React.FC = () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messages: [{ ...initialWelcomeMessage, id: `welcome-${Date.now()}`, timestamp: Date.now() }],
+      // Chưa gắn phiên máy chủ. Lần gửi tin đầu tiên sẽ tạo phiên MỚI thay vì
+      // dùng lại phiên MASTER đang mở — nếu không, "Hội thoại mới" chỉ mới ở
+      // phía trình duyệt còn mô hình vẫn nhớ nguyên chuyện cũ.
+      serverSessionId: null,
+      forceNewOnFirstMessage: true,
     };
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newId);
@@ -219,6 +348,17 @@ const AiMasterChat: React.FC = () => {
       });
       return;
     }
+    /* [THÊM 20/08/2026] Lưu trữ luôn phiên phía máy chủ.
+       Bản cũ chỉ xóa mục trong localStorage; phía CSDL phiên vẫn mở, nên lượt
+       hỏi tiếp theo mô hình vẫn nhận đúng lịch sử mà người dùng tưởng đã xóa.
+       Backend chỉ ĐÁNH DẤU lưu trữ chứ không xóa dữ liệu (thống kê cần giữ). */
+    const removed = sessions.find((s) => s.id === id);
+    if (removed?.serverSessionId) {
+      archiveChatSession(removed.serverSessionId).catch((e) =>
+        console.error('Không lưu trữ được phiên phía máy chủ:', e)
+      );
+    }
+
     const remaining = sessions.filter((s) => s.id !== id);
     setSessions(remaining);
     if (activeSessionId === id) {
@@ -344,7 +484,12 @@ const AiMasterChat: React.FC = () => {
                                nếu muốn AI biết, backend phải tự tra (xem
                                enrollmentRepository trong chat.service.js). */
     try {
-      const sessionId = await ensureServerSession();
+      const sessionId = await ensureServerSession(activeSession.id);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       await streamChatMessage(sessionId, textToSend, {
         onMetadata: (data) => {
           setSessions((prev) =>
@@ -400,7 +545,7 @@ const AiMasterChat: React.FC = () => {
             )
           );
         },
-      });
+      }, controller.signal);
     } catch (err) {
       /* Lỗi ở ĐÂY là lỗi trước khi luồng chạy — chủ yếu là không tạo được phiên
          (mất mạng, hết hạn đăng nhập). Lỗi giữa luồng đã có onError lo. */
@@ -418,10 +563,14 @@ const AiMasterChat: React.FC = () => {
     }
   };
 
+  /* [SỬA 20/08/2026] Giữ tham chiếu tới bộ hẹn giờ để dọn khi rời trang.
+     Bản cũ bỏ rơi `setTimeout`: sao chép rồi rời trang ngay trong hai giây sẽ
+     gọi setState trên một component đã bị gỡ. */
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedMsgId(id);
-    setTimeout(() => setCopiedMsgId(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedMsgId(null), 2000);
   };
 
   const filteredSessions = sessions.filter((s) =>
@@ -439,47 +588,52 @@ const AiMasterChat: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <div className={`flex flex-col md:flex-row bg-slate-950 text-slate-100 min-h-[calc(100vh-64px)] ${isFullScreen ? 'fixed inset-0 z-50 bg-slate-950 h-screen w-screen' : ''}`}>
-        
-        {/* --- LEFT SIDEBAR (SESSIONS) --- */}
+    <Layout hideFooter={true} fullScreen={true}>
+      <div
+        className={`flex flex-1 min-h-0 flex-col bg-background text-foreground md:flex-row ${
+          isFullScreen ? 'fixed inset-0 z-50 h-screen w-screen' : ''
+        }`}
+      >
+        {/* --- Thanh bên: danh sách hội thoại --- */}
         <div
           className={`${
-            sidebarOpen ? 'w-full md:w-80 opacity-100' : 'w-0 opacity-0 pointer-events-none md:pointer-events-auto'
-          } transition-all duration-300 ease-in-out bg-slate-900/90 border-r border-slate-800/80 backdrop-blur-xl flex flex-col shrink-0 relative overflow-hidden`}
+            sidebarOpen
+              ? 'w-full opacity-100 md:w-80'
+              : 'pointer-events-none w-0 opacity-0 md:pointer-events-auto'
+          } relative flex shrink-0 flex-col overflow-hidden border-b border-border bg-card transition-all duration-300 ease-in-out md:border-b-0 md:border-r`}
         >
-          {/* Header & New Chat Button */}
-          <div className="p-4 border-b border-slate-800/80 flex flex-col gap-3">
-            <Button
-              onClick={handleNewSession}
-              className="w-full h-11 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Hội Thoại Mới</span>
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse ml-1" />
+          {/* Nút tạo hội thoại mới + ô tìm kiếm */}
+          <div className="flex flex-col gap-3 border-b border-border p-4">
+            <Button onClick={handleNewSession} className="h-10 w-full gap-2">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              <span>Hội thoại mới</span>
             </Button>
 
-            {/* Search Bar */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
-                placeholder="Tìm kiếm đoạn chat..."
+                placeholder="Tìm trong lịch sử hội thoại..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 bg-slate-950/60 border-slate-800 text-xs rounded-lg text-slate-200 placeholder:text-slate-500 focus:border-indigo-500/50"
+                className="h-9 pl-9 text-sm"
               />
             </div>
           </div>
 
-          {/* Session List */}
-          <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800">
-            <div className="text-[11px] font-bold uppercase text-slate-500 tracking-wider px-2 py-1 flex items-center gap-1.5">
-              <Layers className="w-3 h-3 text-indigo-400" />
-              <span>Lịch Sử Phên Chat ({sessions.length})</span>
+          {/* Danh sách phiên */}
+          <div className="flex-1 space-y-1 overflow-y-auto p-2 sm:p-3">
+            <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Lịch sử hội thoại ({sessions.length})</span>
             </div>
 
             {filteredSessions.length === 0 ? (
-              <p className="text-center text-xs text-slate-500 py-6">Không tìm thấy đoạn chat phù hợp.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Không tìm thấy hội thoại phù hợp.
+              </p>
             ) : (
               filteredSessions.map((s) => {
                 const isActive = s.id === activeSession.id;
@@ -487,36 +641,36 @@ const AiMasterChat: React.FC = () => {
                   <div
                     key={s.id}
                     onClick={() => setActiveSessionId(s.id)}
-                    className={`group p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between gap-2 border ${
+                    className={`group flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2.5 transition-colors ${
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/50 border-indigo-500/50 text-white shadow-md shadow-indigo-500/10'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                        ? 'border-border bg-accent text-accent-foreground'
+                        : 'border-transparent text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          isActive
-                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <h5 className="text-xs font-semibold truncate leading-tight">{s.title}</h5>
-                        <span className="text-[10px] text-slate-500 block mt-0.5">
-                          {new Date(s.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {s.messages.length} tin nhắn
+                        <h5 className="truncate text-sm font-medium leading-tight text-foreground">
+                          {s.title}
+                        </h5>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {new Date(s.updatedAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}{' '}
+                          · {s.messages.length} tin nhắn
                         </span>
                       </div>
                     </div>
 
                     <button
                       onClick={(e) => handleDeleteSession(s.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-opacity shrink-0"
-                      title="Xóa phiên"
+                      className="shrink-0 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-danger group-hover:opacity-100"
+                      title="Xóa hội thoại"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 );
@@ -524,49 +678,51 @@ const AiMasterChat: React.FC = () => {
             )}
           </div>
 
-          {/* Footer Info */}
-          <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 text-[11px] text-slate-400 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-semibold text-indigo-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Gemini 2.5 Pro SSE Engine</span>
-            </div>
-            <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px] font-mono">v3.2</span>
+          {/* Chân thanh bên */}
+          <div className="flex items-center justify-between border-t border-border px-3 py-2.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5 font-medium">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+              Trợ lý học tập 3T EduTech
+            </span>
+            <span className="rounded bg-muted px-2 py-0.5 font-mono">v3.2</span>
           </div>
         </div>
 
-        {/* --- MAIN CHAT WORKSPACE --- */}
-        <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-          
-          {/* Top Navbar */}
-          <div className="h-14 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-4 flex items-center justify-between gap-3 shrink-0 z-10 shadow-sm">
-            <div className="flex items-center gap-2">
+        {/* --- Khu làm việc chính --- */}
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+          {/* Thanh trên cùng */}
+          <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4">
+            <div className="flex min-w-0 items-center gap-2">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                title="Đóng/Mở Lịch sử chat"
+                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Đóng/mở lịch sử hội thoại"
               >
-                {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {sidebarOpen ? (
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                )}
               </button>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
-                <h3 className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-md">
-                  {activeSession.title}
-                </h3>
-              </div>
+              <h3 className="truncate text-sm font-semibold">
+                {activeSession.title}
+              </h3>
             </div>
 
-            {/* Scale / Zoom & Fullscreen Controls */}
+            {/* Cỡ chữ và toàn màn hình */}
             <div className="flex items-center gap-1 sm:gap-2">
-              <div className="hidden sm:flex items-center gap-1 bg-slate-950/80 border border-slate-800 p-1 rounded-xl">
-                <span className="text-[11px] font-semibold text-slate-400 px-2">Scale:</span>
+              <div className="hidden items-center gap-1 rounded-lg border border-border p-1 sm:flex">
+                <span className="px-2 text-xs text-muted-foreground">
+                  Cỡ chữ
+                </span>
                 {(['sm', 'md', 'lg', 'xl'] as const).map((size) => (
                   <button
                     key={size}
                     onClick={() => setScaleFactor(size)}
-                    className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors ${
                       scaleFactor === size
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     {size.toUpperCase()}
@@ -576,80 +732,91 @@ const AiMasterChat: React.FC = () => {
 
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
-                className="p-2 rounded-lg bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 title={isFullScreen ? 'Thu nhỏ' : 'Toàn màn hình'}
               >
-                {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {isFullScreen ? (
+                  <Minimize2 className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                )}
               </button>
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div ref={chatAreaRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 flex flex-col items-center scroll-smooth">
-            <div className={`w-full ${getScaleClass()} space-y-6 transition-all duration-200`}>
-              
+          {/* Khung hội thoại */}
+          <div
+            ref={chatAreaRef}
+            className="flex flex-1 flex-col items-center overflow-y-auto scroll-smooth p-4 sm:p-6"
+          >
+            <div
+              className={`w-full ${getScaleClass()} space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6`}
+            >
               {messages.map((message, idx) => {
                 const isUser = message.sender === 'user';
                 return (
                   <div
                     key={message.id || idx}
-                    className={`flex gap-3 sm:gap-4 items-start ${isUser ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-start gap-3 sm:gap-4 ${
+                      isUser ? 'justify-end' : 'justify-start'
+                    }`}
                   >
-                    {/* Avatar */}
+                    {/* Ảnh đại diện trợ lý */}
                     {!isUser && (
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 border border-indigo-400/30">
-                        <Bot className="w-5 h-5" />
-                      </div>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                        <Bot className="h-5 w-5" aria-hidden="true" />
+                      </span>
                     )}
 
-                    {/* Bubble */}
+                    {/* Bong bóng tin nhắn */}
                     <div
-                      className={`relative rounded-2xl p-4 sm:p-5 max-w-[90%] sm:max-w-[85%] leading-relaxed shadow-xl border ${
+                      className={`max-w-[90%] rounded-xl p-4 leading-relaxed sm:max-w-[85%] sm:p-5 ${
                         isUser
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none border-blue-500/50 shadow-blue-600/10'
-                          : 'bg-slate-900/95 text-slate-100 rounded-bl-none border-slate-800 shadow-black/30 backdrop-blur-md'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
                       }`}
                     >
-                      {/* Bot Header Action Bar */}
+                      {/* Thanh thao tác của tin nhắn trợ lý */}
                       {!isUser && (
-                        <div className="flex items-center justify-between gap-4 pb-2.5 mb-3 border-b border-slate-800/80 text-xs text-slate-400 font-semibold">
-                          <span className="flex items-center gap-1.5 text-indigo-400">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>AI Master Response</span>
+                        <div className="mb-3 flex items-center justify-between gap-4 border-b border-border pb-2.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span>Trả lời từ trợ lý</span>
                           </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => copyToClipboard(message.text, message.id)}
-                              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px]"
-                              title="Sao chép nội dung"
-                            >
-                              {copiedMsgId === message.id ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span className="text-emerald-400">Đã chép</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3.5 h-3.5" />
-                                  <span>Sao chép</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => copyToClipboard(message.text, message.id)}
+                            className="flex items-center gap-1 rounded px-1.5 py-1 transition-colors hover:bg-background hover:text-foreground"
+                            title="Sao chép nội dung"
+                          >
+                            {copiedMsgId === message.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                <span>Đã chép</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                                <span>Sao chép</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
 
-                      {/* Content Text */}
-                      <div className="whitespace-pre-wrap word-break sm:leading-7 tracking-wide font-normal">
-                        {message.text || (isStreaming && idx === messages.length - 1 ? '🤖 Đang suy nghĩ và xử lý tín hiệu...' : '')}
+                      {/* Nội dung */}
+                      <div className="whitespace-pre-wrap break-words">
+                        {message.text ||
+                          (isStreaming && idx === messages.length - 1
+                            ? 'Trợ lý đang soạn câu trả lời...'
+                            : '')}
                         {!isUser && isStreaming && idx === messages.length - 1 && (
-                          <span className="inline-block w-2 h-4 bg-indigo-400 ml-1 animate-pulse align-middle" />
+                          <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-muted-foreground align-middle" />
                         )}
                       </div>
 
-                      {/* --- WIDGET RENDERER IN DEDICATED MASTER PAGE (Hiển thị sau khi AI viết xong text) --- */}
+                      {/* --- Widget đi kèm câu trả lời (hiện sau khi viết xong) --- */}
                       {message.uiWidget && !(isStreaming && idx === messages.length - 1) && (
-                        <div className="mt-4 pt-2 border-t border-slate-800">
+                        <div className="mt-4 border-t border-border pt-3">
                           {message.uiWidget.type === 'COURSE_CAROUSEL' && (
                             <CourseCarouselWidget
                               data={message.uiWidget.data as any}
@@ -674,35 +841,38 @@ const AiMasterChat: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Sources / RAG Citations */}
+                      {/* Nguồn trích dẫn */}
                       {message.sources && message.sources.length > 0 && (
-                        <div className="mt-4 bg-slate-950/60 p-3 rounded-xl border border-indigo-900/40 text-xs">
-                          <span className="text-indigo-400 font-bold flex items-center gap-1.5 mb-1.5">
-                            <BookOpen className="w-3.5 h-3.5" />
-                            Nguồn Trích Xuất & Tri Thức Khóa Học:
+                        <div className="mt-4 rounded-lg border border-border bg-background p-3 text-xs">
+                          <span className="mb-1.5 flex items-center gap-1.5 font-medium text-foreground">
+                            <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                            Nguồn trích từ tài liệu khóa học
                           </span>
                           <div className="space-y-1">
                             {message.sources.map((src, i) => (
-                              <div key={i} className="text-slate-300 truncate font-mono text-[11px] bg-slate-900 px-2 py-1 rounded">
-                                • {src.file_name}
+                              <div
+                                key={i}
+                                className="truncate rounded bg-muted px-2 py-1 font-mono text-muted-foreground"
+                              >
+                                {src.file_name}
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Suggested Questions */}
+                      {/* Câu hỏi gợi ý */}
                       {message.suggestedQuestions && message.suggestedQuestions.length > 0 && !isStreaming && (
-                        <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
-                          <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block">
-                            💡 Câu hỏi gợi ý tiếp tục:
+                        <div className="mt-4 space-y-2 border-t border-border pt-3">
+                          <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Câu hỏi gợi ý
                           </span>
                           <div className="flex flex-wrap gap-2">
                             {message.suggestedQuestions.map((q, qIndex) => (
                               <button
                                 key={qIndex}
                                 onClick={() => handleSendMessage(q)}
-                                className="text-xs text-left px-3 py-1.5 rounded-xl bg-indigo-950/50 hover:bg-indigo-900/80 text-indigo-200 border border-indigo-500/30 transition-all shadow-sm hover:scale-[1.02] active:scale-95"
+                                className="rounded-lg border border-border bg-background px-3 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                               >
                                 {q}
                               </button>
@@ -711,17 +881,24 @@ const AiMasterChat: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Timestamp */}
-                      <span className={`text-[10px] block mt-2 text-right opacity-70 ${isUser ? 'text-indigo-200' : 'text-slate-500'}`}>
-                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {/* Giờ gửi */}
+                      <span
+                        className={`mt-2 block text-right text-xs ${
+                          isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                     </div>
 
-                    {/* User Avatar */}
+                    {/* Ảnh đại diện người dùng */}
                     {isUser && (
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shrink-0 border border-blue-400/30">
-                        <User className="w-5 h-5" />
-                      </div>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                        <User className="h-5 w-5" aria-hidden="true" />
+                      </span>
                     )}
                   </div>
                 );
@@ -731,8 +908,8 @@ const AiMasterChat: React.FC = () => {
             </div>
           </div>
 
-          {/* Input Footer Area */}
-          <div className="border-t border-slate-800 bg-slate-900/90 backdrop-blur-xl p-3 sm:p-4 shrink-0 flex flex-col items-center">
+          {/* Ô nhập tin nhắn */}
+          <div className="flex shrink-0 flex-col items-center border-t border-border bg-card p-3 sm:p-4">
             <div className={`w-full ${getScaleClass()} flex flex-col gap-2`}>
               <form
                 onSubmit={(e) => {
@@ -745,33 +922,33 @@ const AiMasterChat: React.FC = () => {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Gợi ý: 'Tư vấn lộ trình React', 'Khóa học số 1 giá bao nhiêu', 'Thanh toán MoMo'..."
+                  placeholder="Ví dụ: tư vấn lộ trình React, khóa học số 1 giá bao nhiêu, thanh toán MoMo..."
                   disabled={isStreaming}
-                  className="w-full pl-4 pr-24 py-3.5 sm:py-4 bg-slate-950 border border-slate-700/80 rounded-2xl text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                  className="w-full rounded-lg border border-input bg-background py-3 pl-4 pr-28 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:opacity-60"
                 />
 
                 <div className="absolute right-2 flex items-center gap-1.5">
                   <Button
                     type="submit"
                     disabled={!inputText.trim() || isStreaming}
-                    className="h-10 px-4 sm:px-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-transform active:scale-95 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                    className="h-9 gap-1.5 px-4"
                   >
                     {isStreaming ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
                     ) : (
                       <>
                         <span className="hidden sm:inline">Gửi</span>
-                        <Send className="w-4 h-4" />
+                        <Send className="h-4 w-4" aria-hidden="true" />
                       </>
                     )}
                   </Button>
                 </div>
               </form>
 
-              <div className="flex items-center justify-between px-2 text-[11px] text-slate-400">
-                <span>🛡️ AI tự động chuyển đổi tỷ giá và hỗ trợ 5 cổng thanh toán toàn cầu.</span>
-                <span className="hidden md:inline text-indigo-400">Google Deepmind Engine</span>
-              </div>
+              <p className="px-1 text-xs text-muted-foreground">
+                Trợ lý hỗ trợ tìm khóa học, giải đáp bài học và mở cổng thanh toán.
+                Thông tin do trợ lý đưa ra chỉ mang tính tham khảo.
+              </p>
             </div>
           </div>
         </div>

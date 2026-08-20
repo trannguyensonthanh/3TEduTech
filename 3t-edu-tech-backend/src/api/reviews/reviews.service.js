@@ -88,6 +88,18 @@ const createOrUpdateReview = async (user, courseId, reviewBody) => {
   let savedReview;
   let isNewReview = false;
 
+  /* [SỬA 19/08/2026] Mỗi học viên chỉ được đánh giá MỘT LẦN cho một khóa học.
+
+     Trước đây hàm này là upsert nên người học sửa lại điểm không giới hạn,
+     khiến điểm trung bình của khóa học có thể bị một người kéo lên hoặc dìm
+     xuống nhiều lần. Muốn cho phép sửa lại thì bỏ khối chặn dưới đây. */
+  if (existingReview) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Bạn đã đánh giá khóa học này rồi. Mỗi học viên chỉ được đánh giá một lần.'
+    );
+  }
+
   if (existingReview) {
     logger.info(
       `Updating existing review ${existingReview.ReviewID} for course ${courseId} by user ${accountId}`

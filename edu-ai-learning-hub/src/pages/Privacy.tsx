@@ -1,35 +1,23 @@
-// src/pages/PrivacyPolicyPage.tsx
-import React from 'react';
+// src/pages/Privacy.tsx
 import Layout from '@/components/layout/Layout';
 import {
   ChevronRight,
-  ShieldAlert,
+  ShieldCheck,
   FileText,
   Users,
-  Info,
   Mail,
-  ExternalLink,
   DatabaseZap,
   UserCog,
   Cookie,
-  Edit3,
   GitCompareArrows,
   LockKeyhole,
-} from 'lucide-react'; // Thêm/thay đổi icons
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card'; // Thêm CardDescription
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { Icons } from '@/components/common/Icons'; // Để lấy các icon chung nếu cần
 import { Button } from '@/components/ui/button';
 
-// Animation Variants
+// Hiệu ứng xuất hiện khi cuộn tới
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },
   visible: (i: number = 0) => ({
@@ -38,171 +26,164 @@ const sectionVariants = {
     transition: { delay: i * 0.1, duration: 0.6, ease: 'easeOut' },
   }),
 };
-const itemVariants = {
-  // Cho các list item nhỏ
-  hidden: { opacity: 0, x: -20 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: 'easeOut' } },
-};
 
+const toHtml = (text: string) =>
+  text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+/**
+ * Trang chính sách quyền riêng tư.
+ *
+ * Bản trước mở đầu bằng một dải nền chuyển sắc, mỗi mục lại có một biểu tượng
+ * mang màu riêng (xanh, lục, tím, đỏ, ngọc, cam, chàm, xám) nên mười mục hiện
+ * ra tám màu không mang thông tin gì. Nay mọi biểu tượng dùng chung một sắc độ
+ * của màu nhấn, thẻ dùng token nền thẻ và viền mảnh.
+ */
 const PrivacyPolicyPage = () => {
-  const lastUpdatedDate = 'October 26, 2023'; // Cập nhật ngày này
+  const lastUpdatedDate = '26/10/2023';
 
-  // Cấu trúc nội dung được tinh chỉnh và viết lại
   const policySections = [
     {
       id: 'introduction',
-      title: 'Our Commitment to Your Privacy',
-      icon: (
-        <ShieldAlert className="h-7 w-7 mr-3 text-blue-600 dark:text-blue-400" />
-      ),
+      title: 'Cam kết của chúng tôi về quyền riêng tư',
+      icon: ShieldCheck,
       content: [
-        'At 3TEduTech ("3TEduTech", "we", "us", or "our"), your privacy is paramount. This Privacy Policy details our dedication to protecting your personal information when you use our online learning platform, including our website, mobile applications, and related services (collectively, the "Services").',
-        'We encourage you to read this policy thoroughly to understand how we collect, use, disclose, and safeguard your data. By accessing or using our Services, you acknowledge you have read and agree to the practices described herein. This policy may be updated periodically, so please review it regularly.',
+        'Tại 3TEduTech, quyền riêng tư của bạn là ưu tiên hàng đầu. Chính sách này mô tả cách chúng tôi bảo vệ thông tin cá nhân khi bạn sử dụng nền tảng học trực tuyến của chúng tôi, bao gồm trang web, ứng dụng di động và các dịch vụ liên quan (gọi chung là "Dịch vụ").',
+        'Bạn nên đọc kỹ chính sách này để hiểu chúng tôi thu thập, sử dụng, tiết lộ và bảo vệ dữ liệu của bạn ra sao. Khi truy cập hoặc sử dụng Dịch vụ, bạn xác nhận đã đọc và đồng ý với các thực hành được mô tả ở đây. Chính sách có thể được cập nhật theo thời gian, vì vậy hãy xem lại định kỳ.',
       ],
     },
     {
       id: 'information-we-collect',
-      title: 'The Information We Gather',
-      icon: (
-        <FileText className="h-7 w-7 mr-3 text-green-600 dark:text-green-400" />
-      ),
+      title: 'Thông tin chúng tôi thu thập',
+      icon: FileText,
       description:
-        'To provide and enhance our Services, we collect various types of information:',
+        'Để cung cấp và cải thiện Dịch vụ, chúng tôi thu thập các loại thông tin sau:',
       subSections: [
         {
-          title: '2.1. Information You Provide Directly',
-          intro:
-            'When you interact with our Services, you may provide us with:',
+          title: '2.1. Thông tin bạn cung cấp trực tiếp',
+          intro: 'Khi sử dụng Dịch vụ, bạn có thể cung cấp cho chúng tôi:',
           list: [
-            '<strong>Account & Identity Information:</strong> Such as your full name, username, email address, password, date of birth, profile picture, and any other details you add to your profile.',
-            '<strong>Contact Information:</strong> Including your phone number, postal address, and communication preferences for receiving updates from us.',
-            '<strong>Financial Information:</strong> Payment card details (which are processed securely by our third-party payment partners and not stored by us directly), purchase history, and transaction records related to course enrollments or instructor payouts.',
-            '<strong>Educational & Professional Information:</strong> For learners, this includes course progress, quiz scores, assignment submissions, and certificates earned. For instructors, this encompasses expertise, professional biography, educational background, and content provided for courses.',
-            '<strong>User-Generated Content:</strong> Any content you create, share, or post on the Platform, such as forum discussions, course reviews, project submissions, or direct messages.',
-            '<strong>Communication Data:</strong> Records of your communications with us, including support tickets, feedback, survey responses, and interactions with our team or other users through the Platform.',
+            '**Thông tin tài khoản và danh tính:** họ tên, tên đăng nhập, địa chỉ thư điện tử, mật khẩu, ngày sinh, ảnh đại diện và các thông tin khác bạn thêm vào hồ sơ.',
+            '**Thông tin liên hệ:** số điện thoại, địa chỉ nhận thư và lựa chọn nhận thông báo từ chúng tôi.',
+            '**Thông tin thanh toán:** thông tin thẻ (được xử lý an toàn bởi đối tác thanh toán, chúng tôi không lưu trực tiếp), lịch sử mua hàng và các giao dịch liên quan tới ghi danh khóa học hoặc chi trả cho giảng viên.',
+            '**Thông tin học tập và nghề nghiệp:** với học viên là tiến độ học, điểm bài kiểm tra, bài nộp và chứng chỉ đạt được; với giảng viên là chuyên môn, tiểu sử nghề nghiệp, quá trình đào tạo và nội dung khóa học.',
+            '**Nội dung do bạn tạo:** bài viết trong diễn đàn, đánh giá khóa học, bài tập nộp lên hoặc tin nhắn trao đổi trên nền tảng.',
+            '**Dữ liệu trao đổi:** nội dung liên hệ với chúng tôi, gồm phiếu hỗ trợ, góp ý, câu trả lời khảo sát và tương tác với đội ngũ hoặc người dùng khác.',
           ],
         },
         {
-          title: '2.2. Information Collected Automatically',
-          intro:
-            'As you navigate and interact with our Services, we may automatically collect:',
+          title: '2.2. Thông tin thu thập tự động',
+          intro: 'Khi bạn duyệt và tương tác với Dịch vụ, chúng tôi có thể tự động ghi nhận:',
           list: [
-            '<strong>Technical & Device Information:</strong> Your IP address, approximate geographic location (derived from IP), browser type and version, operating system, device identifiers (like MAC address or advertising ID), and screen resolution.',
-            '<strong>Usage & Interaction Data:</strong> Details of your visits to our Platform, including traffic data, pages viewed, features used, time spent on pages, search queries, clickstream data, and interaction with content and advertisements.',
-            "<strong>Cookies & Similar Technologies:</strong> We use cookies, web beacons, pixels, and other tracking technologies to operate and personalize our Services, analyze trends, administer the website, track users' movements around the site, and gather demographic information. Please refer to our dedicated Cookie Policy for detailed information.",
+            '**Thông tin kỹ thuật và thiết bị:** địa chỉ IP, vị trí địa lý tương đối suy ra từ IP, loại và phiên bản trình duyệt, hệ điều hành, mã định danh thiết bị và độ phân giải màn hình.',
+            '**Dữ liệu sử dụng:** các trang bạn xem, tính năng bạn dùng, thời gian ở lại từng trang, từ khóa tìm kiếm, luồng thao tác và tương tác với nội dung.',
+            '**Cookie và công nghệ tương tự:** chúng tôi dùng cookie, thẻ theo dõi và bộ nhớ cục bộ để vận hành và cá nhân hóa Dịch vụ, phân tích xu hướng và ghi nhận cách người dùng di chuyển trong trang. Chi tiết xem trong Chính sách Cookie.',
           ],
         },
       ],
     },
     {
-      id: 'how-we-use-your-information', // Sửa ID cho rõ hơn
-      title: 'How We Utilize Your Information',
-      icon: (
-        <DatabaseZap className="h-7 w-7 mr-3 text-purple-600 dark:text-purple-400" />
-      ),
+      id: 'how-we-use-your-information',
+      title: 'Cách chúng tôi sử dụng thông tin',
+      icon: DatabaseZap,
       description:
-        'Your information is instrumental in helping us deliver, improve, and secure our Services. Our primary uses include:',
+        'Thông tin của bạn giúp chúng tôi cung cấp, cải thiện và bảo vệ Dịch vụ. Các mục đích chính gồm:',
       list: [
-        '<strong>Service Provision & Management:</strong> To create and manage your account, deliver and personalize course content, track your learning progress, issue certificates of completion, and facilitate instructor payouts.',
-        '<strong>Personalization & Recommendations:</strong> To tailor your learning experience by recommending relevant courses, content, and features based on your interests and past activity.',
-        '<strong>Transaction Processing:</strong> To securely process payments for course purchases, subscriptions, and other services, and to manage financial records.',
-        '<strong>Communication & Support:</strong> To send you important service-related announcements (e.g., platform maintenance, security updates), course updates, respond to your inquiries, provide customer support, and gather feedback.',
-        '<strong>Platform Improvement & Development:</strong> To analyze usage patterns, conduct research and development, identify trends, and enhance the functionality, user experience, and performance of our Services.',
-        '<strong>Marketing & Promotional Activities:</strong> With your consent where required, to inform you about new courses, special offers, events, and other news from 3TEduTech that may interest you. You can opt-out of marketing communications at any time.',
-        '<strong>Security, Legal & Compliance:</strong> To protect the security and integrity of our Platform, prevent fraud and abuse, investigate potential violations of our terms, comply with legal and regulatory obligations, and enforce our agreements.',
+        '**Cung cấp và quản lý dịch vụ:** tạo và quản lý tài khoản, phân phối nội dung khóa học, theo dõi tiến độ học, cấp chứng chỉ hoàn thành và chi trả cho giảng viên.',
+        '**Cá nhân hóa và gợi ý:** đề xuất khóa học, nội dung và tính năng phù hợp với sở thích cũng như hoạt động trước đó của bạn.',
+        '**Xử lý giao dịch:** thanh toán an toàn cho khóa học, gói đăng ký và các dịch vụ khác, đồng thời quản lý hồ sơ tài chính.',
+        '**Liên lạc và hỗ trợ:** gửi thông báo quan trọng về dịch vụ, cập nhật khóa học, trả lời câu hỏi, hỗ trợ khách hàng và thu thập góp ý.',
+        '**Cải tiến nền tảng:** phân tích cách sử dụng, nghiên cứu và phát triển, nhận diện xu hướng và nâng cao trải nghiệm cùng hiệu năng của Dịch vụ.',
+        '**Tiếp thị:** khi có sự đồng ý của bạn, giới thiệu khóa học mới, ưu đãi, sự kiện và tin tức khác từ 3TEduTech. Bạn có thể ngừng nhận thông tin tiếp thị bất cứ lúc nào.',
+        '**An toàn và tuân thủ pháp luật:** bảo vệ tính toàn vẹn của nền tảng, ngăn chặn gian lận, điều tra vi phạm điều khoản và tuân thủ nghĩa vụ pháp lý.',
       ],
     },
     {
       id: 'sharing-and-disclosure',
-      title: 'Sharing & Disclosure of Information',
-      icon: <Users className="h-7 w-7 mr-3 text-red-500 dark:text-red-400" />,
+      title: 'Chia sẻ và tiết lộ thông tin',
+      icon: Users,
       description:
-        'We value your trust and limit the sharing of your personal information. It may be disclosed in the following circumstances:',
+        'Chúng tôi hạn chế tối đa việc chia sẻ thông tin cá nhân. Thông tin chỉ được tiết lộ trong các trường hợp sau:',
       list: [
-        '<strong>With Service Providers:</strong> We engage trusted third-party companies and individuals to perform services on our behalf (e.g., payment processing, data hosting and storage, analytics, email delivery, customer support, marketing automation). These providers are contractually obligated to protect your data and only use it for the services they provide to us.',
-        '<strong>With Instructors:</strong> To facilitate the educational experience, we share necessary learner information (such as name, enrollment status, and course progress) with the instructors of the courses you are enrolled in.',
-        '<strong>With Your Consent or at Your Direction:</strong> We may share your information with third parties when you explicitly consent or direct us to do so (e.g., when connecting your 3TEduTech account with a third-party service).',
-        '<strong>For Legal Reasons & Protection:</strong> We may disclose information if required by law, legal process, or governmental request, or if we believe in good faith that such action is necessary to protect the rights, property, or safety of 3TEduTech, our users, or the public.',
-        '<strong>In Connection with Business Transfers:</strong> If 3TEduTech undergoes a merger, acquisition, divestiture, or sale of all or a portion of its assets, your information may be transferred as part of that transaction. We will notify you of any such change in ownership or control of your personal information.',
+        '**Với nhà cung cấp dịch vụ:** các đối tác thực hiện công việc thay chúng tôi (xử lý thanh toán, lưu trữ dữ liệu, phân tích, gửi thư, hỗ trợ khách hàng). Các đối tác này có nghĩa vụ hợp đồng phải bảo vệ dữ liệu và chỉ dùng cho phần việc được giao.',
+        '**Với giảng viên:** chúng tôi chia sẻ thông tin cần thiết của học viên (họ tên, tình trạng ghi danh, tiến độ học) với giảng viên của khóa học bạn tham gia.',
+        '**Khi bạn đồng ý hoặc yêu cầu:** ví dụ khi bạn kết nối tài khoản 3TEduTech với một dịch vụ bên thứ ba.',
+        '**Vì lý do pháp lý:** khi pháp luật, thủ tục tố tụng hoặc cơ quan nhà nước yêu cầu, hoặc khi cần thiết để bảo vệ quyền, tài sản và an toàn của 3TEduTech, người dùng và cộng đồng.',
+        '**Khi chuyển giao doanh nghiệp:** nếu 3TEduTech sáp nhập, mua bán hoặc chuyển nhượng tài sản, thông tin của bạn có thể được chuyển giao. Chúng tôi sẽ thông báo về mọi thay đổi quyền kiểm soát dữ liệu cá nhân.',
       ],
       footerContent:
-        '<strong>We do not sell your personal data to third parties for their marketing purposes.</strong>',
+        '**Chúng tôi không bán dữ liệu cá nhân của bạn cho bên thứ ba vì mục đích tiếp thị của họ.**',
     },
     {
       id: 'your-data-rights-and-choices',
-      title: 'Your Data Rights & Choices',
-      icon: (
-        <UserCog className="h-7 w-7 mr-3 text-teal-600 dark:text-teal-400" />
-      ),
+      title: 'Quyền của bạn đối với dữ liệu',
+      icon: UserCog,
       description:
-        'We empower you with control over your personal information. Depending on your jurisdiction, your rights may include:',
+        'Bạn có quyền kiểm soát thông tin cá nhân của mình. Tùy theo pháp luật nơi bạn cư trú, các quyền này có thể gồm:',
       list: [
-        '<strong>The Right to Access:</strong> You can request a copy of the personal data we hold about you.',
-        '<strong>The Right to Rectification:</strong> You can request to correct or update any inaccurate or incomplete personal data.',
-        '<strong>The Right to Erasure (Right to be Forgotten):</strong> You can request the deletion of your personal data under certain conditions.',
-        '<strong>The Right to Restrict Processing:</strong> You can request that we limit how we use your personal data.',
-        '<strong>The Right to Data Portability:</strong> You can request to receive your personal data in a structured, commonly used, machine-readable format, and to transmit it to another controller.',
-        '<strong>The Right to Object:</strong> You can object to the processing of your personal data for certain purposes (e.g., direct marketing).',
-        '<strong>The Right to Withdraw Consent:</strong> Where we rely on your consent for processing, you can withdraw it at any time, without affecting the lawfulness of processing based on consent before its withdrawal.',
+        '**Quyền truy cập:** yêu cầu bản sao dữ liệu cá nhân mà chúng tôi đang lưu giữ.',
+        '**Quyền chỉnh sửa:** yêu cầu sửa hoặc cập nhật dữ liệu chưa chính xác, chưa đầy đủ.',
+        '**Quyền xóa:** yêu cầu xóa dữ liệu cá nhân trong những điều kiện nhất định.',
+        '**Quyền hạn chế xử lý:** yêu cầu chúng tôi thu hẹp phạm vi sử dụng dữ liệu của bạn.',
+        '**Quyền chuyển dữ liệu:** nhận dữ liệu của bạn ở định dạng máy đọc được và chuyển sang một bên kiểm soát khác.',
+        '**Quyền phản đối:** phản đối việc xử lý dữ liệu cho một số mục đích, ví dụ tiếp thị trực tiếp.',
+        '**Quyền rút lại sự đồng ý:** rút lại bất cứ lúc nào, không ảnh hưởng tới tính hợp pháp của việc xử lý trước thời điểm rút.',
       ],
       footerContent:
-        "To exercise any of these rights, or if you have questions regarding your data, please contact our Data Protection Officer at <a href='mailto:privacy@3tedutech.com' class='text-primary hover:underline font-medium'>privacy@3tedutech.com</a>. We are committed to addressing your requests promptly and in accordance with applicable laws.",
+        "Để thực hiện các quyền trên, hoặc khi có câu hỏi về dữ liệu của bạn, vui lòng liên hệ bộ phận bảo vệ dữ liệu tại <a href='mailto:privacy@3tedutech.com' class='font-medium text-primary hover:underline'>privacy@3tedutech.com</a>. Chúng tôi cam kết phản hồi sớm nhất và đúng quy định pháp luật.",
     },
     {
       id: 'cookie-policy-summary',
-      title: 'Cookie Policy & Tracking Technologies',
-      icon: (
-        <Cookie className="h-7 w-7 mr-3 text-orange-500 dark:text-orange-400" />
-      ),
+      title: 'Cookie và công nghệ theo dõi',
+      icon: Cookie,
       content: [
-        'Our Platform utilizes cookies and similar technologies (such as web beacons, pixels, and local storage) to enhance your browsing experience, analyze platform traffic, personalize content, and provide essential functionalities. Cookies are small data files stored on your device.',
-        'We use different types of cookies, including strictly necessary cookies (for platform operation), performance cookies (for analytics), functionality cookies (to remember your preferences), and targeting/advertising cookies (if applicable, with your consent).',
-        "You have control over your cookie settings through your browser preferences and, where applicable, through our cookie consent management tool. Disabling certain cookies may impact your ability to use some features of our Services. For comprehensive details, please review our full <a href='/cookie-policy' class='text-primary hover:underline font-medium'>Cookie Policy</a>.",
+        'Nền tảng sử dụng cookie và các công nghệ tương tự (thẻ theo dõi, điểm ảnh, bộ nhớ cục bộ) để cải thiện trải nghiệm duyệt web, phân tích lưu lượng, cá nhân hóa nội dung và cung cấp những chức năng thiết yếu. Cookie là các tệp dữ liệu nhỏ lưu trên thiết bị của bạn.',
+        'Chúng tôi dùng nhiều loại cookie: cookie thiết yếu để nền tảng vận hành, cookie hiệu năng để phân tích, cookie chức năng để ghi nhớ tùy chọn của bạn, và cookie quảng cáo khi có sự đồng ý của bạn.',
+        "Bạn có thể kiểm soát cookie qua thiết lập trình duyệt và công cụ quản lý đồng ý của chúng tôi. Việc tắt một số cookie có thể làm giảm khả năng sử dụng vài tính năng. Chi tiết xem trong <a href='/cookie-policy' class='font-medium text-primary hover:underline'>Chính sách Cookie</a>.",
       ],
     },
     {
       id: 'data-security-measures',
-      title: 'Our Data Security Measures',
-      icon: (
-        <LockKeyhole className="h-7 w-7 mr-3 text-indigo-600 dark:text-indigo-400" />
-      ),
+      title: 'Biện pháp bảo mật dữ liệu',
+      icon: LockKeyhole,
       content: [
-        'The security of your personal data is a top priority. We implement and maintain a variety of industry-standard technical, administrative, and physical security measures designed to protect your information from unauthorized access, use, alteration, disclosure, or destruction. These measures include data encryption, access controls, secure software development practices, regular security audits, and employee training.',
-        'While we take extensive precautions, please understand that no method of transmission over the Internet or system of electronic storage is 100% secure. We cannot guarantee absolute security, but we are continuously working to improve our safeguards.',
+        'An toàn dữ liệu cá nhân là ưu tiên hàng đầu. Chúng tôi áp dụng và duy trì nhiều biện pháp kỹ thuật, quản trị và vật lý theo chuẩn ngành nhằm bảo vệ thông tin khỏi truy cập, sử dụng, thay đổi, tiết lộ hoặc phá hủy trái phép: mã hóa dữ liệu, kiểm soát truy cập, quy trình phát triển phần mềm an toàn, kiểm định bảo mật định kỳ và đào tạo nhân sự.',
+        'Dù đã hết sức thận trọng, không phương thức truyền tải nào trên Internet hay hệ thống lưu trữ điện tử nào an toàn tuyệt đối. Chúng tôi không thể bảo đảm an toàn tuyệt đối, nhưng liên tục cải thiện các lớp bảo vệ.',
       ],
     },
     {
       id: 'policy-updates',
-      title: 'Updates to This Privacy Policy',
-      icon: (
-        <GitCompareArrows className="h-7 w-7 mr-3 text-gray-600 dark:text-gray-400" />
-      ),
+      title: 'Cập nhật chính sách',
+      icon: GitCompareArrows,
       content: [
-        'We may revise this Privacy Policy periodically to reflect changes in our data practices, legal or regulatory requirements, or service offerings. When we make material changes, we will notify you by updating the "Last Updated" date at the top of this policy and, where appropriate, by other means (such as a prominent notice on our Platform or via email).',
-        'We encourage you to review this Privacy Policy regularly to stay informed about how we collect, use, and protect your information.',
+        'Chúng tôi có thể sửa đổi chính sách này theo thời gian để phản ánh thay đổi trong cách xử lý dữ liệu, yêu cầu pháp lý hoặc phạm vi dịch vụ. Khi có thay đổi quan trọng, chúng tôi sẽ cập nhật ngày "Cập nhật lần cuối" ở đầu trang và thông báo bằng hình thức phù hợp, chẳng hạn thông báo nổi bật trên nền tảng hoặc thư điện tử.',
+        'Bạn nên xem lại chính sách này định kỳ để nắm được cách chúng tôi thu thập, sử dụng và bảo vệ thông tin của bạn.',
       ],
     },
   ];
 
   return (
     <Layout>
-      <div className="bg-gradient-to-b from-slate-100 via-background to-background dark:from-slate-900 dark:via-slate-800 dark:to-slate-850/80">
-        <div className="container mx-auto px-4 py-10 md:py-16">
+      <div className='border-b border-border bg-muted/40'>
+        <div className='container mx-auto px-4 py-10 md:py-14'>
           <motion.nav
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center mb-8 text-sm"
+            className='mb-8 flex items-center text-sm'
+            aria-label='Đường dẫn'
           >
             <Link
-              to="/"
-              className="text-muted-foreground hover:text-primary transition-colors font-medium"
+              to='/'
+              className='font-medium text-muted-foreground transition-colors hover:text-primary'
             >
-              Home
+              Trang chủ
             </Link>
-            <ChevronRight className="h-4 w-4 mx-1.5 text-muted-foreground" />
-            <span className="font-semibold text-foreground">
-              Privacy Policy
+            <ChevronRight
+              className='mx-1.5 h-4 w-4 text-muted-foreground'
+              aria-hidden='true'
+            />
+            <span className='font-medium text-foreground'>
+              Chính sách quyền riêng tư
             </span>
           </motion.nav>
 
@@ -210,15 +191,17 @@ const PrivacyPolicyPage = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mb-12 md:mb-16 text-center"
+            className='text-center'
           >
-            <ShieldAlert className="h-16 w-16 md:h-20 md:w-20 mx-auto mb-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-800 dark:text-slate-50">
-              Our Commitment to Your Privacy
+            <span className='mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+              <ShieldCheck className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <h1 className='text-3xl font-semibold tracking-tight sm:text-4xl'>
+              Cam kết của chúng tôi về quyền riêng tư
             </h1>
-            <p className="mt-3 text-base text-muted-foreground">
-              Last Updated:{' '}
-              <span className="font-medium text-foreground">
+            <p className='mt-3 text-sm text-muted-foreground'>
+              Cập nhật lần cuối:{' '}
+              <span className='font-medium text-foreground'>
                 {lastUpdatedDate}
               </span>
             </p>
@@ -226,81 +209,71 @@ const PrivacyPolicyPage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-16 md:pb-24">
-        <div className="max-w-5xl mx-auto">
-          {policySections.map((section, index) => (
-            <motion.section
-              key={section.id}
-              variants={sectionVariants}
-              custom={index}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.15 }} // Trigger khi 15% vào view
-              className="mb-10 md:mb-14 scroll-mt-24"
-              id={section.id} // scroll-mt cho anchor links
-            >
-              <Card className="overflow-hidden shadow-lg hover:shadow-xl dark:bg-slate-800/60 border dark:border-slate-700/50 rounded-xl transition-shadow duration-300">
-                <CardHeader className="border-b dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 p-5 md:p-6">
-                  <CardTitle className="text-2xl md:text-3xl font-semibold text-slate-800 dark:text-slate-100 flex items-center">
-                    {section.icon}
-                    {section.title}
-                  </CardTitle>
-                  {section.description && (
-                    <CardDescription className="text-base pt-1 !mt-1.5 text-slate-600 dark:text-slate-400">
-                      {section.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="p-5 md:p-6 text-slate-700 dark:text-slate-300 space-y-4 leading-relaxed text-base">
+      <div className='container mx-auto px-4 py-12 md:py-16'>
+        <div className='mx-auto max-w-4xl space-y-8'>
+          {policySections.map((section, index) => {
+            const SectionIcon = section.icon;
+            return (
+              <motion.section
+                key={section.id}
+                variants={sectionVariants}
+                custom={index}
+                initial='hidden'
+                whileInView='visible'
+                viewport={{ once: true, amount: 0.15 }}
+                className='scroll-mt-24 rounded-xl border border-border bg-card text-card-foreground'
+                id={section.id}
+              >
+                <header className='border-b border-border px-5 py-4'>
+                  <div className='flex items-start gap-3'>
+                    <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                      <SectionIcon className='h-5 w-5' aria-hidden='true' />
+                    </span>
+                    <div className='min-w-0 space-y-0.5'>
+                      <h2 className='text-lg font-semibold'>{section.title}</h2>
+                      {section.description && (
+                        <p className='text-sm text-muted-foreground'>
+                          {section.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </header>
+
+                <div className='space-y-4 p-5 text-sm leading-relaxed text-muted-foreground'>
                   {section.content?.map((paragraph, pIndex) => (
                     <p
                       key={pIndex}
-                      dangerouslySetInnerHTML={{
-                        __html: paragraph.replace(
-                          /\*\*(.*?)\*\*/g,
-                          '<strong>$1</strong>'
-                        ),
-                      }}
+                      dangerouslySetInnerHTML={{ __html: toHtml(paragraph) }}
                     />
                   ))}
+
                   {section.subSections?.map((sub, sIndex) => (
                     <div
                       key={sIndex}
                       className={cn(
-                        sIndex > 0 &&
-                          'mt-6 pt-5 border-t dark:border-slate-700/40'
+                        sIndex > 0 && 'mt-6 border-t border-border pt-5'
                       )}
                     >
                       <h3
-                        className="text-xl font-semibold mt-0 mb-3 text-foreground dark:text-slate-200"
-                        dangerouslySetInnerHTML={{
-                          __html: sub.title.replace(
-                            /\*\*(.*?)\*\*/g,
-                            '<strong>$1</strong>'
-                          ),
-                        }}
+                        className='mb-2 text-base font-semibold text-foreground'
+                        dangerouslySetInnerHTML={{ __html: toHtml(sub.title) }}
                       />
                       {sub.intro && (
                         <p
-                          className="mb-2.5 text-sm text-muted-foreground"
+                          className='mb-2.5'
                           dangerouslySetInnerHTML={{
-                            __html: sub.intro.replace(
-                              /\*\*(.*?)\*\*/g,
-                              '<strong>$1</strong>'
-                            ),
+                            __html: toHtml(sub.intro),
                           }}
                         />
                       )}
                       {sub.list && (
-                        <ul className="list-disc space-y-2.5 pl-5 md:pl-6 marker:text-primary dark:marker:text-primary/80">
+                        <ul className='list-disc space-y-2 pl-5 marker:text-muted-foreground'>
                           {sub.list.map((item, lIndex) => (
                             <li
                               key={lIndex}
                               dangerouslySetInnerHTML={{
-                                __html: item.replace(
-                                  /\*\*(.*?)\*\*/g,
-                                  '<strong>$1</strong>'
-                                ),
+                                __html: toHtml(item),
                               }}
                             />
                           ))}
@@ -308,63 +281,51 @@ const PrivacyPolicyPage = () => {
                       )}
                     </div>
                   ))}
-                  {section.list &&
-                    !section.subSections && ( // Chỉ render list này nếu không có subSections
-                      <ul className="list-disc space-y-2.5 pl-5 md:pl-6 marker:text-primary dark:marker:text-primary/80">
-                        {section.list.map((item, lIndex) => (
-                          <li
-                            key={lIndex}
-                            dangerouslySetInnerHTML={{
-                              __html: item.replace(
-                                /\*\*(.*?)\*\*/g,
-                                '<strong>$1</strong>'
-                              ),
-                            }}
-                          />
-                        ))}
-                      </ul>
-                    )}
+
+                  {section.list && !section.subSections && (
+                    <ul className='list-disc space-y-2 pl-5 marker:text-muted-foreground'>
+                      {section.list.map((item, lIndex) => (
+                        <li
+                          key={lIndex}
+                          dangerouslySetInnerHTML={{ __html: toHtml(item) }}
+                        />
+                      ))}
+                    </ul>
+                  )}
+
                   {section.footerContent && (
                     <p
-                      className="mt-5 pt-4 border-t dark:border-slate-700/50 text-sm italic text-muted-foreground"
+                      className='mt-5 border-t border-border pt-4 text-sm'
                       dangerouslySetInnerHTML={{
-                        __html: section.footerContent.replace(
-                          /\*\*(.*?)\*\*/g,
-                          '<strong>$1</strong>'
-                        ),
+                        __html: toHtml(section.footerContent),
                       }}
                     />
                   )}
-                </CardContent>
-              </Card>
-            </motion.section>
-          ))}
+                </div>
+              </motion.section>
+            );
+          })}
 
           <motion.div
             variants={sectionVariants}
             custom={policySections.length}
-            initial="hidden"
-            whileInView="visible"
+            initial='hidden'
+            whileInView='visible'
             viewport={{ once: true, amount: 0.3 }}
-            className="mt-12 md:mt-16 pt-8 md:pt-10 border-t dark:border-slate-700/60 text-center bg-slate-100 dark:bg-slate-800/50 p-8 rounded-xl shadow-inner"
+            className='rounded-xl border border-border bg-muted/40 p-8 text-center'
           >
-            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
-              Questions or Concerns?
+            <h2 className='text-xl font-semibold tracking-tight sm:text-2xl'>
+              Bạn còn câu hỏi nào không?
             </h2>
-            <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-              Your privacy is important to us. If you have any questions about
-              this Privacy Policy, our data practices, or wish to exercise your
-              rights, please don't hesitate to reach out.
+            <p className='mx-auto mt-3 max-w-lg text-sm text-muted-foreground'>
+              Nếu bạn có thắc mắc về chính sách này, về cách chúng tôi xử lý dữ
+              liệu, hoặc muốn thực hiện các quyền của mình, hãy liên hệ với
+              chúng tôi.
             </p>
-            <Button
-              asChild
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 text-base group"
-            >
-              <a href="mailto:privacy@3tedutech.com">
-                <Mail className="h-5 w-5 mr-2.5 transition-transform duration-300 group-hover:scale-110" />
-                Contact Our Privacy Team
-                <ExternalLink className="ml-2 h-4 w-4 opacity-80 group-hover:opacity-100" />
+            <Button asChild size='lg' className='mt-6'>
+              <a href='mailto:privacy@3tedutech.com'>
+                <Mail className='mr-2 h-4 w-4' aria-hidden='true' />
+                Liên hệ bộ phận quyền riêng tư
               </a>
             </Button>
           </motion.div>

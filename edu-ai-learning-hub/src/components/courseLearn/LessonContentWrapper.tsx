@@ -50,7 +50,7 @@ const LessonContentWrapper: React.FC<LessonContentWrapperProps> = ({
   console.log('course', course);
   if (!activeLesson || !activeSection) {
     return (
-      <main className='flex-1 flex flex-col items-center justify-center p-8 text-center bg-muted/30 dark:bg-background'>
+      <main className='flex-1 flex flex-col items-center justify-center p-8 text-center bg-background'>
         <Icons.playCircle className='h-20 w-20 text-muted-foreground opacity-50 mb-4' />
         <h2 className='text-xl font-semibold text-muted-foreground'>
           {t('lessonContentWrapper.selectLessonTitle')}
@@ -71,15 +71,15 @@ const LessonContentWrapper: React.FC<LessonContentWrapperProps> = ({
     course.userProgress?.[activeLesson.lessonId]?.isCompleted || false;
 
   return (
-    <div className='flex-1 flex flex-col bg-muted/20 dark:bg-gray-900/30 overflow-hidden'>
+    <div className='flex-1 flex flex-col bg-background overflow-hidden'>
       {/* Header */}
-      <header className='sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b shadow-sm'>
+      <header className='sticky top-0 z-30 border-b border-border bg-background'>
         <div className='container mx-auto px-4 sm:px-6 lg:px-8 max-w-full'>
           <div className='flex h-16 items-center justify-between gap-4'>
             <div className='flex items-center gap-2 min-w-0'>
               <Link
                 to={`/courses/${course.slug}`}
-                title='Back to Course Overview'
+                title={t('lessonContentWrapper.backToCourse', 'Quay lại trang khóa học')}
                 className='hidden lg:inline-flex'
               >
                 <Button variant='ghost' size='icon' className='shrink-0'>
@@ -97,7 +97,7 @@ const LessonContentWrapper: React.FC<LessonContentWrapperProps> = ({
                   className='text-xs text-muted-foreground truncate'
                   title={activeSection.sectionName}
                 >
-                  Part of: {activeSection.sectionName}
+                  Thuộc chương: {activeSection.sectionName}
                 </p>
               </div>
             </div>
@@ -130,7 +130,7 @@ const LessonContentWrapper: React.FC<LessonContentWrapperProps> = ({
                 {isMarkingCompletion ? (
                   <Icons.loader2 className='h-4 w-4 animate-spin' />
                 ) : isLessonCompleted ? (
-                  <Icons.checkCircle className='h-4 w-4 text-green-600 dark:text-green-400' />
+                  <Icons.checkCircle className='h-4 w-4 text-success' />
                 ) : (
                   <Icons.checkCircle className='h-4 w-4' />
                 )}
@@ -176,9 +176,7 @@ const LessonContentWrapper: React.FC<LessonContentWrapperProps> = ({
           </div>
         </ScrollArea>
 
-        <div className='shrink-0 border-t bg-card z-20 shadow-[0_-2px_5px_-1px_rgba(0,0,0,0.05)] dark:shadow-[0_-2px_5px_-1px_rgba(0,0,0,0.2)]'>
-          {' '}
-          {/* Cải thiện shadow */}
+        <div className='shrink-0 z-20 border-t border-border bg-card'>
           <div className='container mx-auto px-0 sm:px-2 md:px-4 max-w-full'>
             <LessonTabs
               lesson={activeLesson}

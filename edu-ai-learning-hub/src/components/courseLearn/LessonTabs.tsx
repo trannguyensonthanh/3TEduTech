@@ -1,6 +1,6 @@
 // src/components/courseLearn/LessonTabs.tsx
 import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from 'react-i18next';
 import { Lesson } from '@/types/common.types';
 import { OverviewTab } from './tabs/OverviewTab';
@@ -27,7 +27,7 @@ const LessonTabs: React.FC<LessonTabsProps> = ({
       onValueChange={setActiveTab}
       className='h-full flex flex-col'
     >
-      <TabsList className='grid w-full grid-cols-3 sticky top-0 bg-card/95 backdrop-blur-sm z-10 border-b shadow-sm'>
+      <TabsList className='grid w-full grid-cols-3 sticky top-0 z-10 border-b border-border bg-card'>
         <TabsTrigger value='description'>
           {t('lessonTabs.overview')}
         </TabsTrigger>

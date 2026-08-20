@@ -21,7 +21,7 @@ interface SettingsContextType {
   language: Language;
   currency: Currency;
   setLanguage: (language: Language) => void;
-  formatPrice: (price: number) => string;
+  formatPrice: (price: number, overrideCurrency?: Currency | string) => string;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -100,16 +100,20 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   }, [i18n, updateCurrency]);
 
   const formatPrice = useCallback(
-    (price: number): string => {
+    (price: number, overrideCurrency?: Currency | string): string => {
+      if (typeof price !== 'number' || isNaN(price)) {
+        price = 0;
+      }
+      const activeCurrency = overrideCurrency || currency;
       try {
         return new Intl.NumberFormat(language, {
           style: 'currency',
-          currency: currency,
-          minimumFractionDigits: currency === 'VND' ? 0 : 2,
-          maximumFractionDigits: currency === 'VND' ? 0 : 2,
+          currency: activeCurrency,
+          minimumFractionDigits: activeCurrency === 'VND' ? 0 : 2,
+          maximumFractionDigits: activeCurrency === 'VND' ? 0 : 2,
         }).format(price);
       } catch (e) {
-        if (currency === 'VND') {
+        if (activeCurrency === 'VND') {
           return `${price.toLocaleString('vi-VN')} ₫`;
         }
         return `$${price.toFixed(2)}`;

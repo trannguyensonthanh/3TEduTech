@@ -14,8 +14,18 @@ const badgeVariants = cva(
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        /* Trạng thái — luôn kèm biểu tượng và nhãn chữ ở nơi sử dụng,
+           không để riêng màu gánh ý nghĩa. */
         success:
-          "border-transparent bg-green-500 text-white hover:bg-green-600",
+          "border-transparent bg-success text-success-foreground hover:bg-success/90",
+        warning:
+          "border-transparent bg-warning text-warning-foreground hover:bg-warning/90",
+        danger:
+          "border-transparent bg-danger text-danger-foreground hover:bg-danger/90",
+        /* Biến thể nền nhạt, dùng cho nhãn trạng thái nằm trong bảng và thẻ. */
+        successSoft: "border-transparent bg-success-soft text-success",
+        warningSoft: "border-transparent bg-warning-soft text-warning",
+        dangerSoft: "border-transparent bg-danger-soft text-danger",
         outline: "text-foreground",
       },
     },

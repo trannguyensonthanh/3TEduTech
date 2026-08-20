@@ -126,26 +126,49 @@ def get_whisper_model():
         compute_type = settings.whisper_compute_type
         model_size = settings.whisper_model_size
 
+        cpu_threads = getattr(settings, "whisper_cpu_threads", 0) or 0
+
         logger.info(
-            f"Loading Whisper model: {model_size} (device={device}, "
+            f"Đang nạp Whisper: {model_size} (device={device}, "
             f"compute_type={compute_type})..."
         )
         try:
             _whisper_model = WhisperModel(
-                model_size, device=device, compute_type=compute_type
+                model_size,
+                device=device,
+                compute_type=compute_type,
+                cpu_threads=cpu_threads,
             )
-            logger.info("Whisper model loaded successfully.")
+            logger.info("Đã nạp Whisper %s trên %s.", model_size, device)
         except Exception as e:
-            logger.error(f"Failed to load Whisper model on device={device}: {e}")
-            if device == "cuda":
-                logger.warning(
-                    "⚠️ Load Whisper trên GPU thất bại, fallback sang CPU (int8)."
-                )
-                _whisper_model = WhisperModel(
-                    model_size, device="cpu", compute_type="int8"
-                )
-            else:
-                raise e
+            logger.error(f"Nạp Whisper thất bại trên device={device}: {e}")
+            if device != "cuda":
+                raise
+
+            """[SỬA 19/08/2026] Khi GPU hỏng, KHÔNG giữ nguyên kích thước mô hình.
+
+            Bản cũ rơi từ (large-v3, cuda) xuống (large-v3, cpu). Nghe thì hợp
+            lý — "vẫn chạy được" — nhưng large-v3 trên CPU chậm hơn thời gian
+            thực nhiều lần: một video 20 phút ngốn cả tiếng đồng hồ, hàng đợi
+            tắc, và không có gì báo cho ai biết vì sao.
+
+            Rơi xuống mô hình nhỏ hơn là lựa chọn trung thực hơn: phụ đề kém
+            chính xác hơn nhưng có trong vài phút, và dòng log nói thẳng ra
+            điều đó để người vận hành đi sửa GPU."""
+            du_phong = "small" if model_size in ("large-v3", "large-v2", "medium") else model_size
+            logger.warning(
+                "Whisper không chạy được trên GPU. Chuyển sang CPU và HẠ mô hình "
+                "%s -> %s (int8). Phụ đề sẽ kém chính xác hơn cho tới khi GPU "
+                "hoạt động trở lại.",
+                model_size,
+                du_phong,
+            )
+            _whisper_model = WhisperModel(
+                du_phong,
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=cpu_threads,
+            )
     return _whisper_model
 
 

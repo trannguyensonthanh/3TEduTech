@@ -8,33 +8,33 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
 const getCategoryIcon = (iconIdentifier?: string | null) => {
-  if (!iconIdentifier) return <Icons.help className='h-8 w-8' />;
+  if (!iconIdentifier) return <Icons.help className='h-6 w-6' />;
   const iconName = iconIdentifier.toLowerCase();
   if (iconName.includes('programm') || iconName.includes('laptop'))
-    return <Icons.laptop className='h-8 w-8' />;
+    return <Icons.laptop className='h-6 w-6' />;
   if (iconName.includes('business') || iconName.includes('briefcase'))
-    return <Icons.business className='h-8 w-8' />;
+    return <Icons.business className='h-6 w-6' />;
   if (iconName.includes('data') || iconName.includes('database'))
-    return <Icons.dataScience className='h-8 w-8' />;
+    return <Icons.dataScience className='h-6 w-6' />;
   if (iconName.includes('design') || iconName.includes('palette'))
-    return <Icons.design className='h-8 w-8' />;
+    return <Icons.design className='h-6 w-6' />;
   if (iconName.includes('market') || iconName.includes('megaphone'))
-    return <Icons.marketing className='h-8 w-8' />;
+    return <Icons.marketing className='h-6 w-6' />;
   if (iconName.includes('lang') || iconName.includes('language'))
-    return <Icons.language className='h-8 w-8' />;
+    return <Icons.language className='h-6 w-6' />;
   if (iconName.includes('person') || iconName.includes('user'))
-    return <Icons.user className='h-8 w-8' />;
+    return <Icons.user className='h-6 w-6' />;
   if (iconName.includes('ai') || iconName.includes('brain'))
-    return <Icons.ai className='h-8 w-8' />;
+    return <Icons.ai className='h-6 w-6' />;
   if (iconIdentifier.startsWith('http'))
     return (
       <img
         src={iconIdentifier}
-        alt='category icon'
-        className='h-8 w-8 object-contain'
+        alt=''
+        className='h-6 w-6 object-contain'
       />
     );
-  return <Icons.help className='h-8 w-8' />;
+  return <Icons.help className='h-6 w-6' />;
 };
 
 const containerVariants = {
@@ -61,28 +61,13 @@ const itemVariants = {
   },
 };
 
-const categoryGradients = [
-  'from-blue-500/20 to-cyan-500/20',
-  'from-emerald-500/20 to-teal-500/20',
-  'from-violet-500/20 to-purple-500/20',
-  'from-rose-500/20 to-pink-500/20',
-  'from-amber-500/20 to-orange-500/20',
-  'from-cyan-500/20 to-sky-500/20',
-  'from-indigo-500/20 to-blue-500/20',
-  'from-red-500/20 to-rose-500/20',
-];
-
-const categoryIconColors = [
-  'text-blue-500 dark:text-blue-400',
-  'text-emerald-500 dark:text-emerald-400',
-  'text-violet-500 dark:text-violet-400',
-  'text-rose-500 dark:text-rose-400',
-  'text-amber-500 dark:text-amber-400',
-  'text-cyan-500 dark:text-cyan-400',
-  'text-indigo-500 dark:text-indigo-400',
-  'text-red-500 dark:text-red-400',
-];
-
+/**
+ * Dải lĩnh vực khóa học.
+ *
+ * Bản trước phát cho mỗi thẻ một cặp màu chuyển sắc khác nhau, nên tám thẻ
+ * cùng hàng hiện ra tám bảng màu và mắt không đọc được đâu là nhóm. Nay tám
+ * thẻ cùng một kiểu, biểu tượng dùng chung một sắc độ của màu nhấn.
+ */
 const CategoriesSection = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -95,32 +80,22 @@ const CategoriesSection = () => {
   const categories = categoryData?.categories || [];
 
   return (
-    <section className='relative py-16 md:py-24 overflow-hidden'>
-      {/* Grid background pattern */}
-      <div className='absolute inset-0 grid-bg-pattern opacity-40 pointer-events-none z-0' />
-      
-      {/* Gradient orbs */}
-      <div className='absolute top-0 left-1/4 w-80 h-80 rounded-full bg-blue-500/5 dark:bg-blue-600/10 blur-[100px] pointer-events-none z-0' />
-      <div className='absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-indigo-500/5 dark:bg-indigo-600/10 blur-[100px] pointer-events-none z-0' />
-
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
+    <section className='border-b border-border bg-muted/40 py-16 md:py-20'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className='text-center mb-12 md:mb-16'
+          className='mx-auto max-w-2xl text-center'
         >
-          <h2 className='text-3xl sm:text-4xl font-bold text-slate-800 dark:text-white tracking-tight'>
-            {t('categories.title', 'Explore Top')}{' '}
-            <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500'>
-              {t('categories.titleHighlight', 'Categories')}
-            </span>
+          <h2 className='text-2xl font-semibold tracking-tight sm:text-3xl'>
+            {t('categories.title', 'Khám phá các lĩnh vực hàng đầu')}
           </h2>
-          <p className='mt-4 text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto'>
+          <p className='mt-3 text-base text-muted-foreground md:text-lg'>
             {t(
               'categories.description',
-              'Discover our most popular course categories and find the perfect fit for your learning goals.'
+              'Khám phá những lĩnh vực khóa học phổ biến nhất và tìm hướng đi phù hợp với mục tiêu học tập của bạn.'
             )}
           </p>
         </motion.div>
@@ -130,16 +105,16 @@ const CategoriesSection = () => {
             variants={containerVariants}
             initial='hidden'
             animate='visible'
-            className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'
+            className='mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
           >
             {[...Array(8)].map((_, index) => (
               <motion.div
                 key={index}
                 variants={itemVariants}
-                className='bg-white dark:bg-slate-800/60 rounded-xl p-6 flex flex-col items-center text-center h-full border border-slate-200/60 dark:border-slate-700/50'
+                className='flex h-full flex-col items-center rounded-xl border border-border bg-card p-6 text-center'
               >
-                <Skeleton className='w-16 h-16 rounded-2xl mb-5' />
-                <Skeleton className='h-6 w-3/4 mb-2' />
+                <Skeleton className='mb-4 h-12 w-12 rounded-lg' />
+                <Skeleton className='mb-2 h-5 w-3/4' />
                 <Skeleton className='h-4 w-1/2' />
               </motion.div>
             ))}
@@ -147,15 +122,18 @@ const CategoriesSection = () => {
         )}
 
         {error && (
-          <div className='text-center text-red-500 dark:text-red-400 py-10'>
-            <Icons.warning className='h-12 w-12 mx-auto mb-4' />
-            <p className='text-lg font-semibold'>
-              {t('categories.errorTitle', 'Oops! Something went wrong.')}
+          <div className='mt-12 text-center'>
+            <Icons.warning
+              className='mx-auto mb-3 h-10 w-10 text-danger'
+              aria-hidden='true'
+            />
+            <p className='text-base font-medium text-danger'>
+              {t('categories.errorTitle', 'Rất tiếc! Đã xảy ra lỗi.')}
             </p>
-            <p>
+            <p className='mt-1 text-sm text-muted-foreground'>
               {t(
                 'categories.errorDesc',
-                "We couldn't load the categories right now. Please try again later."
+                'Hiện không thể tải danh mục. Vui lòng thử lại sau.'
               )}
             </p>
           </div>
@@ -167,30 +145,25 @@ const CategoriesSection = () => {
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.15 }}
-            className='grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-6'
+            className='mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
           >
-            {categories.map((category, index) => (
+            {categories.map((category) => (
               <motion.div key={category.categoryId} variants={itemVariants}>
                 <Link
                   to={`/categories/${category.slug}`}
-                  className='group premium-card gradient-border-card bg-white dark:bg-slate-800/60 rounded-xl p-6 flex flex-col items-center text-center h-full border border-slate-200/60 dark:border-slate-700/40 block'
+                  className='group flex h-full flex-col items-center rounded-xl border border-border bg-card p-6 text-center transition-colors hover:border-primary/40 hover:bg-accent'
                 >
-                  {/* Icon with gradient background */}
-                  <div
-                    className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 transition-all duration-400 group-hover:scale-110 group-hover:shadow-lg bg-gradient-to-br ${
-                      categoryGradients[index % categoryGradients.length]
-                    } ${categoryIconColors[index % categoryIconColors.length]}`}
-                  >
+                  <span className='mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary'>
                     {getCategoryIcon(category.iconUrl || category.slug)}
-                  </div>
-                  <h3 className='text-lg font-semibold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300'>
+                  </span>
+                  <h3 className='mb-1 text-base font-semibold transition-colors group-hover:text-primary'>
                     {category.categoryName}
                   </h3>
                   {category.courseCount !== undefined && (
-                    <p className='text-sm text-slate-500 dark:text-slate-400'>
+                    <p className='text-sm text-muted-foreground'>
                       {t('categories.courseCount', {
                         count: category.courseCount,
-                        defaultValue: '{{count}} courses',
+                        defaultValue: '{{count}} khóa học',
                       })}
                     </p>
                   )}
@@ -204,14 +177,14 @@ const CategoriesSection = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className='text-center text-slate-500 dark:text-slate-400 py-10'
+            className='mt-12 text-center'
           >
-            <Icons.help className='h-12 w-12 mx-auto mb-4 opacity-50' />
-            <p className='text-lg'>
-              {t(
-                'categories.noCategories',
-                'No categories available at the moment.'
-              )}
+            <Icons.help
+              className='mx-auto mb-3 h-10 w-10 text-muted-foreground'
+              aria-hidden='true'
+            />
+            <p className='text-sm text-muted-foreground'>
+              {t('categories.noCategories', 'Hiện chưa có lĩnh vực nào.')}
             </p>
           </motion.div>
         )}
@@ -224,16 +197,19 @@ const CategoriesSection = () => {
             duration: 0.5,
             delay: categories.length > 0 ? 0.5 : 0.2,
           }}
-          className='mt-12 md:mt-16 text-center'
+          className='mt-12 text-center'
         >
           <Button
-            variant='ghost'
+            variant='outline'
             size='lg'
             onClick={() => navigate('/categories')}
-            className='text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 group px-6 py-3'
+            className='group'
           >
-            {t('categories.viewAll', 'View All Categories')}
-            <Icons.arrowRight className='ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1' />
+            {t('categories.viewAll', 'Xem tất cả lĩnh vực')}
+            <Icons.arrowRight
+              className='ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5'
+              aria-hidden='true'
+            />
           </Button>
         </motion.div>
       </div>

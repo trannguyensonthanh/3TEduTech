@@ -36,6 +36,20 @@ def start():
             "reload_dirs": ["src"],
             # Chặn thêm một lớp nữa, phòng khi có ai đó chạy từ thư mục khác.
             "reload_excludes": ["*.pyc", "__pycache__/*", ".venv/*", "data/*"],
+            # ================================================================
+            # [SỬA 20/08/2026] Dùng polling thay cho WatchFiles.
+            #
+            # WatchFiles dùng inotify qua rust_notify, nhưng trên Docker Desktop
+            # Windows (WSL2 backend) nó liên tục crash với:
+            #   _rust_notify.WatchfilesRustInternalError: Input/output error (os error 5)
+            # Mỗi lần crash, Uvicorn restart lại process → AI Service bị chậm
+            # khởi động thêm nhiều giây, khiến health-check timeout.
+            #
+            # StatReload dùng os.stat() polling — chậm hơn ~1s khi phát hiện
+            # thay đổi file nhưng KHÔNG BAO GIỜ crash, hoạt động ổn định trên
+            # mọi hệ điều hành kể cả Docker Desktop Windows.
+            # ================================================================
+            "reload_delay": 2.0,
         }
 
     # =========================================================================

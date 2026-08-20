@@ -97,14 +97,14 @@ const ZipGuidePanel: React.FC<Props> = ({ limits, defaultOpen = false }) => {
   };
 
   return (
-    <div className="rounded-xl border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       <button
         type="button"
         onClick={() => setMoRong((v) => !v)}
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
             <FolderTree className="h-4 w-4" />
           </div>
           <div>
@@ -122,15 +122,15 @@ const ZipGuidePanel: React.FC<Props> = ({ limits, defaultOpen = false }) => {
       </button>
 
       {moRong && (
-        <div className="space-y-6 border-t px-5 py-5 text-sm">
+        <div className="space-y-6 border-t border-border px-5 py-5 text-sm">
           {/* ---------- Ý chính ---------- */}
-          <div className="flex gap-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+          <div className="flex gap-3 rounded-xl border border-border bg-accent p-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
             <div className="space-y-1">
-              <p className="font-medium text-indigo-950">
+              <p className="font-medium text-foreground">
                 Tệp ZIP chỉ chứa tài liệu và phụ đề — không chứa video.
               </p>
-              <p className="text-indigo-900/80">
+              <p className="text-muted-foreground">
                 Video được gắn ở bước cuối, đi thẳng từ máy bạn lên kho lưu trữ
                 mà không qua máy chủ. Nhờ vậy tệp ZIP chỉ còn vài MB thay vì vài
                 GB, tải lên trong vài giây, và bạn không phải chờ lại từ đầu mỗi
@@ -182,7 +182,7 @@ const ZipGuidePanel: React.FC<Props> = ({ limits, defaultOpen = false }) => {
               nguyên, dung lượng còn vài MB.
             </p>
             <div className="relative">
-              <pre className="max-h-72 overflow-auto rounded-lg bg-slate-900 p-4 pr-24 text-xs leading-relaxed text-slate-100">
+              <pre className="max-h-72 overflow-auto rounded-lg border border-border bg-muted p-4 pr-24 text-xs leading-relaxed text-foreground">
                 {LENH_POWERSHELL}
               </pre>
               <Button
@@ -223,7 +223,7 @@ const ZipGuidePanel: React.FC<Props> = ({ limits, defaultOpen = false }) => {
               bài theo tên tệp. Với mỗi bài có hai lựa chọn:
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border p-3">
+              <div className="rounded-lg border border-border p-3">
                 <p className="font-medium">Tải lên hệ thống</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Tối đa <strong>{limits.maxVideoUploadMb}MB</strong> mỗi tệp.
@@ -231,9 +231,9 @@ const ZipGuidePanel: React.FC<Props> = ({ limits, defaultOpen = false }) => {
                   viên không tải về được.
                 </p>
               </div>
-              <div className="rounded-lg border p-3">
+              <div className="rounded-lg border border-border p-3">
                 <p className="flex items-center gap-1.5 font-medium">
-                  <Youtube className="h-4 w-4 text-red-600" />
+                  <Youtube className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   Dán link YouTube
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">

@@ -113,7 +113,7 @@ const syncInitialDataToAi = async ({ force = false } = {}) => {
       );
     } else {
       const coursesRes = await pool.request().query(
-        `SELECT CourseID, CourseName, ShortDescription, FullDescription,
+        `SELECT CourseID, CourseName, Slug, ShortDescription, FullDescription,
                 OriginalPrice, DiscountedPrice,
                 ISNULL(VersionNumber, 1) AS VersionNumber
          FROM Courses
@@ -158,6 +158,14 @@ const syncInitialDataToAi = async ({ force = false } = {}) => {
             // ChromaDB để lọc đúng phiên bản khi trả lời học viên.
             course_id: c.CourseID,
             version_number: c.VersionNumber,
+            /* [THÊM 20/08/2026] Thêm slug và giá.
+               Thẻ khóa học trong khung chat đọc `slug` để mở thẳng trang khóa
+               học (thiếu thì nút "Xem chi tiết" chỉ đổ tên xuống ô tìm kiếm) và
+               đọc `price` để hiện giá (thiếu thì luôn rơi về nhãn chung chung).
+               Giá ở đây là ảnh chụp tại thời điểm nạp tri thức, dùng để HIỂN
+               THỊ GỢI Ý; mọi lệnh tạo đơn vẫn lấy giá từ CSDL. */
+            slug: c.Slug,
+            price: Number(c.DiscountedPrice ?? c.OriginalPrice ?? 0),
           }, 60000);
 
           successCourses++;

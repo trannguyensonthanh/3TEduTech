@@ -1,7 +1,7 @@
 // src/components/admin/approvals/CurriculumSectionAdminView.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Lesson, LessonType } from '@/types/common.types'; // Import types chuẩn
+import { Lesson } from '@/types/common.types'; // Import types chuẩn
 import {
   ChevronDown,
   ChevronUp,
@@ -11,8 +11,7 @@ import {
   Eye,
   Clock,
   File as FileIcon,
-  Lock,
-} from 'lucide-react'; // Thêm Lock
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Section } from '@/services/section.service';
 import { useTranslation } from 'react-i18next';
@@ -101,7 +100,7 @@ const CurriculumSectionAdminView: React.FC<CurriculumSectionAdminViewProps> = ({
 
       {/* Lessons List (Collapsible) */}
       {isExpanded && (
-        <div className='pl-8 pr-3 pb-3 divide-y bg-background/50'>
+        <div className='pl-8 pr-3 pb-3 divide-y divide-border bg-muted/30'>
           {section.lessons && section.lessons.length > 0 ? (
             section.lessons
               .sort((a, b) => a.lessonOrder - b.lessonOrder)
@@ -113,13 +112,13 @@ const CurriculumSectionAdminView: React.FC<CurriculumSectionAdminViewProps> = ({
                   <div className='flex items-center space-x-3 flex-grow min-w-0'>
                     {/* Icon */}
                     {lesson.lessonType === 'VIDEO' && (
-                      <Video className='h-4 w-4 text-blue-600 shrink-0' />
+                      <Video className='h-4 w-4 text-muted-foreground shrink-0' />
                     )}
                     {lesson.lessonType === 'TEXT' && (
-                      <FileText className='h-4 w-4 text-green-600 shrink-0' />
+                      <FileText className='h-4 w-4 text-muted-foreground shrink-0' />
                     )}
                     {lesson.lessonType === 'QUIZ' && (
-                      <BookIcon className='h-4 w-4 text-purple-600 shrink-0' />
+                      <BookIcon className='h-4 w-4 text-muted-foreground shrink-0' />
                     )}
                     {/* Info */}
                     <div className='flex-grow min-w-0'>

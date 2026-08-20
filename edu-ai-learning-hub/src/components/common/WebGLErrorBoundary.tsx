@@ -83,13 +83,14 @@ export class WebGLErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-      // Mặc định trả về hiệu ứng Ambient Light Gradient bằng Vanilla CSS, siêu mượt và không bao giờ crash
+      /* Nền dự phòng khi không dựng được WebGL: một mặt phẳng trung tính lấy
+         từ token. Bản trước dùng các khối mờ phát sáng xanh tím — đúng thứ mà
+         quy ước giao diện cấm, và ở chế độ sáng thì lem nhem. */
       return (
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-          <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
-        </div>
+        <div
+          className='pointer-events-none absolute inset-0 z-0 bg-muted'
+          aria-hidden='true'
+        />
       );
     }
 

@@ -138,9 +138,9 @@ const auditEntries = (entries, destDir, limits) => {
   /* Phần mở rộng mà ta CHỈ đọc tên + kích thước, không ghi nội dung ra đĩa.
      Truyền vào từ importPipeline (lấy từ fileClassifier) chứ không ghi cứng ở
      đây — safeExtract không nên biết gì về nghiệp vụ "thế nào là video". */
-  const skipContentExt =
-    limits.skipContentExtensions instanceof Set
-      ? limits.skipContentExtensions
+  const ratioExemptExt =
+    limits.ratioExemptExtensions instanceof Set
+      ? limits.ratioExemptExtensions
       : new Set();
 
   const extOf = (name) => {
@@ -214,22 +214,13 @@ const auditEntries = (entries, destDir, limits) => {
 
        Hàng rào SỐ LƯỢNG tệp vẫn giữ nguyên ở đây, vì nó có thật với entry bị
        bỏ qua nội dung: mỗi entry vẫn tốn một mục trong danh sách. */
-    if (skipContentExt.has(extOf(entry.name))) {
-      entry.skipContent = true;
-      accepted.push(entry);
-
-      if (accepted.length > limits.maxFiles) {
-        throw new ImportRejectedError(
-          `Tệp ZIP chứa quá nhiều tệp (tối đa ${limits.maxFiles}).`,
-          'ZIP_TOO_MANY_FILES'
-        );
-      }
-      continue;
-    }
-
     /* --- Zip bomb: tỉ lệ nén của TỪNG entry ---
-       Chỉ áp cho những entry SẼ ĐƯỢC GIẢI NÉN THẬT (video đã continue ở trên). */
+       Miễn trừ cho các phần mở rộng nằm trong ratioExemptExtensions (video).
+       Lý do: tệp video không nén hoặc nén lossless của bài giảng màn hình tĩnh
+       có tỉ lệ nén rất cao và từng bị chặn oan là zip bomb. Các hàng rào dung
+       lượng bên dưới VẪN áp dụng đầy đủ cho chúng. */
     if (
+      !ratioExemptExt.has(extOf(entry.name)) &&
       entry.uncompressedSize > RATIO_CHECK_MIN_SIZE &&
       entry.compressedSize > 0
     ) {

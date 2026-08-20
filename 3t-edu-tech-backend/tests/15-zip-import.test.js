@@ -203,7 +203,7 @@ describe('📦 ZIP IMPORT — Luồng thật: tải lên → phân tích → b�
     );
   });
 
-  test('VIDEO ĐƯỢC TÁCH RA — bài video đánh dấu cần tải video, không có tệp trên đĩa', async () => {
+  test('VIDEO trong ZIP được nhận đúng là bài học dạng VIDEO', async () => {
     if (!state.qaImportJobId) return;
     const res = await get(`/imports/${state.qaImportJobId}/proposal`, {
       token: gvToken,
@@ -212,19 +212,43 @@ describe('📦 ZIP IMPORT — Luồng thật: tải lên → phân tích → b�
     const p = res.data?.proposal || res.data;
     const lessons = (p.sections || []).flatMap((s) => s.lessons || []);
 
-    const video = lessons.find(
-      (l) => l.lessonType === 'VIDEO' || l.needsVideo === true
-    );
+    const video = lessons.find((l) => l.lessonType === 'VIDEO');
     expect(video).toBeTruthy();
 
-    /* Đây là mấu chốt của cả thiết kế: máy chủ BIẾT có video (tên tệp, kích
-       thước lấy từ central directory) nhưng KHÔNG giữ nội dung. */
-    expect(video.needsVideo).toBe(true);
-    expect(video.videoFileName || video.sourcePath).toMatch(/\.mp4$/i);
-    expect(video.absolutePath == null || video.isPlaceholder === true).toBe(true);
+    /* [SỬA 19/08/2026] Kỳ vọng ở đây ĐÃ ĐỔI theo thiết kế mới.
+
+       Bản trước: video KHÔNG được giải nén, bài học mang cờ needsVideo=true và
+       giảng viên phải gắn video ở một bước riêng sau khi tạo khóa.
+
+       Bản hiện tại (importPipeline.js dòng 205-211): video ĐƯỢC giải nén ra
+       đĩa như mọi tệp khác, để đọc được thời lượng thật và đẩy thẳng lên
+       Cloudinary ở giai đoạn C. Đổi lại, giảng viên phải tự nén video cho nhẹ
+       trước khi đóng gói ZIP.
+
+       Chỉ MIỄN TRỪ kiểm tra tỉ lệ nén cho video — các hạn mức dung lượng và số
+       tệp VẪN áp dụng đầy đủ. `needsVideo` nay chỉ còn đúng khi bài học tham
+       chiếu tới một video KHÔNG có trong ZIP (treeAnalyzer.js dòng 405). */
+    expect(video.needsVideo).toBe(false);
+    expect(video.sourcePath || video.videoFileName).toMatch(/\.mp4$/i);
     console.log(
-      `  ✅ Video tách đúng: ${video.videoFileName || video.sourcePath} (needsVideo=true, không lưu nội dung)`
+      `  ✅ Video nằm trong ZIP, giải nén bình thường: ${video.sourcePath || video.videoFileName}`
     );
+  });
+
+  test('★ Video nén tỉ lệ cao KHÔNG bị chặn nhầm là zip bomb', async () => {
+    if (!state.qaImportJobId) return;
+    /* ZIP dùng ở trên chứa video 20MB toàn số 0, tỉ lệ nén khoảng 1000:1 —
+       vượt xa ngưỡng 200:1. Job vẫn phải READY.
+
+       Đây không phải tình huống bịa: giảng viên xuất bài giảng ra AVI không
+       nén hoặc MOV lossless (màn hình tĩnh) sẽ cho tỉ lệ nén tương tự, và
+       trước ngày 19/08 cả tệp ZIP bị từ chối kèm thông báo "phát hiện zip
+       bomb" — trong khi chẳng có gì nguy hiểm cả. */
+    const res = await get(`/imports/${state.qaImportJobId}`, { token: gvToken });
+    expectStatus(res, 200);
+    expect(res.data.status).toBe('READY');
+    expect(res.data.errorCode).toBeFalsy();
+    console.log('  ✅ Video tỉ lệ nén cao đi qua được, không bị gắn nhãn zip bomb');
   });
 
   test('Tài liệu trùng tên video được GỘP vào bài video, không đẻ bài trùng', async () => {

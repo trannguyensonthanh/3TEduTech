@@ -39,7 +39,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Icons } from '@/components/common/Icons';
+import SectionCard from '@/components/common/SectionCard';
+import StatCard from '@/components/common/StatCard';
+import {
+  AlertTriangle,
+  BookOpen,
+  Captions,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileSearch,
+  FileText,
+  Info,
+  Layers,
+  ListChecks,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  Video,
+  Wand,
+  X,
+} from 'lucide-react';
 
 import { getCategories } from '@/services/category.service';
 import { getLevels } from '@/services/level.service';
@@ -101,39 +123,9 @@ interface Props {
   onCancel: () => void;
 }
 
-/* ───────────────────────────── Thẻ thống kê ───────────────────────────── */
-
-/* Nhận thẳng COMPONENT icon, không nhận tên khóa — xem ghi chú cùng vấn đề ở
-   CourseImport.tsx (tra `Icons[key]` buộc TS suy ra hợp của MỌI icon). */
-type IconComponent = React.ComponentType<{ className?: string }>;
-
-const StatTile: React.FC<{
-  Icon: IconComponent;
-  label: string;
-  value: React.ReactNode;
-  tone?: 'default' | 'good' | 'warn';
-}> = ({ Icon, label, value, tone = 'default' }) => {
-  const toneClass =
-    tone === 'good'
-      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
-      : tone === 'warn'
-        ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
-        : 'text-indigo-400 bg-indigo-500/10 border-indigo-500/25';
-
-  return (
-    <div className='rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm'>
-      <div
-        className={`mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border ${toneClass}`}
-      >
-        <Icon className='h-4 w-4' />
-      </div>
-      <p className='text-2xl font-extrabold leading-none tabular-nums'>
-        {value}
-      </p>
-      <p className='mt-1.5 text-xs text-muted-foreground'>{label}</p>
-    </div>
-  );
-};
+/* Thẻ thống kê riêng của màn hình này đã bị xóa: nó tự tô ba màu nền theo
+   `tone`, nên bốn thẻ đứng cạnh nhau ra bốn màu trong khi mọi thẻ số liệu khác
+   của hệ thống đều trung tính. Nay dùng thẳng `@/components/common/StatCard`. */
 
 /* ───────────────────────────── Thành phần chính ───────────────────────── */
 
@@ -454,36 +446,27 @@ const ImportReviewPanel: React.FC<Props> = ({
   return (
     <div className='space-y-6'>
       {/* ── SỐ LIỆU ── */}
-      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <StatTile
-          Icon={Icons.layers}
-          label='Chương sẽ tạo'
-          value={counts.sections}
-        />
-        <StatTile
-          Icon={Icons.lessons}
-          label='Bài học sẽ tạo'
-          value={counts.lessons}
-        />
-        <StatTile
-          Icon={Icons.video}
+      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+        <StatCard label='Chương sẽ tạo' value={counts.sections} icon={Layers} />
+        <StatCard label='Bài học sẽ tạo' value={counts.lessons} icon={BookOpen} />
+        <StatCard
           label='Video (tải lên sau)'
           value={counts.videos}
+          icon={Video}
         />
-        <StatTile
-          Icon={Icons.captions}
+        <StatCard
           label='Phụ đề ghép được'
           value={proposal.stats?.subtitleMatched ?? 0}
-          tone='good'
+          icon={Captions}
         />
       </div>
 
       {/* ── CẢNH BÁO ĐỘ TIN CẬY ── */}
       {lowConfidence && (
-        <div className='flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm'>
-          <Icons.alertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-amber-400' />
+        <div className='flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm'>
+          <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-warning' aria-hidden='true' />
           <div className='space-y-1'>
-            <p className='font-semibold text-amber-300'>
+            <p className='font-medium text-foreground'>
               Cấu trúc thư mục hơi khó đoán (độ tin cậy {confidencePercent}%)
             </p>
             <p className='text-muted-foreground'>
@@ -496,14 +479,17 @@ const ImportReviewPanel: React.FC<Props> = ({
       )}
 
       {/* ── NHỜ AI VIẾT MÔ TẢ ── */}
-      <section className='overflow-hidden rounded-3xl border border-violet-500/25 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-transparent p-5'>
+      {/* Khối AI trước đây có nền chuyển sắc tím riêng để "nổi bật". Nó nổi bật
+          thật, nhưng bằng cách phá vỡ hệ màu của cả trang. Nay là một khối bình
+          thường; việc nó quan trọng đã được nói bằng vị trí và bằng chữ. */}
+      <SectionCard>
         <div className='flex flex-wrap items-center justify-between gap-4'>
           <div className='flex items-start gap-3'>
-            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg shadow-fuchsia-500/25'>
-              <Icons.sparkles className='h-5 w-5 text-white' />
+            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground'>
+              <Sparkles className='h-5 w-5' aria-hidden='true' />
             </div>
             <div className='space-y-1'>
-              <p className='font-bold'>Để AI viết mô tả giúp bạn</p>
+              <p className='font-medium'>Để AI viết mô tả giúp bạn</p>
               <p className='max-w-xl text-xs text-muted-foreground'>
                 AI đọc nội dung đã bóc từ tài liệu rồi viết mô tả cho khóa học,
                 từng chương và từng bài. Bạn xem lại và sửa thoải mái trước khi
@@ -514,13 +500,8 @@ const ImportReviewPanel: React.FC<Props> = ({
 
           <div className='flex shrink-0 gap-2'>
             {beforeAi && (
-              <Button
-                variant='ghost'
-                onClick={handleUndoAi}
-                disabled={enriching}
-                className='rounded-xl'
-              >
-                <Icons.refresh className='mr-2 h-4 w-4' />
+              <Button variant='ghost' onClick={handleUndoAi} disabled={enriching}>
+                <RefreshCw className='mr-2 h-4 w-4' aria-hidden='true' />
                 Hoàn tác
               </Button>
             )}
@@ -529,34 +510,29 @@ const ImportReviewPanel: React.FC<Props> = ({
               variant='outline'
               onClick={handleGenerateQuiz}
               disabled={quizzing || enriching}
-              className='h-11 rounded-xl border-violet-400/40 px-5 font-bold'
             >
               {quizzing ? (
                 <>
-                  <Icons.loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
                   Đang soạn đề...
                 </>
               ) : (
                 <>
-                  <Icons.listChecks className='mr-2 h-4 w-4' />
+                  <ListChecks className='mr-2 h-4 w-4' aria-hidden='true' />
                   {quizInfo ? 'Soạn đề lại' : 'Tạo câu hỏi trắc nghiệm'}
                 </>
               )}
             </Button>
 
-            <Button
-              onClick={handleEnrich}
-              disabled={enriching || quizzing}
-              className='h-11 rounded-xl border border-white/20 bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 font-bold text-white shadow-lg shadow-fuchsia-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-violet-500 hover:to-fuchsia-500 disabled:translate-y-0 disabled:opacity-60'
-            >
+            <Button onClick={handleEnrich} disabled={enriching || quizzing}>
               {enriching ? (
                 <>
-                  <Icons.loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
                   AI đang viết...
                 </>
               ) : (
                 <>
-                  <Icons.wand className='mr-2 h-4 w-4' />
+                  <Wand className='mr-2 h-4 w-4' aria-hidden='true' />
                   {aiInfo ? 'Viết lại' : 'Dùng AI viết mô tả'}
                 </>
               )}
@@ -565,38 +541,38 @@ const ImportReviewPanel: React.FC<Props> = ({
         </div>
 
         {enriching && (
-          <p className='mt-4 border-t border-violet-500/20 pt-3 text-xs text-muted-foreground'>
+          <p className='mt-4 border-t border-border pt-3 text-xs text-muted-foreground'>
             Có thể mất tới vài phút với khóa học nhiều bài. Đừng đóng trang này.
           </p>
         )}
 
         {quizzing && (
-          <p className='mt-4 border-t border-violet-500/20 pt-3 text-xs text-muted-foreground'>
+          <p className='mt-4 border-t border-border pt-3 text-xs text-muted-foreground'>
             Đang soạn đề từ nội dung tài liệu. Bài video chưa có phụ đề sẽ được
             bỏ qua vì không có gì để ra đề.
           </p>
         )}
 
         {(aiInfo || quizInfo) && !enriching && !quizzing && (
-          <div className='mt-4 space-y-2 border-t border-violet-500/20 pt-3 text-xs'>
+          <div className='mt-4 space-y-2 border-t border-border pt-3 text-xs'>
             {aiInfo && (
-              <p className='flex items-center gap-2 text-emerald-400'>
-                <Icons.checkCircle2 className='h-3.5 w-3.5 shrink-0' />
+              <p className='flex items-center gap-2 text-success'>
+                <CheckCircle2 className='h-3.5 w-3.5 shrink-0' aria-hidden='true' />
                 Đã viết mô tả cho {aiInfo.sections} chương và {aiInfo.lessons}{' '}
                 bài học.
               </p>
             )}
 
             {quizInfo && (
-              <p className='flex items-center gap-2 text-emerald-400'>
-                <Icons.checkCircle2 className='h-3.5 w-3.5 shrink-0' />
+              <p className='flex items-center gap-2 text-success'>
+                <CheckCircle2 className='h-3.5 w-3.5 shrink-0' aria-hidden='true' />
                 Đã soạn {quizInfo.total} câu hỏi cho {quizInfo.lessons} bài học.
                 Bấm vào nhãn "N câu hỏi" ở mỗi bài để xem.
               </p>
             )}
 
             <p className='flex items-start gap-2 text-muted-foreground'>
-              <Icons.info className='mt-0.5 h-3.5 w-3.5 shrink-0' />
+              <Info className='mt-0.5 h-3.5 w-3.5 shrink-0' aria-hidden='true' />
               Hãy đọc lại trước khi tạo — AI có thể hiểu sai ý bạn. Riêng câu hỏi
               trắc nghiệm, sửa hoặc xóa từng câu ở trang Sửa khóa học sau khi tạo
               xong.
@@ -604,43 +580,37 @@ const ImportReviewPanel: React.FC<Props> = ({
 
             {[...(aiInfo?.warnings || []), ...(quizInfo?.warnings || [])].map(
               (w) => (
-                <p key={w} className='flex items-start gap-2 text-amber-400'>
-                  <Icons.alertTriangle className='mt-0.5 h-3.5 w-3.5 shrink-0' />
+                <p key={w} className='flex items-start gap-2 text-warning'>
+                  <AlertTriangle className='mt-0.5 h-3.5 w-3.5 shrink-0' aria-hidden='true' />
                   {w}
                 </p>
               )
             )}
           </div>
         )}
-      </section>
+      </SectionCard>
 
       {/* ── THÔNG TIN KHÓA HỌC ── */}
-      <section className='space-y-5 rounded-3xl border border-border/60 bg-card/60 p-6 backdrop-blur-sm'>
-        <h2 className='flex items-center gap-2 text-lg font-bold'>
-          <Icons.bookOpen className='h-5 w-5 text-indigo-400' />
-          Thông tin khóa học
-        </h2>
-
+      <SectionCard title='Thông tin khóa học' bodyClassName='space-y-5 p-5'>
         <div className='space-y-2'>
           <Label htmlFor='import-course-name'>
-            Tên khóa học <span className='text-rose-400'>*</span>
+            Tên khóa học <span className='text-danger'>*</span>
           </Label>
           <Input
             id='import-course-name'
             value={courseName}
             onChange={(e) => setCourseName(e.target.value)}
             placeholder='VD: Lập trình Python từ con số 0'
-            className='h-11 rounded-xl'
           />
         </div>
 
         <div className='grid gap-4 sm:grid-cols-3'>
           <div className='space-y-2'>
             <Label>
-              Danh mục <span className='text-rose-400'>*</span>
+              Danh mục <span className='text-danger'>*</span>
             </Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className='h-11 rounded-xl'>
+              <SelectTrigger>
                 <SelectValue placeholder='Chọn danh mục' />
               </SelectTrigger>
               <SelectContent>
@@ -658,10 +628,10 @@ const ImportReviewPanel: React.FC<Props> = ({
 
           <div className='space-y-2'>
             <Label>
-              Cấp độ <span className='text-rose-400'>*</span>
+              Cấp độ <span className='text-danger'>*</span>
             </Label>
             <Select value={levelId} onValueChange={setLevelId}>
-              <SelectTrigger className='h-11 rounded-xl'>
+              <SelectTrigger>
                 <SelectValue placeholder='Chọn cấp độ' />
               </SelectTrigger>
               <SelectContent>
@@ -682,7 +652,6 @@ const ImportReviewPanel: React.FC<Props> = ({
               min={0}
               value={originalPrice}
               onChange={(e) => setOriginalPrice(e.target.value)}
-              className='h-11 rounded-xl'
             />
           </div>
         </div>
@@ -695,7 +664,6 @@ const ImportReviewPanel: React.FC<Props> = ({
             onChange={(e) => setShortDescription(e.target.value)}
             maxLength={500}
             placeholder='Một câu tóm tắt hiện ở thẻ khóa học'
-            className='h-11 rounded-xl'
           />
         </div>
 
@@ -703,7 +671,7 @@ const ImportReviewPanel: React.FC<Props> = ({
           <Label htmlFor='import-full-desc'>
             Mô tả đầy đủ
             {proposal.courseDescription && (
-              <span className='ml-2 text-xs font-normal text-emerald-400'>
+              <span className='ml-2 text-xs font-normal text-success'>
                 (đã lấy sẵn từ tệp _khoa-hoc.md)
               </span>
             )}
@@ -713,16 +681,15 @@ const ImportReviewPanel: React.FC<Props> = ({
             value={fullDescription}
             onChange={(e) => setFullDescription(e.target.value)}
             rows={5}
-            className='rounded-xl'
           />
         </div>
-      </section>
+      </SectionCard>
 
       {/* ── CẤU TRÚC ── */}
       <section className='space-y-4'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
-          <h2 className='flex items-center gap-2 text-lg font-bold'>
-            <Icons.layers className='h-5 w-5 text-purple-400' />
+          <h2 className='flex items-center gap-2 text-base font-semibold'>
+            <Layers className='h-5 w-5 text-muted-foreground' aria-hidden='true' />
             Cấu trúc đề xuất
           </h2>
           <p className='text-xs text-muted-foreground'>
@@ -739,14 +706,12 @@ const ImportReviewPanel: React.FC<Props> = ({
             <div
               key={section.sourceDir || `root-${sIndex}`}
               className={[
-                'overflow-hidden rounded-2xl border transition-all duration-200',
-                section.selected
-                  ? 'border-border/60 bg-card/60'
-                  : 'border-border/40 bg-muted/20 opacity-60',
+                'overflow-hidden rounded-xl border border-border transition-colors',
+                section.selected ? 'bg-card' : 'bg-muted/40 opacity-60',
               ].join(' ')}
             >
               {/* Đầu chương */}
-              <div className='flex flex-wrap items-center gap-3 border-b border-border/50 p-4'>
+              <div className='flex flex-wrap items-center gap-3 border-b border-border p-4'>
                 <Checkbox
                   checked={section.selected}
                   onCheckedChange={(v) =>
@@ -761,10 +726,10 @@ const ImportReviewPanel: React.FC<Props> = ({
                     patchSection(sIndex, { sectionName: e.target.value })
                   }
                   disabled={!section.selected}
-                  className='h-10 min-w-[200px] flex-1 rounded-xl border-transparent bg-transparent text-base font-bold focus-visible:border-input focus-visible:bg-background'
+                  className='h-10 min-w-[200px] flex-1 border-transparent bg-transparent text-base font-semibold focus-visible:border-input focus-visible:bg-background'
                 />
 
-                <span className='shrink-0 rounded-full bg-indigo-500/15 px-2.5 py-1 text-xs font-semibold text-indigo-300'>
+                <span className='shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground'>
                   {pickedCount}/{section.lessons.length} bài
                 </span>
 
@@ -780,9 +745,9 @@ const ImportReviewPanel: React.FC<Props> = ({
                   aria-label={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
                 >
                   {isCollapsed ? (
-                    <Icons.chevronDown className='h-4 w-4' />
+                    <ChevronDown className='h-4 w-4' aria-hidden='true' />
                   ) : (
-                    <Icons.chevronUp className='h-4 w-4' />
+                    <ChevronUp className='h-4 w-4' aria-hidden='true' />
                   )}
                 </button>
               </div>
@@ -791,7 +756,7 @@ const ImportReviewPanel: React.FC<Props> = ({
                   Trước khi bấm AI thì gần như luôn rỗng, nên hiện sẵn một ô
                   trống chỉ làm màn hình rối thêm mà chẳng ai dùng tới. */}
               {section.description && (
-                <div className='border-b border-border/40 px-4 py-3'>
+                <div className='border-b border-border px-4 py-3'>
                   <Textarea
                     value={section.description}
                     onChange={(e) =>
@@ -799,14 +764,14 @@ const ImportReviewPanel: React.FC<Props> = ({
                     }
                     disabled={!section.selected}
                     rows={2}
-                    className='rounded-lg border-transparent bg-muted/30 text-xs focus-visible:border-input focus-visible:bg-background'
+                    className='border-transparent bg-muted/50 text-xs focus-visible:border-input focus-visible:bg-background'
                   />
                 </div>
               )}
 
               {/* Danh sách bài */}
               {!isCollapsed && (
-                <div className='divide-y divide-border/40'>
+                <div className='divide-y divide-border'>
                   {section.lessons.map((lesson, lIndex) => (
                     <div
                       key={lesson.sourcePath}
@@ -822,17 +787,13 @@ const ImportReviewPanel: React.FC<Props> = ({
                         className='shrink-0'
                       />
 
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                          lesson.lessonType === 'VIDEO'
-                            ? 'bg-rose-500/15 text-rose-400'
-                            : 'bg-sky-500/15 text-sky-400'
-                        }`}
-                      >
+                      {/* Loại bài học được phân biệt bằng BIỂU TƯỢNG, không bằng
+                          màu nền: đây không phải trạng thái tốt hay xấu. */}
+                      <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground'>
                         {lesson.lessonType === 'VIDEO' ? (
-                          <Icons.video className='h-4 w-4' />
+                          <Video className='h-4 w-4' aria-hidden='true' />
                         ) : (
-                          <Icons.fileText className='h-4 w-4' />
+                          <FileText className='h-4 w-4' aria-hidden='true' />
                         )}
                       </div>
 
@@ -844,7 +805,7 @@ const ImportReviewPanel: React.FC<Props> = ({
                           })
                         }
                         disabled={!section.selected || !lesson.selected}
-                        className='h-9 min-w-[180px] flex-1 rounded-lg border-transparent bg-transparent text-sm focus-visible:border-input focus-visible:bg-background'
+                        className='h-9 min-w-[180px] flex-1 border-transparent bg-transparent text-sm focus-visible:border-input focus-visible:bg-background'
                       />
 
                       {/* Nhãn thông tin */}
@@ -856,7 +817,7 @@ const ImportReviewPanel: React.FC<Props> = ({
                         {lesson.lessonType === 'VIDEO' &&
                           lesson.durationSeconds !== null && (
                             <span className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'>
-                              <Icons.clock className='h-3 w-3' />
+                              <Clock className='h-3 w-3' aria-hidden='true' />
                               {formatDuration(lesson.durationSeconds)}
                             </span>
                           )}
@@ -867,30 +828,30 @@ const ImportReviewPanel: React.FC<Props> = ({
 
                         {lesson.hasSubtitle && (
                           <span
-                            className='flex items-center gap-1 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-emerald-400'
+                            className='flex items-center gap-1 rounded-md bg-success-soft px-1.5 py-0.5 text-success'
                             title='Đã ghép được tệp phụ đề trùng tên'
                           >
-                            <Icons.captions className='h-3 w-3' />
+                            <Captions className='h-3 w-3' aria-hidden='true' />
                             phụ đề
                           </span>
                         )}
 
                         {lesson.hasText && (
                           <span
-                            className='flex items-center gap-1 rounded-md bg-sky-500/15 px-1.5 py-0.5 text-sky-400'
+                            className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'
                             title='Đã đọc được nội dung văn bản của tệp'
                           >
-                            <Icons.fileSearch className='h-3 w-3' />
+                            <FileSearch className='h-3 w-3' aria-hidden='true' />
                             có nội dung
                           </span>
                         )}
 
                         {lesson.note && (
                           <span
-                            className='flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-400'
+                            className='flex items-center gap-1 rounded-md bg-warning-soft px-1.5 py-0.5 text-warning'
                             title={lesson.note}
                           >
-                            <Icons.info className='h-3 w-3' />
+                            <Info className='h-3 w-3' aria-hidden='true' />
                             lưu ý
                           </span>
                         )}
@@ -904,9 +865,9 @@ const ImportReviewPanel: React.FC<Props> = ({
                                 [lesson.sourcePath]: !prev[lesson.sourcePath],
                               }))
                             }
-                            className='flex items-center gap-1 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-violet-300 transition-colors hover:bg-violet-500/25'
+                            className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-accent'
                           >
-                            <Icons.listChecks className='h-3 w-3' />
+                            <ListChecks className='h-3 w-3' aria-hidden='true' />
                             {lesson.quiz.length} câu hỏi
                           </button>
                         )}
@@ -926,10 +887,10 @@ const ImportReviewPanel: React.FC<Props> = ({
                           Bung sẵn hết thì một khóa 30 bài × 3 câu × 4 lựa chọn
                           sẽ thành 360 dòng, không ai đọc nổi. */}
                       {lesson.quiz.length > 0 && openQuiz[lesson.sourcePath] && (
-                        <div className='mt-3 space-y-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 pl-4'>
+                        <div className='mt-3 space-y-3 rounded-lg border border-border bg-muted/50 p-3 pl-4'>
                           {lesson.quiz.map((q, qIndex) => (
                             <div key={`${lesson.sourcePath}-q${qIndex}`} className='space-y-1.5'>
-                              <p className='text-xs font-semibold'>
+                              <p className='text-xs font-medium'>
                                 {qIndex + 1}. {q.question}
                               </p>
 
@@ -941,13 +902,13 @@ const ImportReviewPanel: React.FC<Props> = ({
                                       key={`${lesson.sourcePath}-q${qIndex}-o${oIndex}`}
                                       className={`flex items-start gap-2 text-xs ${
                                         isCorrect
-                                          ? 'font-semibold text-emerald-400'
+                                          ? 'font-medium text-success'
                                           : 'text-muted-foreground'
                                       }`}
                                     >
                                       <span className='mt-0.5 w-4 shrink-0'>
                                         {isCorrect ? (
-                                          <Icons.check className='h-3 w-3 stroke-[3]' />
+                                          <Check className='h-3 w-3' aria-hidden='true' />
                                         ) : (
                                           <span className='opacity-40'>
                                             {String.fromCharCode(65 + oIndex)}.
@@ -985,7 +946,9 @@ const ImportReviewPanel: React.FC<Props> = ({
       </section>
 
       {/* ── HÀNH ĐỘNG ── */}
-      <div className='sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/60 bg-card/95 p-4 shadow-2xl backdrop-blur-xl'>
+      {/* Thanh hành động dính đáy màn hình: nền đặc `bg-card` chứ không phải
+          nền mờ, để chữ bên dưới không lem qua làm khó đọc. */}
+      <div className='sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-lg'>
         <div className='space-y-2'>
           <p className='text-sm text-muted-foreground'>
             Sẽ tạo{' '}
@@ -996,12 +959,12 @@ const ImportReviewPanel: React.FC<Props> = ({
               <>
                 {' '}
                 cùng{' '}
-                <strong className='text-violet-300'>
+                <strong className='text-foreground'>
                   {counts.questions} câu hỏi
                 </strong>
               </>
             )}{' '}
-            ở trạng thái <strong className='text-amber-400'>NHÁP</strong>.
+            ở trạng thái <strong className='text-foreground'>NHÁP</strong>.
           </p>
 
           {counts.questions > 0 && (
@@ -1016,29 +979,20 @@ const ImportReviewPanel: React.FC<Props> = ({
         </div>
 
         <div className='flex gap-3'>
-          <Button
-            variant='outline'
-            onClick={onCancel}
-            disabled={submitting}
-            className='rounded-xl'
-          >
-            <Icons.x className='mr-2 h-4 w-4' />
+          <Button variant='outline' onClick={onCancel} disabled={submitting}>
+            <X className='mr-2 h-4 w-4' aria-hidden='true' />
             Hủy bỏ
           </Button>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className='h-11 rounded-xl border border-white/20 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-6 font-extrabold text-white shadow-xl shadow-emerald-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-500 disabled:translate-y-0 disabled:opacity-60'
-          >
+          <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? (
               <>
-                <Icons.loader2 className='mr-2 h-4 w-4 animate-spin' />
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
                 Đang tạo...
               </>
             ) : (
               <>
-                <Icons.checkCircle2 className='mr-2 h-4 w-4 stroke-[3]' />
+                <CheckCircle2 className='mr-2 h-4 w-4' aria-hidden='true' />
                 Tạo khóa học nháp
               </>
             )}
@@ -1048,10 +1002,10 @@ const ImportReviewPanel: React.FC<Props> = ({
 
       {/* ── GHI CHÚ VIDEO ── */}
       {counts.videos > 0 && (
-        <div className='flex items-start gap-3 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-4 text-sm'>
-          <Icons.info className='mt-0.5 h-4 w-4 shrink-0 text-sky-400' />
+        <div className='flex items-start gap-3 rounded-xl border border-border bg-muted/50 p-4 text-sm'>
+          <Info className='mt-0.5 h-4 w-4 shrink-0 text-muted-foreground' aria-hidden='true' />
           <p className='text-muted-foreground'>
-            <strong className='text-sky-300'>
+            <strong className='text-foreground'>
               {counts.videos} video chưa được tải lên Cloudinary.
             </strong>{' '}
             Chúng vẫn nằm trên máy chủ và chỉ được tải lên sau khi bạn tạo khóa

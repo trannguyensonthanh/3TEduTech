@@ -1,6 +1,6 @@
 // src/components/instructor/courseCreate/LessonVideoManager.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,12 +24,7 @@ import {
   useLessonVideoUrl,
   useUploadLessonVideoDirect,
 } from '@/hooks/queries/lesson.queries';
-import {
-  getYoutubeEmbedUrl,
-  extractYoutubeId,
-  getVimeoEmbedUrl,
-  extractVimeoId,
-} from '@/utils/video.util';
+import { getYoutubeEmbedUrl, getVimeoEmbedUrl } from '@/utils/video.util';
 import { Lesson } from '@/types/common.types';
 import { Label } from '@/components/ui/label';
 import Plyr from 'plyr-react';
@@ -53,12 +48,12 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
 
   const { mutate: uploadVideoDirect, isPending: isUploading } = useUploadLessonVideoDirect({
     onSuccess: () => {
-      toast.success('Video uploaded directly to Cloudinary successfully!');
+      toast.success('Đã tải video lên Cloudinary thành công.');
       setVideoFile(null);
       setUploadProgress(0);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Video direct upload failed.');
+      toast.error(error.message || 'Tải video lên thất bại.');
       setUploadProgress(0);
     },
   });
@@ -91,7 +86,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
     if (file) {
       if (file.size > 500 * 1024 * 1024) {
         // 500MB
-        toast.error('Video file size cannot exceed 500MB.');
+        toast.error('Dung lượng video không được vượt quá 500MB.');
         return;
       }
       setVideoFile(file);
@@ -180,7 +175,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
         name='videoSourceType'
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Video Source</FormLabel>
+            <FormLabel>Nguồn video</FormLabel>
             <Select
               onValueChange={field.onChange}
               value={field.value ?? 'CLOUDINARY'}
@@ -194,7 +189,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
               <SelectContent>
                 <SelectItem value='CLOUDINARY'>
                   <Icons.upload className='inline-block h-4 w-4 mr-2' />
-                  Upload Video
+                  Tải video lên
                 </SelectItem>
                 <SelectItem value='YOUTUBE'>
                   <Icons.youtube className='inline-block h-4 w-4 mr-2' />
@@ -212,7 +207,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
 
       {videoSourceType === 'CLOUDINARY' && (
         <div>
-          <Label>Video File</Label>
+          <Label>Tệp video</Label>
           <input
             type='file'
             ref={videoFileRef}
@@ -221,7 +216,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
             className='hidden'
           />
           <div
-            className='mt-2 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-all'
+            className='mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary'
             onClick={() => !isUploading && videoFileRef.current?.click()}
           >
             {videoPreview && videoPreview.startsWith('blob:') ? (
@@ -230,7 +225,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
               <>
                 <Icons.upload className='h-8 w-8 text-muted-foreground' />
                 <p className='mt-2 text-sm text-muted-foreground'>
-                  Click or drag file to upload directly to Cloudinary
+                  Bấm hoặc kéo thả tệp để tải thẳng lên Cloudinary
                 </p>
               </>
             )}
@@ -240,29 +235,30 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
               type='button'
               onClick={handleUploadVideo}
               disabled={isUploading}
-              className='mt-3 w-full shadow-sm hover:shadow-md transition-all'
+              className='mt-3 w-full'
             >
               <Icons.upload className='mr-2 h-4 w-4' />
-              Direct Upload Now
+              Tải lên ngay
             </Button>
           )}
           {isUploading && (
-            <div className='w-full max-w-sm mx-auto mt-4 p-3.5 bg-secondary/50 rounded-xl border border-primary/20 shadow-inner backdrop-blur-sm transition-all'>
+            <div className='mx-auto mt-4 w-full max-w-sm rounded-xl border border-border bg-muted p-3.5'>
               <div className='flex items-center justify-between text-xs font-semibold text-foreground mb-1.5'>
                 <span className='flex items-center gap-1.5'>
                   <Icons.spinner className='h-4 w-4 animate-spin text-primary' />
-                  Direct Cloud Uploading...
+                  Đang tải thẳng lên đám mây…
                 </span>
                 <span className='text-primary font-mono font-bold'>{uploadProgress}%</span>
               </div>
-              <div className='w-full bg-muted rounded-full h-2.5 overflow-hidden border border-border/50'>
+              <div className='h-2.5 w-full overflow-hidden rounded-full border border-border bg-background'>
                 <div
-                  className='bg-primary h-2.5 rounded-full transition-all duration-300 shadow-sm'
+                  className='h-2.5 rounded-full bg-primary transition-all duration-300'
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
-              <p className='text-[11px] text-center text-emerald-600 dark:text-emerald-400 mt-2 font-mono font-medium flex items-center justify-center gap-1'>
-                <span>⚡</span> 0MB Server RAM consumed • Real-time stream
+              <p className='mt-2 flex items-center justify-center gap-1 text-center font-mono text-[11px] font-medium text-success'>
+                <Icons.checkCircle className='h-3 w-3' aria-hidden='true' />
+                Truyền thẳng theo thời gian thực, không tốn RAM máy chủ
               </p>
             </div>
           )}
@@ -275,10 +271,10 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
           name='externalVideoInput'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{videoSourceType} URL or ID</FormLabel>
+              <FormLabel>Đường dẫn hoặc mã video {videoSourceType}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder='Paste link here...'
+                  placeholder='Dán đường dẫn vào đây…'
                   {...field}
                   value={field.value ?? ''}
                 />
@@ -290,7 +286,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
       )}
 
       <div className='mt-4'>
-        <Label>Preview</Label>
+        <Label>Xem trước</Label>
         <AspectRatio
           ratio={16 / 9}
           className='bg-muted mt-2 rounded-md overflow-hidden'
@@ -303,7 +299,7 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
             <Plyr source={plyrSource} options={plyrOptions} />
           ) : (
             <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
-              Video preview will appear here.
+              Bản xem trước video sẽ hiện ở đây.
             </div>
           )}
         </AspectRatio>

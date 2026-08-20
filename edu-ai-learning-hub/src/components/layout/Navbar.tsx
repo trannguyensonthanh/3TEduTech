@@ -1,8 +1,7 @@
 // src/components/layout/Navbar.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +18,13 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetClose,
-  SheetDescription, // Thêm nếu cần
   SheetFooter,
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Icons } from '../common/Icons'; // Đảm bảo icons logo, menu, search, course, category, instructors, info, close, etc.
+import { Icons } from '../common/Icons';
 import AuthModal from '../auth/AuthModal';
 import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import CartDropdown from './CartDropdown';
@@ -35,9 +32,8 @@ import { SearchCommandDialog } from '../search/SearchCommandDialog'; // Dialog t
 import { useAuth } from '@/contexts/AuthContext';
 import { useLogoutMutation } from '@/hooks/queries/auth.queries';
 import { useMyCart } from '@/hooks/queries/cart.queries';
-import { useTheme } from '@/contexts/ThemeContext'; // Hoặc import { useTheme as useNextThemes } from "next-themes";
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Moon,
   Sun,
@@ -45,50 +41,49 @@ import {
   LayoutDashboard,
   BookUser,
   UserCircle,
-  Settings,
   GraduationCap,
   CreditCard,
-  Search as SearchIcon,
-  Info,
-  BookMarked,
-  Users,
-  Home,
-  KeyRound,
-  // Thêm các icon khác nếu cần trực tiếp từ lucide-react
+  BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import { LanguageToggle } from '@/components/common/LanguageToggle';
 import { useTranslation } from 'react-i18next';
 
-// Navigation Links Data
+// Dữ liệu liên kết điều hướng. `label` cũng chính là khóa dịch trong navbar.links.
 const navLinks = [
   {
     href: '/courses',
     label: 'Courses',
-    icon: <Icons.course className='mr-3 h-5 w-5 opacity-80' />,
+    icon: <Icons.course className='mr-3 h-5 w-5' />,
   },
   {
     href: '/categories',
     label: 'Categories',
-    icon: <Icons.folder className='mr-3 h-5 w-5 opacity-80' />,
+    icon: <Icons.folder className='mr-3 h-5 w-5' />,
   },
   {
     href: '/instructors',
     label: 'Instructors',
-    icon: <Icons.instructors className='mr-3 h-5 w-5 opacity-80' />,
+    icon: <Icons.instructors className='mr-3 h-5 w-5' />,
   },
   {
     href: '/about',
     label: 'About Us',
-    icon: <Icons.info className='mr-3 h-5 w-5 opacity-80' />,
+    icon: <Icons.info className='mr-3 h-5 w-5' />,
   },
-  // { href: "/pricing", label: "Pricing", icon: <DollarSign className="mr-3 h-5 w-5 opacity-80" /> },
-  // { href: "/blog", label: "Blog", icon: <BookMarked className="mr-3 h-5 w-5 opacity-80" /> },
 ];
 
+/**
+ * Thanh điều hướng chung.
+ *
+ * Bản trước dùng nền kính mờ khi cuộn, một nút "AI Master" chuyển sắc ba màu có
+ * hiệu ứng nhấp nháy, và vài mục menu tự tô màu riêng. Nay thanh luôn dùng nền
+ * trang, chỉ hiện đường kẻ khi cuộn, và mục nhấn mạnh dùng đúng một sắc độ của
+ * màu nhấn.
+ */
 const Navbar = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [defaultAuthTab, setDefaultAuthTab] = useState<'login' | 'signup'>(
     'login'
@@ -96,11 +91,11 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
 
-  const { data: cartData } = useMyCart();
-  const cartItemCount = cartData?.items?.length || 0;
+  /* Giữ lời gọi này để giỏ hàng được nạp sẵn khi thanh điều hướng hiện ra;
+     số lượng sản phẩm do CartDropdown tự hiển thị. */
+  useMyCart();
 
-  const { theme, setTheme } = useTheme(); // từ ThemeContext wrapper
-  // const { theme, setTheme } = useNextThemes(); // nếu dùng trực tiếp
+  const { theme, setTheme } = useTheme();
 
   const logoutMutation = useLogoutMutation({
     onSuccess: () => {
@@ -138,407 +133,412 @@ const Navbar = () => {
   };
 
   const userRoleDisplay = (roleId?: string): string => {
-    if (!roleId) return 'Member';
+    if (!roleId) return 'Thành viên';
     switch (roleId) {
       case 'AD':
-        return 'Administrator';
+        return 'Quản trị viên';
       case 'SA':
-        return 'Super Admin';
+        return 'Quản trị cấp cao';
       case 'GV':
-        return 'Instructor';
+        return 'Giảng viên';
       case 'NU':
       default:
-        return 'Student';
+        return 'Học viên';
     }
   };
 
+  const mobileAccountLinks = [
+    {
+      href: '/my-courses',
+      label: t('navbar.myLearning'),
+      icon: <GraduationCap className='h-5 w-5' />,
+    },
+    {
+      href: '/profile',
+      label: t('navbar.profileSettings'),
+      icon: <UserCircle className='h-5 w-5' />,
+    },
+    {
+      href: '/orders',
+      label: t('navbar.orderHistory'),
+      icon: <CreditCard className='h-5 w-5' />,
+    },
+    {
+      href: '/certificates',
+      label: t('navbar.myCertificates'),
+      icon: <Icons.certificate className='h-5 w-5' />,
+    },
+  ];
+
   return (
-    <>
-      <header
-        className={cn(
-          'sticky top-0 z-50 w-full transition-all duration-500 ease-out',
-          isScrolled
-            ? 'shadow-lg shadow-black/5 dark:shadow-black/20 navbar-glass border-b border-slate-200/50 dark:border-slate-700/30'
-            : 'border-b border-transparent bg-transparent'
-        )}
-      >
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-          <div
-            className={cn(
-              'flex items-center justify-between transition-[height] duration-300 ease-out',
-              isScrolled ? 'h-16' : 'h-20'
-            )}
-          >
-            {/* Logo and Main Navigation (Desktop) */}
-            <div className='flex items-center'>
-              <Link
-                to='/'
-                className='flex items-center space-x-2.5 mr-4 lg:mr-6 group shrink-0'
-              >
-                <Icons.logo
-                  className={cn(
-                    'text-primary transition-all duration-300 group-hover:rotate-[15deg]',
-                    isScrolled ? 'h-8 w-8' : 'h-9 w-9'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'font-bold text-foreground group-hover:text-primary transition-all duration-300',
-                    isScrolled ? 'text-xl' : 'text-2xl'
-                  )}
-                >
-                  3TEduTech
-                </span>
-              </Link>
-              <nav className='hidden lg:flex items-center space-x-0.5 xl:space-x-1'>
-                {navLinks.map((link) => {
-                  const isActive = location.pathname === link.href ||
-                    (link.href !== '/' && location.pathname.startsWith(link.href));
-                  return (
-                    <Link
-                      key={link.label}
-                      to={link.href}
-                      className={cn(
-                        'nav-link-premium relative flex items-center gap-1 px-3.5 py-2 text-sm font-medium rounded-lg transition-colors duration-200 h-9',
-                        isActive
-                          ? 'text-primary'
-                          : 'text-muted-foreground hover:text-foreground'
-                      )}
-                    >
-                      <span className='relative z-10'>
-                        {t(`navbar.links.${link.label}`)}
-                      </span>
-                      <span className='absolute inset-0 rounded-lg bg-primary/0 hover:bg-primary/5 transition-colors' />
-                    </Link>
-                  );
-                })}
-                <Link
-                  to="/ai-master"
-                  className="ml-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-xs shadow-md shadow-indigo-500/30 hover:opacity-95 transition-transform active:scale-95 flex items-center gap-1.5 animate-pulse"
-                >
-                  <span>✨ AI Master</span>
-                </Link>
-              </nav>
-            </div>
-
-            {/* Right Section: Search, Theme, Actions (Desktop) */}
-            <div className='hidden lg:flex items-center space-x-2'>
-              <LanguageToggle />
-              <Button
-                variant='outline'
-                onClick={() => setOpenSearchDialog(true)}
-                className='h-10 w-auto px-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 dark:bg-slate-800/60 dark:border-slate-700/70 dark:hover:bg-slate-700/80 justify-start'
-                aria-label='Search courses'
-              >
-                <Icons.search className='mr-2 h-4 w-4' />
-                {t('navbar.search')}
-                <kbd className='ml-auto pl-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100'>
-                  <span className='text-xs'>⌘</span>K
-                </kbd>
-              </Button>
-
-              <Button
-                variant='ghost'
-                size='icon'
-                onClick={toggleTheme}
-                className='rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/80'
-                aria-label='Toggle theme'
-              >
-                <Sun className='h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0' />
-                <Moon className='absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100' />
-              </Button>
-
-              {isAuthenticated && (
-                <>
-                  {' '}
-                  <NotificationDropdown /> <CartDropdown />{' '}
-                </>
-              )}
-
-              {isAuthLoading ? (
-                <Skeleton className='h-10 w-10 rounded-full' />
-              ) : isAuthenticated && user ? (
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      className='relative h-10 w-10 rounded-full p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background group'
-                    >
-                      <Avatar className='h-9 w-9 border-2 border-transparent group-hover:border-primary/60 dark:group-hover:border-primary/50 transition-all group-focus-visible:border-primary'>
-                        <AvatarImage
-                          src={
-                            user.avatarUrl ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              user.fullName || 'User'
-                            )}&background=random&size=96&font-size=0.4&bold=true&format=svg`
-                          }
-                          alt={user.fullName || 'User'}
-                        />
-                        <AvatarFallback className='bg-muted text-muted-foreground font-semibold border border-border'>
-                          {getInitials(user.fullName)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className='w-60 p-2 shadow-xl dark:bg-slate-800 border dark:border-slate-700'
-                    align='end'
-                    forceMount
-                  >
-                    <div className='flex items-center p-2 mb-1'>
-                      <Avatar className='h-11 w-11 mr-3 border'>
-                        <AvatarImage
-                          src={
-                            user.avatarUrl ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              user.fullName || 'User'
-                            )}&background=random&size=128&font-size=0.4&bold=true&format=svg`
-                          }
-                          alt={user.fullName || 'User'}
-                        />
-                        <AvatarFallback>
-                          {getInitials(user.fullName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className='flex flex-col space-y-0.5 overflow-hidden'>
-                        <p
-                          className='text-sm font-semibold leading-none text-foreground truncate'
-                          title={user.fullName || 'Valued User'}
-                        >
-                          {user.fullName || 'Valued User'}
-                        </p>
-                        <p
-                          className='text-xs leading-tight text-muted-foreground truncate'
-                          title={user.email}
-                        >
-                          {user.email}
-                        </p>
-                        <p
-                          className='text-[11px] leading-tight text-primary dark:text-primary/80 font-medium mt-0.5'
-                          title={userRoleDisplay(user.role)}
-                        >
-                          {userRoleDisplay(user.role)}
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    {(user.role === 'AD' ||
-                      user.role === 'SA' ||
-                      user.role === 'GV') && (
-                      <DropdownMenuGroup>
-                        <DropdownMenuLabel>
-                          {t('navbar.dashboards')}
-                        </DropdownMenuLabel>
-                        {(user.role === 'AD' || user.role === 'SA') && (
-                          <DropdownMenuItem
-                            asChild
-                            className='cursor-pointer h-9'
-                          >
-                            <Link
-                              to='/admin'
-                              className='flex items-center w-full'
-                            >
-                              <LayoutDashboard className='mr-2.5 h-4 w-4 opacity-80' />
-                              {t('navbar.adminPanel')}
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
-                        {(user.role === 'GV' ||
-                          user.role === 'AD' ||
-                          user.role === 'SA') && (
-                          <DropdownMenuItem
-                            asChild
-                            className='cursor-pointer h-9'
-                          >
-                            <Link
-                              to='/instructor/earnings'
-                              className='flex items-center w-full'
-                            >
-                              <BookUser className='mr-2.5 h-4 w-4 opacity-80' />
-                              {t('navbar.instructorHub')}
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuGroup>
+    <header
+      className={cn(
+        'sticky top-0 z-50 w-full bg-background transition-colors duration-200',
+        isScrolled ? 'border-b border-border' : 'border-b border-transparent'
+      )}
+    >
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
+        <div
+          className={cn(
+            'flex items-center justify-between transition-[height] duration-300 ease-out',
+            isScrolled ? 'h-16' : 'h-20'
+          )}
+        >
+          {/* Logo và điều hướng chính (máy tính) */}
+          <div className='flex items-center'>
+            <Link
+              to='/'
+              className='mr-4 flex shrink-0 items-center gap-2.5 lg:mr-6'
+            >
+              <Icons.logo className='h-8 w-8 text-primary' />
+              <span className='text-xl font-semibold tracking-tight text-foreground'>
+                3TEduTech
+              </span>
+            </Link>
+            <nav className='hidden items-center gap-0.5 lg:flex xl:gap-1'>
+              {navLinks.map((link) => {
+                const isActive =
+                  location.pathname === link.href ||
+                  (link.href !== '/' && location.pathname.startsWith(link.href));
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'flex h-9 items-center rounded-md px-3 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-accent text-primary'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     )}
-                    {(user.role === 'AD' ||
-                      user.role === 'SA' ||
-                      user.role === 'GV') && <DropdownMenuSeparator />}
+                  >
+                    {t(`navbar.links.${link.label}`)}
+                  </Link>
+                );
+              })}
+              <Link
+                to='/ai-master'
+                className='ml-1 flex h-9 items-center gap-1.5 rounded-md bg-primary/10 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/15'
+              >
+                <Sparkles className='h-4 w-4' aria-hidden='true' />
+                AI Master
+              </Link>
+            </nav>
+          </div>
+
+          {/* Bên phải: tìm kiếm, giao diện, tài khoản (máy tính) */}
+          <div className='hidden items-center gap-2 lg:flex'>
+            <LanguageToggle />
+            <Button
+              variant='outline'
+              onClick={() => setOpenSearchDialog(true)}
+              className='h-10 w-auto justify-start px-3 text-sm text-muted-foreground'
+              aria-label='Tìm kiếm khóa học'
+            >
+              <Icons.search className='mr-2 h-4 w-4' aria-hidden='true' />
+              {t('navbar.search')}
+              <kbd className='pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted pl-2 pr-1.5 font-mono text-[10px] font-medium text-muted-foreground'>
+                <span className='text-xs'>⌘</span>K
+              </kbd>
+            </Button>
+
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={toggleTheme}
+              className='rounded-full text-muted-foreground hover:text-foreground'
+              aria-label='Đổi giao diện sáng / tối'
+            >
+              <Sun className='h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0' />
+              <Moon className='absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100' />
+            </Button>
+
+            {isAuthenticated && (
+              <>
+                <NotificationDropdown />
+                <CartDropdown />
+              </>
+            )}
+
+            {isAuthLoading ? (
+              <Skeleton className='h-10 w-10 rounded-full' />
+            ) : isAuthenticated && user ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    className='relative h-10 w-10 rounded-full p-0'
+                    aria-label='Menu tài khoản'
+                  >
+                    <Avatar className='h-9 w-9 border border-border'>
+                      <AvatarImage
+                        src={
+                          user.avatarUrl ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            user.fullName || 'User'
+                          )}&background=random&size=96&font-size=0.4&bold=true&format=svg`
+                        }
+                        alt={user.fullName || 'Người dùng'}
+                      />
+                      <AvatarFallback className='bg-muted font-semibold text-muted-foreground'>
+                        {getInitials(user.fullName)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className='w-60 p-2' align='end' forceMount>
+                  <div className='mb-1 flex items-center p-2'>
+                    <Avatar className='mr-3 h-11 w-11 border border-border'>
+                      <AvatarImage
+                        src={
+                          user.avatarUrl ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            user.fullName || 'User'
+                          )}&background=random&size=128&font-size=0.4&bold=true&format=svg`
+                        }
+                        alt={user.fullName || 'Người dùng'}
+                      />
+                      <AvatarFallback className='bg-muted text-muted-foreground'>
+                        {getInitials(user.fullName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className='flex flex-col space-y-0.5 overflow-hidden'>
+                      <p
+                        className='truncate text-sm font-semibold leading-none text-foreground'
+                        title={user.fullName || 'Người dùng'}
+                      >
+                        {user.fullName || 'Người dùng'}
+                      </p>
+                      <p
+                        className='truncate text-xs leading-tight text-muted-foreground'
+                        title={user.email}
+                      >
+                        {user.email}
+                      </p>
+                      <p
+                        className='mt-0.5 text-[11px] font-medium leading-tight text-muted-foreground'
+                        title={userRoleDisplay(user.role)}
+                      >
+                        {userRoleDisplay(user.role)}
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  {(user.role === 'AD' ||
+                    user.role === 'SA' ||
+                    user.role === 'GV') && (
                     <DropdownMenuGroup>
                       <DropdownMenuLabel>
-                        {t('navbar.mySpace')}
+                        {t('navbar.dashboards')}
                       </DropdownMenuLabel>
-                      <DropdownMenuItem asChild className='cursor-pointer h-9'>
-                        <Link
-                          to='/my-courses'
-                          className='flex items-center w-full'
-                        >
-                          <GraduationCap className='mr-2.5 h-4 w-4 opacity-80' />
-                          {t('navbar.myLearning')}
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className='cursor-pointer h-9'>
-                        <Link
-                          to='/profile'
-                          className='flex items-center w-full'
-                        >
-                          <UserCircle className='mr-2.5 h-4 w-4 opacity-80' />
-                          {t('navbar.profileSettings')}
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className='cursor-pointer h-9'>
-                        <Link to='/orders' className='flex items-center w-full'>
-                          <CreditCard className='mr-2.5 h-4 w-4 opacity-80' />
-                          {t('navbar.orderHistory')}
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className='cursor-pointer h-9'>
-                        <Link
-                          to='/certificates'
-                          className='flex items-center w-full'
-                        >
-                          <Icons.certificate className='mr-2.5 h-4 w-4 opacity-80' />
-                          {t('navbar.myCertificates')}
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleLogout}
-                      className='cursor-pointer h-9 text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 focus:text-red-700 dark:focus:text-red-400'
-                    >
-                      <LogOut className='mr-2.5 h-4 w-4 opacity-80' />
-                      {t('navbar.logOut')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className='flex items-center space-x-1.5'>
-                  <Button
-                    variant='ghost'
-                    onClick={() => {
-                      setDefaultAuthTab('login');
-                      setAuthModalOpen(true);
-                    }}
-                    className='text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent h-9 px-3.5'
-                  >
-                    {t('navbar.login')}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setDefaultAuthTab('signup');
-                      setAuthModalOpen(true);
-                    }}
-                    className='text-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 shadow hover:shadow-md transition-shadow'
-                  >
-                    {t('navbar.signup')}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Menu Trigger */}
-            <div className='flex lg:hidden items-center'>
-              <Button
-                variant='ghost'
-                size='icon'
-                onClick={() => setOpenSearchDialog(true)}
-                className='rounded-full mr-0.5 text-muted-foreground hover:text-foreground hover:bg-accent'
-              >
-                <Icons.search className='h-5 w-5' />
-                <span className='sr-only'>{t('navbar.openSearch')}</span>
-              </Button>
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='rounded-full text-foreground hover:bg-accent'
-                    aria-label='Open mobile menu'
-                  >
-                    {mobileMenuOpen ? (
-                      <Icons.close className='h-6 w-6' />
-                    ) : (
-                      <Icons.menu className='h-6 w-6' />
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  side='left'
-                  className='w-[300px] p-0 flex flex-col bg-background dark:bg-slate-900 shadow-2xl border-r dark:border-slate-700/80'
-                >
-                  <SheetHeader className='p-5 pb-3 border-b dark:border-slate-700/80'>
-                    <SheetTitle className='flex items-center'>
-                      <Icons.logo className='h-7 w-7 mr-2 text-primary' />
-                      <span className='text-xl font-bold text-foreground'>
-                        3TEduTech
-                      </span>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <ScrollArea className='flex-1 custom-scrollbar'>
-                    <nav className='flex flex-col space-y-1 p-4'>
-                      {navLinks.map((link) => (
-                        <SheetClose asChild key={link.label}>
-                          <Link
-                            to={link.href}
-                            className={cn(
-                              'flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-colors',
-                              location.pathname.startsWith(link.href)
-                                ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                                : 'text-foreground/80 hover:bg-accent dark:hover:bg-accent/70 hover:text-foreground'
-                            )}
-                          >
-                            {link.icon} {t(`navbar.links.${link.label}`)}
+                      {(user.role === 'AD' || user.role === 'SA') && (
+                        <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                          <Link to='/admin' className='flex w-full items-center'>
+                            <LayoutDashboard
+                              className='mr-2.5 h-4 w-4'
+                              aria-hidden='true'
+                            />
+                            {t('navbar.adminPanel')}
                           </Link>
-                        </SheetClose>
-                      ))}
-                      <SheetClose asChild>
+                        </DropdownMenuItem>
+                      )}
+                      {(user.role === 'GV' ||
+                        user.role === 'AD' ||
+                        user.role === 'SA') && (
+                        <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                          <Link
+                            to='/instructor/earnings'
+                            className='flex w-full items-center'
+                          >
+                            <BookUser
+                              className='mr-2.5 h-4 w-4'
+                              aria-hidden='true'
+                            />
+                            {t('navbar.instructorHub')}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuGroup>
+                  )}
+                  {(user.role === 'AD' ||
+                    user.role === 'SA' ||
+                    user.role === 'GV') && <DropdownMenuSeparator />}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>{t('navbar.mySpace')}</DropdownMenuLabel>
+                    <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                      <Link
+                        to='/my-courses'
+                        className='flex w-full items-center'
+                      >
+                        <GraduationCap
+                          className='mr-2.5 h-4 w-4'
+                          aria-hidden='true'
+                        />
+                        {t('navbar.myLearning')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                      <Link
+                        to='/learning-report'
+                        className='flex w-full items-center'
+                      >
+                        <BarChart3
+                          className='mr-2.5 h-4 w-4'
+                          aria-hidden='true'
+                        />
+                        Báo cáo học tập AI
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                      <Link to='/profile' className='flex w-full items-center'>
+                        <UserCircle
+                          className='mr-2.5 h-4 w-4'
+                          aria-hidden='true'
+                        />
+                        {t('navbar.profileSettings')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                      <Link to='/orders' className='flex w-full items-center'>
+                        <CreditCard
+                          className='mr-2.5 h-4 w-4'
+                          aria-hidden='true'
+                        />
+                        {t('navbar.orderHistory')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className='h-9 cursor-pointer'>
+                      <Link
+                        to='/certificates'
+                        className='flex w-full items-center'
+                      >
+                        <Icons.certificate
+                          className='mr-2.5 h-4 w-4'
+                          aria-hidden='true'
+                        />
+                        {t('navbar.myCertificates')}
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className='h-9 cursor-pointer text-danger focus:text-danger'
+                  >
+                    <LogOut className='mr-2.5 h-4 w-4' aria-hidden='true' />
+                    {t('navbar.logOut')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className='flex items-center gap-1.5'>
+                <Button
+                  variant='ghost'
+                  onClick={() => {
+                    setDefaultAuthTab('login');
+                    setAuthModalOpen(true);
+                  }}
+                  className='h-9 px-3.5 text-sm font-medium'
+                >
+                  {t('navbar.login')}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setDefaultAuthTab('signup');
+                    setAuthModalOpen(true);
+                  }}
+                  className='h-9 px-4 text-sm font-medium'
+                >
+                  {t('navbar.signup')}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Nút mở menu trên điện thoại */}
+          <div className='flex items-center lg:hidden'>
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => setOpenSearchDialog(true)}
+              className='mr-0.5 rounded-full text-muted-foreground hover:text-foreground'
+            >
+              <Icons.search className='h-5 w-5' aria-hidden='true' />
+              <span className='sr-only'>{t('navbar.openSearch')}</span>
+            </Button>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='rounded-full'
+                  aria-label='Mở menu'
+                >
+                  {mobileMenuOpen ? (
+                    <Icons.close className='h-6 w-6' aria-hidden='true' />
+                  ) : (
+                    <Icons.menu className='h-6 w-6' aria-hidden='true' />
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side='left'
+                className='flex w-[300px] flex-col p-0'
+              >
+                <SheetHeader className='border-b border-border p-5 pb-3'>
+                  <SheetTitle className='flex items-center'>
+                    <Icons.logo className='mr-2 h-7 w-7 text-primary' />
+                    <span className='text-xl font-semibold text-foreground'>
+                      3TEduTech
+                    </span>
+                  </SheetTitle>
+                </SheetHeader>
+                <ScrollArea className='flex-1'>
+                  <nav className='flex flex-col space-y-1 p-4'>
+                    {navLinks.map((link) => (
+                      <SheetClose asChild key={link.label}>
                         <Link
-                          to="/ai-master"
-                          className="flex items-center px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-base shadow-md mt-2"
+                          to={link.href}
+                          className={cn(
+                            'flex items-center rounded-md px-3 py-2.5 text-base font-medium transition-colors',
+                            location.pathname.startsWith(link.href)
+                              ? 'bg-accent text-primary'
+                              : 'text-foreground hover:bg-accent'
+                          )}
                         >
-                          ✨ AI Master Suite
+                          {link.icon} {t(`navbar.links.${link.label}`)}
                         </Link>
                       </SheetClose>
-                    </nav>
-                    {isAuthenticated && user && (
-                      <Separator className='my-3 mx-4 dark:bg-slate-700/80' />
-                    )}
-                    {isAuthenticated && user && (
-                      <div className='p-4 pt-1 space-y-1'>
-                        <p className='px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2'>
-                          My Account
+                    ))}
+                    <SheetClose asChild>
+                      <Link
+                        to='/ai-master'
+                        className='mt-1 flex items-center rounded-md bg-primary/10 px-3 py-2.5 text-base font-medium text-primary transition-colors hover:bg-primary/15'
+                      >
+                        <Sparkles
+                          className='mr-3 h-5 w-5'
+                          aria-hidden='true'
+                        />
+                        Bộ công cụ AI Master
+                      </Link>
+                    </SheetClose>
+                  </nav>
+                  {isAuthenticated && user && (
+                    <>
+                      <Separator className='mx-4 my-3' />
+                      <div className='space-y-1 p-4 pt-1'>
+                        <p className='mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
+                          Tài khoản của tôi
                         </p>
-                        {[
-                          {
-                            href: '/my-courses',
-                            label: 'My Learning',
-                            icon: <GraduationCap />,
-                          },
-                          {
-                            href: '/profile',
-                            label: 'Profile & Settings',
-                            icon: <UserCircle />,
-                          },
-                          {
-                            href: '/orders',
-                            label: 'Order History',
-                            icon: <CreditCard />,
-                          },
-                          {
-                            href: '/certificates',
-                            label: 'My Certificates',
-                            icon: <Icons.certificate />,
-                          },
-                        ].map((link) => (
-                          <SheetClose asChild key={link.label}>
+                        {mobileAccountLinks.map((link) => (
+                          <SheetClose asChild key={link.href}>
                             <Link
                               to={link.href}
-                              className='flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-colors text-foreground/80 hover:bg-accent dark:hover:bg-accent/70 hover:text-foreground'
+                              className='flex items-center rounded-md px-3 py-2.5 text-base font-medium text-foreground transition-colors hover:bg-accent'
                             >
-                              <span className='mr-3 h-5 w-5 opacity-80 flex items-center justify-center'>
+                              <span className='mr-3 flex h-5 w-5 items-center justify-center'>
                                 {link.icon}
-                              </span>{' '}
+                              </span>
                               {link.label}
                             </Link>
                           </SheetClose>
@@ -547,9 +547,12 @@ const Navbar = () => {
                           <SheetClose asChild>
                             <Link
                               to='/admin'
-                              className='flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-colors text-foreground/80 hover:bg-accent dark:hover:bg-accent/70 hover:text-foreground'
+                              className='flex items-center rounded-md px-3 py-2.5 text-base font-medium text-foreground transition-colors hover:bg-accent'
                             >
-                              <LayoutDashboard className='mr-3 h-5 w-5 opacity-80' />
+                              <LayoutDashboard
+                                className='mr-3 h-5 w-5'
+                                aria-hidden='true'
+                              />
                               {t('navbar.adminPanel')}
                             </Link>
                           </SheetClose>
@@ -560,72 +563,75 @@ const Navbar = () => {
                           <SheetClose asChild>
                             <Link
                               to='/instructor'
-                              className='flex items-center px-3 py-2.5 rounded-md text-base font-medium transition-colors text-foreground/80 hover:bg-accent dark:hover:bg-accent/70 hover:text-foreground'
+                              className='flex items-center rounded-md px-3 py-2.5 text-base font-medium text-foreground transition-colors hover:bg-accent'
                             >
-                              <BookUser className='mr-3 h-5 w-5 opacity-80' />
+                              <BookUser
+                                className='mr-3 h-5 w-5'
+                                aria-hidden='true'
+                              />
                               {t('navbar.instructorHub')}
                             </Link>
                           </SheetClose>
                         )}
                       </div>
-                    )}
-                  </ScrollArea>
-                  <SheetFooter className='p-4 mt-auto border-t dark:border-slate-700/80'>
-                    {isAuthenticated ? (
-                      <Button
-                        variant='ghost'
-                        onClick={handleLogout}
-                        className='w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-500 h-11 text-base'
-                      >
-                        <LogOut className='mr-3 h-5 w-5 opacity-80' />{' '}
-                        {t('navbar.logOut')}
-                      </Button>
-                    ) : (
-                      <div className='grid grid-cols-2 gap-3'>
-                        <SheetClose asChild>
-                          <Button
-                            variant='outline'
-                            className='w-full h-11 text-base'
-                            onClick={() => {
-                              setDefaultAuthTab('login');
-                              setAuthModalOpen(true);
-                            }}
-                          >
-                            {t('navbar.login')}
-                          </Button>
-                        </SheetClose>
-                        <SheetClose asChild>
-                          <Button
-                            className='w-full h-11 text-base'
-                            onClick={() => {
-                              setDefaultAuthTab('signup');
-                              setAuthModalOpen(true);
-                            }}
-                          >
-                            {t('navbar.signup')}
-                          </Button>
-                        </SheetClose>
-                      </div>
-                    )}
-                  </SheetFooter>
-                </SheetContent>
-              </Sheet>
-            </div>
+                    </>
+                  )}
+                </ScrollArea>
+                <SheetFooter className='mt-auto border-t border-border p-4'>
+                  {isAuthenticated ? (
+                    <Button
+                      variant='ghost'
+                      onClick={handleLogout}
+                      className='h-11 w-full justify-start text-base text-danger hover:text-danger'
+                    >
+                      <LogOut className='mr-3 h-5 w-5' aria-hidden='true' />
+                      {t('navbar.logOut')}
+                    </Button>
+                  ) : (
+                    <div className='grid w-full grid-cols-2 gap-3'>
+                      <SheetClose asChild>
+                        <Button
+                          variant='outline'
+                          className='h-11 w-full text-base'
+                          onClick={() => {
+                            setDefaultAuthTab('login');
+                            setAuthModalOpen(true);
+                          }}
+                        >
+                          {t('navbar.login')}
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button
+                          className='h-11 w-full text-base'
+                          onClick={() => {
+                            setDefaultAuthTab('signup');
+                            setAuthModalOpen(true);
+                          }}
+                        >
+                          {t('navbar.signup')}
+                        </Button>
+                      </SheetClose>
+                    </div>
+                  )}
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-        <SearchCommandDialog
-          open={openSearchDialog}
-          onOpenChange={setOpenSearchDialog}
+      </div>
+      <SearchCommandDialog
+        open={openSearchDialog}
+        onOpenChange={setOpenSearchDialog}
+      />
+      {!isAuthLoading && (
+        <AuthModal
+          isOpen={authModalOpen && !isAuthenticated}
+          onClose={() => setAuthModalOpen(false)}
+          defaultTab={defaultAuthTab}
         />
-        {!isAuthLoading && (
-          <AuthModal
-            isOpen={authModalOpen && !isAuthenticated}
-            onClose={() => setAuthModalOpen(false)}
-            defaultTab={defaultAuthTab}
-          />
-        )}
-      </header>
-    </>
+      )}
+    </header>
   );
 };
 

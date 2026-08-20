@@ -149,9 +149,16 @@ def create_app() -> FastAPI:
         else:
             vllm_info["engine"] = "not_used"
 
+        # [THÊM 19/08/2026] Trạng thái CHI TIẾT của lớp chọn mô hình.
+        # Không có khối này, khi Gemini hết hạn mức và hệ thống lặng lẽ chuyển
+        # sang Qwen thì không ai biết — chỉ thấy câu trả lời "hơi khác" mà
+        # không hiểu vì sao.
+        from src.core.llm_provider import trang_thai_provider
+
         return {
             "status": overall_status,
             "llm_provider": settings.llm_provider,
+            "llm": trang_thai_provider(),
             "vllm": vllm_info,
             # [SỬA 18/08/2026] Thêm `available`.
             #

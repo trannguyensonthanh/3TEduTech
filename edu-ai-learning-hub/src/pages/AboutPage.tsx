@@ -1,10 +1,10 @@
-import React from 'react';
+// src/pages/AboutPage.tsx
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/common/Icons';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import StatCard from '@/components/common/StatCard';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
@@ -27,8 +27,13 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
-// --- Data (quản lý qua i18n) ---
-
+/**
+ * Trang giới thiệu.
+ *
+ * Bản trước mở đầu bằng một dải nền tối chuyển sắc kèm ba quầng sáng mờ, rồi
+ * mỗi giá trị cốt lõi và mỗi con số lại mang một màu riêng. Nay trang chỉ dùng
+ * nền nhạt để phân tách các dải, và một sắc độ duy nhất của màu nhấn.
+ */
 const AboutPage = () => {
   const { t } = useTranslation();
 
@@ -55,135 +60,97 @@ const AboutPage = () => {
     },
   ];
 
+  /* Nhãn nằm trong nhánh `aboutPage.stats` của tệp dịch. Bản trước gọi
+     t('stats.learners') nên không khớp khóa nào và hiện ra nguyên chuỗi khóa. */
   const platformStats = [
+    { icon: Icons.users, number: '5M+', labelKey: 'aboutPage.stats.learners' },
+    { icon: Icons.courses, number: '10K+', labelKey: 'aboutPage.stats.courses' },
     {
-      icon: <Icons.users className='w-10 h-10' />,
-      number: '5M+',
-      labelKey: 'stats.learners',
-      color: 'text-blue-500',
-    },
-    {
-      icon: <Icons.courses className='w-10 h-10' />,
-      number: '10K+',
-      labelKey: 'stats.courses',
-      color: 'text-green-500',
-    },
-    {
-      icon: <Icons.instructors className='w-10 h-10' />,
+      icon: Icons.instructors,
       number: '2K+',
-      labelKey: 'stats.instructors',
-      color: 'text-purple-500',
+      labelKey: 'aboutPage.stats.instructors',
     },
-    {
-      icon: <Icons.globe className='w-10 h-10' />,
-      number: '150+',
-      labelKey: 'stats.countries',
-      color: 'text-red-500',
-    },
+    { icon: Icons.globe, number: '150+', labelKey: 'aboutPage.stats.countries' },
   ];
 
   const coreValues = [
     {
-      icon: (
-        <Icons.users className='w-8 h-8 text-blue-600 dark:text-blue-400' />
-      ),
+      icon: Icons.users,
       titleKey: 'values.learnerCentric',
       descKey: 'values.learnerCentricDesc',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     },
     {
-      icon: (
-        <Icons.lightbulb className='w-8 h-8 text-yellow-500 dark:text-yellow-400' />
-      ),
+      icon: Icons.lightbulb,
       titleKey: 'values.innovation',
       descKey: 'values.innovationDesc',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
     },
     {
-      icon: (
-        <Icons.star className='w-8 h-8 text-green-500 dark:text-green-400' />
-      ),
+      icon: Icons.star,
       titleKey: 'values.excellence',
       descKey: 'values.excellenceDesc',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
     },
     {
-      icon: (
-        <Icons.globe className='w-8 h-8 text-purple-500 dark:text-purple-400' />
-      ),
+      icon: Icons.globe,
       titleKey: 'values.accessibility',
       descKey: 'values.accessibilityDesc',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     },
     {
-      icon: (
-        <Icons.heartHandshake className='w-8 h-8 text-red-500 dark:text-red-400' />
-      ),
+      icon: Icons.heartHandshake,
       titleKey: 'values.integrity',
       descKey: 'values.integrityDesc',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
     },
     {
-      icon: <Icons.ai className='w-8 h-8 text-teal-500 dark:text-teal-400' />,
+      icon: Icons.ai,
       titleKey: 'values.empowerment',
       descKey: 'values.empowermentDesc',
-      bgColor: 'bg-teal-100 dark:bg-teal-900/30',
     },
   ];
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <motion.div
+      {/* Dải mở đầu */}
+      <motion.section
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className='relative bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 text-white pt-20 pb-16 md:pt-32 md:pb-24 text-center overflow-hidden'
+        className='border-b border-border bg-muted/40'
       >
-        <div className='absolute inset-0 opacity-10'>
-          <div className='absolute -top-20 -left-20 w-72 h-72 bg-blue-500 rounded-full filter blur-3xl animate-pulse-slow'></div>
-          <div className='absolute -bottom-20 -right-10 w-80 h-80 bg-purple-500 rounded-full filter blur-3xl animate-pulse-slower animation-delay-2000'></div>
-          <div className='absolute top-1/3 left-1/4 w-60 h-60 bg-teal-400 rounded-full filter blur-3xl animate-pulse-slow animation-delay-4000'></div>
-        </div>
-        <div className='container mx-auto px-4 relative z-10'>
+        <div className='container mx-auto px-4 py-16 text-center md:py-20'>
           <motion.h1
             variants={itemVariants}
             initial='hidden'
             animate='visible'
-            className='text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight'
+            className='text-3xl font-semibold tracking-tight sm:text-4xl'
           >
-            <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-green-400'>
-              {t('aboutPage.hero.title')}
-            </span>
+            {t('aboutPage.hero.title')}
           </motion.h1>
           <motion.p
             variants={itemVariants}
             initial='hidden'
             animate='visible'
-            className='text-xl md:text-2xl text-slate-200 max-w-3xl mx-auto'
+            className='mx-auto mt-4 max-w-3xl text-base text-muted-foreground md:text-lg'
           >
             {t('aboutPage.hero.subtitle')}
           </motion.p>
         </div>
-      </motion.div>
+      </motion.section>
 
       <div className='container mx-auto px-4 py-12 md:py-16'>
-        <div className='max-w-6xl mx-auto'>
-          {/* Our Story */}
+        <div className='mx-auto max-w-6xl space-y-16 md:space-y-20'>
+          {/* Câu chuyện của chúng tôi */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.2 }}
-            className='mb-16 md:mb-20'
           >
             <motion.h2
               variants={itemVariants}
-              className='text-3xl md:text-4xl font-bold mb-8 text-slate-800 dark:text-slate-100 text-center md:text-left'
+              className='text-2xl font-semibold tracking-tight sm:text-3xl'
             >
               {t('aboutPage.story.title')}
             </motion.h2>
-            <div className='prose prose-lg dark:prose-invert max-w-none space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed'>
+            <div className='mt-6 space-y-4 text-base leading-relaxed text-muted-foreground'>
               <motion.p variants={itemVariants}>
                 {t('aboutPage.story.p1')}
               </motion.p>
@@ -196,119 +163,126 @@ const AboutPage = () => {
             </div>
           </motion.section>
 
-          {/* Our Mission & Vision */}
+          {/* Sứ mệnh và tầm nhìn */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.2 }}
-            className='mb-16 md:mb-20 bg-slate-50 dark:bg-slate-800/50 p-8 md:p-12 rounded-2xl shadow-xl'
+            className='rounded-xl border border-border bg-muted/40 p-8 md:p-12'
           >
-            <div className='grid md:grid-cols-2 gap-8 md:gap-12 items-center'>
+            <div className='grid items-start gap-8 md:grid-cols-2 md:gap-12'>
               <motion.div variants={itemVariants}>
-                <div className='flex items-center text-blue-600 dark:text-blue-400 mb-3'>
-                  <Icons.target className='w-8 h-8 mr-3' />
-                  <h2 className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                <div className='mb-3 flex items-center gap-3'>
+                  <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                    <Icons.target className='h-5 w-5' aria-hidden='true' />
+                  </span>
+                  <h2 className='text-xl font-semibold tracking-tight sm:text-2xl'>
                     {t('aboutPage.mission.title')}
                   </h2>
                 </div>
-                <p className='text-lg text-slate-700 dark:text-slate-300 mb-4 leading-relaxed'>
+                <p className='text-base leading-relaxed text-muted-foreground'>
                   {t('aboutPage.mission.description')}
                 </p>
-                <ul className='space-y-2 text-slate-600 dark:text-slate-300'>
+                <ul className='mt-4 space-y-2 text-sm'>
                   {[...Array(4)].map((_, idx) => (
-                    <li key={idx} className='flex items-start'>
-                      <Icons.checkCircle className='h-5 w-5 text-green-500 dark:text-green-400 mr-2.5 mt-1 flex-shrink-0' />
-                      <span>{t(`aboutPage.mission.item${idx + 1}`)}</span>
+                    <li key={idx} className='flex items-start gap-2.5'>
+                      <Icons.checkCircle
+                        className='mt-0.5 h-4 w-4 shrink-0 text-primary'
+                        aria-hidden='true'
+                      />
+                      <span className='text-muted-foreground'>
+                        {t(`aboutPage.mission.item${idx + 1}`)}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </motion.div>
-              <motion.div variants={itemVariants} className='mt-8 md:mt-0'>
-                <div className='flex items-center text-purple-600 dark:text-purple-400 mb-3'>
-                  <Icons.eye className='w-8 h-8 mr-3' />
-                  <h2 className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+
+              <motion.div variants={itemVariants}>
+                <div className='mb-3 flex items-center gap-3'>
+                  <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                    <Icons.eye className='h-5 w-5' aria-hidden='true' />
+                  </span>
+                  <h2 className='text-xl font-semibold tracking-tight sm:text-2xl'>
                     {t('aboutPage.vision.title')}
                   </h2>
                 </div>
-                <p className='text-lg text-slate-700 dark:text-slate-300 leading-relaxed'>
+                <p className='text-base leading-relaxed text-muted-foreground'>
                   {t('aboutPage.vision.description')}
                 </p>
               </motion.div>
             </div>
           </motion.section>
 
-          {/* Our Core Values */}
+          {/* Giá trị cốt lõi */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.2 }}
-            className='mb-16 md:mb-20'
           >
             <motion.h2
               variants={itemVariants}
-              className='text-3xl md:text-4xl font-bold mb-10 md:mb-12 text-slate-800 dark:text-slate-100 text-center'
+              className='text-center text-2xl font-semibold tracking-tight sm:text-3xl'
             >
               {t('aboutPage.values.title')}
             </motion.h2>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-              {coreValues.map((value, index) => (
-                <motion.div key={index} variants={itemVariants}>
-                  <Card className='h-full text-center p-6 md:p-8 bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl dark:hover:shadow-slate-700/60 transition-all duration-300 transform hover:-translate-y-1.5 border dark:border-slate-700'>
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 ${value.bgColor}`}
-                    >
-                      {value.icon}
+            <div className='mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+              {coreValues.map((value) => {
+                const ValueIcon = value.icon;
+                return (
+                  <motion.div key={value.titleKey} variants={itemVariants}>
+                    <div className='h-full rounded-xl border border-border bg-card p-6 text-center'>
+                      <span className='mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                        <ValueIcon className='h-6 w-6' aria-hidden='true' />
+                      </span>
+                      <h3 className='mb-2 text-base font-semibold'>
+                        {t(`aboutPage.${value.titleKey}`)}
+                      </h3>
+                      <p className='text-sm leading-relaxed text-muted-foreground'>
+                        {t(`aboutPage.${value.descKey}`)}
+                      </p>
                     </div>
-                    <h3 className='text-xl font-semibold text-slate-800 dark:text-slate-100 mb-3'>
-                      {t(`aboutPage.${value.titleKey}`)}
-                    </h3>
-                    <p className='text-sm text-slate-600 dark:text-slate-400 leading-relaxed'>
-                      {t(`aboutPage.${value.descKey}`)}
-                    </p>
-                  </Card>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.section>
 
-          {/* Our Leadership Team */}
+          {/* Ban lãnh đạo */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.1 }}
-            className='mb-16 md:mb-20'
           >
             <motion.h2
               variants={itemVariants}
-              className='text-3xl md:text-4xl font-bold mb-10 md:mb-12 text-slate-800 dark:text-slate-100 text-center'
+              className='text-center text-2xl font-semibold tracking-tight sm:text-3xl'
             >
               {t('aboutPage.leadership.title')}
             </motion.h2>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10'>
-              {leadershipTeam.map((member, index) => {
+            <div className='mt-10 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4'>
+              {leadershipTeam.map((member) => {
                 const name = t(`aboutPage.leadership.${member.key}.name`);
                 return (
                   <motion.div
-                    key={index}
+                    key={member.key}
                     variants={itemVariants}
-                    className='flex flex-col items-center text-center group'
+                    className='flex flex-col items-center text-center'
                   >
-                    <Avatar className='w-32 h-32 md:w-36 md:h-36 mb-4 shadow-lg border-4 border-transparent group-hover:border-blue-400 dark:group-hover:border-blue-500 transition-all duration-300'>
+                    <Avatar className='mb-4 h-28 w-28 border border-border'>
                       <AvatarImage src={member.image} alt={name} />
-                      <AvatarFallback className='text-3xl bg-slate-200 dark:bg-slate-700'>
+                      <AvatarFallback className='bg-muted text-xl text-muted-foreground'>
                         {name.substring(0, 1) + (name.split(' ')[1]?.[0] || '')}
                       </AvatarFallback>
                     </Avatar>
-                    <h3 className='text-lg font-semibold text-slate-800 dark:text-slate-100'>
-                      {t(`aboutPage.leadership.${member.key}.name`)}
-                    </h3>
-                    <p className='text-sm text-blue-600 dark:text-blue-400 font-medium mb-1'>
+                    <h3 className='text-base font-semibold'>{name}</h3>
+                    <p className='mt-0.5 text-sm font-medium text-primary'>
                       {t(`aboutPage.leadership.${member.key}.title`)}
                     </p>
-                    <p className='text-xs text-muted-foreground px-2'>
+                    <p className='mt-1 px-2 text-xs text-muted-foreground'>
                       {t(`aboutPage.leadership.${member.key}.bio`)}
                     </p>
                   </motion.div>
@@ -317,85 +291,66 @@ const AboutPage = () => {
             </div>
           </motion.section>
 
-          {/* Stats Section */}
+          {/* Số liệu nền tảng */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.2 }}
-            className='mb-16 md:mb-20 bg-slate-50 dark:bg-slate-800/50 p-8 md:p-12 rounded-2xl shadow-xl'
           >
             <motion.h2
               variants={itemVariants}
-              className='text-3xl md:text-4xl font-bold mb-10 text-slate-800 dark:text-slate-100 text-center'
+              className='text-center text-2xl font-semibold tracking-tight sm:text-3xl'
             >
               {t('aboutPage.stats.title')}
             </motion.h2>
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8'>
-              {platformStats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  className='text-center p-4 bg-background dark:bg-slate-800 rounded-lg shadow-md'
-                >
-                  <div className={`mb-3 ${stat.color}`}>
-                    {React.cloneElement(stat.icon, {
-                      className: 'w-10 h-10 md:w-12 md:h-12 mx-auto',
-                    })}
-                  </div>
-                  <div
-                    className={`text-3xl md:text-4xl font-extrabold ${stat.color} mb-1`}
-                  >
-                    {stat.number}
-                  </div>
-                  <div className='text-sm text-muted-foreground'>
-                    {t(stat.labelKey)}
-                  </div>
+            <div className='mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+              {platformStats.map((stat) => (
+                <motion.div key={stat.labelKey} variants={itemVariants}>
+                  <StatCard
+                    label={t(stat.labelKey)}
+                    value={stat.number}
+                    icon={stat.icon}
+                  />
                 </motion.div>
               ))}
             </div>
           </motion.section>
 
-          {/* Final CTA */}
+          {/* Lời mời cuối trang */}
           <motion.section
             variants={sectionVariants}
             initial='hidden'
             whileInView='visible'
             viewport={{ once: true, amount: 0.3 }}
-            className='text-center py-10 md:py-16 border-t dark:border-slate-700'
+            className='border-t border-border pt-12 text-center md:pt-16'
           >
             <motion.h2
               variants={itemVariants}
-              className='text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6'
+              className='text-2xl font-semibold tracking-tight sm:text-3xl'
             >
               {t('aboutPage.cta.title')}
             </motion.h2>
             <motion.p
               variants={itemVariants}
-              className='text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto'
+              className='mx-auto mt-3 max-w-2xl text-base text-muted-foreground'
             >
               {t('aboutPage.cta.description')}
             </motion.p>
             <motion.div
               variants={itemVariants}
-              className='flex flex-col sm:flex-row gap-4 justify-center'
+              className='mt-8 flex flex-col justify-center gap-3 sm:flex-row'
             >
-              <Button
-                size='lg'
-                asChild
-                className='bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105'
-              >
+              <Button size='lg' asChild>
                 <Link to='/courses'>
-                  {t('aboutPage.cta.explore')}{' '}
-                  <Icons.arrowRight className='ml-2 h-5 w-5' />
+                  {t('aboutPage.cta.explore')}
+                  <Icons.arrowRight
+                    className='ml-2 h-4 w-4'
+                    aria-hidden='true'
+                  />
                 </Link>
               </Button>
-              <Button
-                size='lg'
-                variant='outline'
-                asChild
-                className='border-foreground/30 text-foreground hover:bg-foreground/5 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/60 font-semibold shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105'
-              >
+              <Button size='lg' variant='outline' asChild>
                 <Link to='/instructor/register'>
                   {t('aboutPage.cta.becomeInstructor')}
                 </Link>

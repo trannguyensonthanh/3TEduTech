@@ -21,17 +21,10 @@ const getOverviewStats = async (accountId) => {
        WHERE lp.AccountID = @AccountID AND lp.IsCompleted = 1
       ) AS TotalCompletedLessons,
       
-      /* [SỬA 17/08/2026] Bảng LessonProgress KHÔNG có cột CreatedAt.
-         Schema thật: ProgressID, AccountID, LessonID, IsCompleted, CompletedAt,
-         LastWatchedPosition, LastWatchedAt.
-         → DATEDIFF(MINUTE, CreatedAt, ...) gây lỗi "Invalid column name 'CreatedAt'".
-         Hệ thống không ghi nhận thời điểm bắt đầu học nên không tính được thời lượng
-         thực. Ước lượng hợp lý nhất từ dữ liệu đang có:
-           - Bài đã hoàn thành  → tính trọn thời lượng video
-           - Bài đang học dở    → tính tới vị trí xem cuối cùng (LastWatchedPosition) */
+      /* [SỬA 17/08/2026] + [SỬA MỚI] Dùng TotalTimeSpent thực tế nếu có, nếu không thì ước lượng. */
       (SELECT ISNULL(SUM(
-                CASE WHEN lp.IsCompleted = 1
-                     THEN ISNULL(l.VideoDurationSeconds, 0)
+                CASE WHEN lp.TotalTimeSpent > 0 THEN lp.TotalTimeSpent
+                     WHEN lp.IsCompleted = 1 THEN ISNULL(l.VideoDurationSeconds, 0)
                      ELSE ISNULL(lp.LastWatchedPosition, 0)
                 END
               ) / 60, 0)
@@ -140,9 +133,23 @@ const getQuizPerformance = async (accountId) => {
     ORDER BY qa.CompletedAt DESC
   `;
   
+  /* [SỬA 19/08/2026] LỖI LÀM HỎNG CẢ TRANG BÁO CÁO.
+
+     Trước đây hai truy vấn dùng CHUNG một đối tượng Request và chạy song song
+     trong Promise.all. Thư viện mssql chỉ cho mỗi Request thực thi một truy vấn
+     tại một thời điểm; truy vấn thứ hai ném EREQINPROG. Lỗi này không được bắt
+     ở tầng nào nên toàn bộ điểm cuối báo cáo học tập trả về 500 — đúng triệu
+     chứng người dùng gặp.
+
+     Mỗi truy vấn nay có Request riêng, và vẫn chạy song song như ý định ban đầu. */
+  const statsRequest = pool.request();
+  statsRequest.input('AccountID', sql.BigInt, accountId);
+  const recentRequest = pool.request();
+  recentRequest.input('AccountID', sql.BigInt, accountId);
+
   const [statsResult, recentResult] = await Promise.all([
-    request.query(statsQuery),
-    request.query(recentQuery)
+    statsRequest.query(statsQuery),
+    recentRequest.query(recentQuery)
   ]);
 
   return {
@@ -167,19 +174,17 @@ const getWeeklyActivity = async (accountId) => {
     SELECT 
       FORMAT(d.Date, 'yyyy-MM-dd') AS Date,
       (SELECT COUNT(*) FROM LessonProgress lp WHERE lp.AccountID = @AccountID AND CAST(lp.CompletedAt AS DATE) = d.Date) AS LessonsCompleted,
-      /* [SỬA 17/08/2026] LessonProgress KHÔNG có cột CreatedAt → lỗi
-         "Invalid column name 'CreatedAt'" (giống lỗi ở getOverviewStats phía trên).
-         Ước lượng thời lượng học trong ngày từ dữ liệu thực có:
-           - Bài hoàn thành trong ngày → tính trọn thời lượng video
-           - Bài chỉ xem dở trong ngày → tính tới vị trí xem cuối (LastWatchedPosition) */
+      /* [SỬA 17/08/2026] + [SỬA MỚI] Ước lượng thời lượng học trong ngày, ưu tiên TotalTimeSpent nếu có */
       (SELECT ISNULL(SUM(
-                CASE WHEN lp.IsCompleted = 1 AND CAST(lp.CompletedAt AS DATE) = d.Date
+                CASE WHEN lp.TotalTimeSpent > 0 THEN lp.TotalTimeSpent
+                     WHEN lp.IsCompleted = 1 AND CAST(lp.CompletedAt AS DATE) = v.DailyDate
                      THEN ISNULL(l.VideoDurationSeconds, 0)
                      ELSE ISNULL(lp.LastWatchedPosition, 0)
                 END
               ) / 60, 0)
        FROM LessonProgress lp
        JOIN Lessons l ON lp.LessonID = l.LessonID
+       CROSS APPLY (SELECT d.Date AS DailyDate) v
        WHERE lp.AccountID = @AccountID
          AND CAST(lp.LastWatchedAt AS DATE) = d.Date
          AND lp.LastWatchedAt IS NOT NULL) AS MinutesSpent

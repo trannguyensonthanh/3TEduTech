@@ -22,12 +22,12 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'; // Cho Tabs
 const profileTabs = [
   {
     value: 'profile',
-    label: 'Edit Profile',
+    label: 'Hồ sơ cá nhân',
     icon: <Icons.userEdit className='mr-2 h-4 w-4 sm:h-5 sm:w-5' />,
   },
   {
     value: 'security',
-    label: 'Account Security',
+    label: 'Bảo mật tài khoản',
     icon: <Icons.lockKeyhole className='mr-2 h-4 w-4 sm:h-5 sm:w-5' />,
   },
   // {
@@ -133,17 +133,17 @@ const UserProfilePage = () => {
     ).toUpperCase();
   };
   const userRoleDisplay = (roleId?: string): string => {
-    if (!roleId) return 'Member';
+    if (!roleId) return 'Thành viên';
     switch (roleId) {
       case 'AD':
-        return 'Administrator';
+        return 'Quản trị viên';
       case 'SA':
-        return 'Super Admin';
+        return 'Quản trị hệ thống';
       case 'GV':
-        return 'Instructor';
+        return 'Giảng viên';
       case 'NU':
       default:
-        return 'Student';
+        return 'Học viên';
     }
   };
 
@@ -172,14 +172,14 @@ const UserProfilePage = () => {
       <Layout>
         <div className='container mx-auto px-4 py-12 text-center'>
           <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6 text-destructive' />
-          <h2 className='text-2xl font-semibold mb-3 text-destructive-foreground dark:text-destructive'>
-            Could Not Load Your Profile
+          <h2 className='text-2xl font-semibold mb-3 text-danger'>
+            Không tải được hồ sơ của bạn
           </h2>
           <p className='text-muted-foreground mb-6'>
-            There was an issue fetching your profile data. Please try refreshing
-            the page or contact support if the problem persists.
+            Có trục trặc khi lấy dữ liệu hồ sơ. Bạn thử tải lại trang, hoặc liên
+            hệ hỗ trợ nếu tình trạng vẫn tiếp diễn.
           </p>
-          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          <Button onClick={() => window.location.reload()}>Tải lại trang</Button>
         </div>
       </Layout>
     );
@@ -193,17 +193,15 @@ const UserProfilePage = () => {
         animate='visible'
       >
         {/* Page Header */}
-        <div className='bg-slate-50 dark:bg-slate-900/50 border-b border-border/60 dark:border-slate-700/60'>
+        <div className='border-b border-border bg-muted/30'>
           <motion.div
             variants={sectionVariants}
             className='container mx-auto px-4 pt-8 pb-6 md:pt-12 md:pb-10'
           >
-            <h1 className='text-3xl md:text-4xl font-bold text-foreground tracking-tight'>
-              Account Settings
-            </h1>
+            <h1 className='text-foreground'>Cài đặt tài khoản</h1>
             <p className='mt-1.5 text-muted-foreground text-base md:text-lg'>
-              Manage your profile information, security settings, and
-              application preferences.
+              Quản lý thông tin cá nhân, thiết lập bảo mật và tùy chọn sử dụng
+              ứng dụng.
             </p>
           </motion.div>
         </div>
@@ -215,16 +213,16 @@ const UserProfilePage = () => {
               variants={sidebarVariants}
               className='md:col-span-4 lg:col-span-3 md:sticky md:top-24' // top-24 (1.5rem * 4 (navbar h-16) + 1.5rem (padding-top của container này))
             >
-              <Card className='shadow-xl dark:bg-slate-800/40 border dark:border-slate-700/50'>
+              <Card className='rounded-xl border border-border bg-card shadow-none'>
                 <CardContent className='p-6'>
                   <div className='flex flex-col items-center space-y-4'>
                     <div className='relative group'>
-                      <Avatar className='h-28 w-28 md:h-32 md:w-32 border-4 border-background dark:border-slate-800 shadow-lg'>
+                      <Avatar className='h-28 w-28 md:h-32 md:w-32 border-4 border-background'>
                         <AvatarImage
                           src={
                             displayUser.avatarUrl ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              displayUser.fullName || 'User'
+                              displayUser.fullName || 'Người dùng'
                             )}&size=256&background=random&font-size=0.33&bold=true&format=svg`
                           }
                           alt={displayUser.fullName}
@@ -236,13 +234,13 @@ const UserProfilePage = () => {
                       <Button
                         variant='outline'
                         size='icon'
-                        className='absolute bottom-1 right-1 h-9 w-9 rounded-full bg-background/90 hover:bg-accent group-hover:opacity-100 opacity-0 md:opacity-100 transition-opacity shadow-md border'
+                        className='absolute bottom-1 right-1 h-9 w-9 rounded-full border border-border bg-background/90 hover:bg-accent group-hover:opacity-100 opacity-0 md:opacity-100 transition-opacity'
                         onClick={() => {
                           handleTabChange(
                             'profile'
                           ); /* TODO: Scroll to avatar upload section */
                         }}
-                        aria-label='Change profile picture'
+                        aria-label='Đổi ảnh đại diện'
                       >
                         <Icons.edit className='h-4 w-4 text-muted-foreground group-hover:text-primary' />
                       </Button>
@@ -252,13 +250,13 @@ const UserProfilePage = () => {
                       <h2 className='text-2xl font-bold text-foreground'>
                         {displayUser.fullName}
                       </h2>
-                      <p className='text-sm text-primary dark:text-primary/90 font-medium mt-0.5'>
+                      <p className='text-sm text-primary font-medium mt-0.5'>
                         {displayUser.headline ||
                           userRoleDisplay(displayUser.roleId)}
                       </p>
                     </div>
 
-                    <Separator className='my-4 dark:bg-slate-700/60 w-full' />
+                    <Separator className='my-4 w-full' />
 
                     <div className='w-full text-sm space-y-3.5 text-left'>
                       <div className='flex items-center text-muted-foreground'>
@@ -301,12 +299,12 @@ const UserProfilePage = () => {
                 className='w-full'
               >
                 <ScrollArea className='w-full pb-1 mb-6 md:mb-8'>
-                  <TabsList className='inline-flex h-auto min-w-full sm:min-w-0 sm:w-auto bg-slate-100 dark:bg-slate-800 p-1.5 rounded-lg shadow-sm'>
+                  <TabsList className='inline-flex h-auto min-w-full sm:min-w-0 sm:w-auto bg-muted p-1.5 rounded-lg'>
                     {profileTabs.map((tab) => (
                       <TabsTrigger
                         key={tab.value}
                         value={tab.value}
-                        className='px-3.5 py-2 sm:px-5 sm:py-2.5 text-sm font-medium flex-1 sm:flex-none data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md rounded-md h-auto leading-normal'
+                        className='px-3.5 py-2 sm:px-5 sm:py-2.5 text-sm font-medium flex-1 sm:flex-none data-[state=active]:bg-background data-[state=active]:text-primary rounded-md h-auto leading-normal'
                       >
                         {React.cloneElement(tab.icon, {
                           className: cn(

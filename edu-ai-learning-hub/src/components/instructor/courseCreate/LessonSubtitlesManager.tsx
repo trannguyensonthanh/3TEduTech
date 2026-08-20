@@ -142,21 +142,21 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
   }
 
   return (
-    <div className='space-y-4 border rounded-md p-4'>
+    <div className='space-y-4 rounded-xl border border-border bg-card p-4'>
       <h3 className='font-semibold text-base flex items-center'>
         <Icons.captions className='h-5 w-5 mr-2 text-primary' />
         Subtitles
       </h3>
 
       {/* On-Demand AI Generator Banner */}
-      <div className='bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-lg p-3 my-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm'>
+      <div className='my-2 flex flex-col items-start justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3 sm:flex-row sm:items-center'>
         <div className='flex items-center space-x-3'>
-          <div className='p-2.5 bg-indigo-500/20 text-indigo-400 rounded-lg shrink-0 flex items-center justify-center'>
-            <Icons.bot className='w-5 h-5 text-indigo-500 animate-pulse' />
+          <div className='flex shrink-0 items-center justify-center rounded-lg bg-background p-2.5 text-primary'>
+            <Icons.bot className='w-5 h-5' />
           </div>
           <div>
             <p className='text-sm font-semibold text-foreground flex items-center gap-1.5'>
-              AI Auto-Transcribe <span className='text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider'>On-Demand</span>
+              AI Auto-Transcribe <span className='rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground'>On-Demand</span>
             </p>
             <p className='text-xs text-muted-foreground mt-0.5'>
               Tiết kiệm tài nguyên! AI chỉ chạy tạo phụ đề khi bạn thực sự mong muốn và bấm nút kích hoạt.
@@ -168,7 +168,7 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
           size='sm'
           onClick={handleGenerateAi}
           disabled={isGeneratingAi || (subtitlesData && subtitlesData.subtitles && subtitlesData.subtitles.length > 0)}
-          className='bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shrink-0 shadow-sm transition-all duration-200 w-full sm:w-auto'
+          className='w-full shrink-0 sm:w-auto'
         >
           {isGeneratingAi ? (
             <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
@@ -179,7 +179,7 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
         </Button>
       </div>
       {subtitlesData && subtitlesData.subtitles && subtitlesData.subtitles.length > 0 && (
-        <p className='text-[11px] text-amber-500 italic mt-[-4px] mb-2 flex items-center gap-1'>
+        <p className='mt-[-4px] mb-2 flex items-center gap-1 text-[11px] italic text-warning'>
           <Icons.info className='w-3.5 h-3.5' /> Bài học đã có sẵn phụ đề srt. Để sử dụng AI dịch và tạo lại mới, hãy xóa file phụ đề cũ bên dưới.
         </p>
       )}
@@ -252,7 +252,7 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
                   disabled={sub.isDefault || isSettingPrimary}
                 >
                   {sub.isDefault ? (
-                    <Icons.checkCircle className='h-4 w-4 mr-2 text-green-500' />
+                    <Icons.checkCircle className='h-4 w-4 mr-2 text-success' />
                   ) : (
                     <div className='h-4 w-4 mr-2' />
                   )}
@@ -271,7 +271,7 @@ export const LessonSubtitlesManager: React.FC<LessonSubtitlesManagerProps> = ({
                     href={sub.subtitleUrl}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-xs text-blue-500 hover:underline truncate max-w-[200px]'
+                    className='max-w-[200px] truncate text-xs text-primary hover:underline'
                   >
                     {sub.subtitleUrl}
                   </a>

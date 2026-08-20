@@ -41,6 +41,7 @@ export interface Order {
   originalTotalPrice: number;
   discountAmount: number;
   finalAmount: number;
+  currencyId?: string;
   promotionId?: number | null;
   paymentId?: number | null;
   orderStatus: OrderStatus;

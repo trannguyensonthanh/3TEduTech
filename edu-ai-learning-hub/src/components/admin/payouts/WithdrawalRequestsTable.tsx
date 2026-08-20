@@ -20,16 +20,42 @@ interface WithdrawalRequestsTableProps {
   onReview: (request: WithdrawalRequest) => void;
 }
 
-const statusConfig = {
-  PENDING: { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
-  APPROVED: { label: 'Approved', className: 'bg-blue-100 text-blue-800' },
-  REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-800' },
-  PROCESSING: {
-    label: 'Processing',
-    className: 'bg-purple-100 text-purple-800',
+/* Trạng thái luôn gồm ba phần: biểu tượng, nhãn chữ và màu token.
+   Không để riêng màu gánh ý nghĩa. */
+const statusConfig: Record<
+  string,
+  { label: string; className: string; icon: React.ElementType }
+> = {
+  PENDING: {
+    label: 'Chờ duyệt',
+    className: 'bg-warning-soft text-warning border-transparent',
+    icon: Icons.hourglass,
   },
-  COMPLETED: { label: 'Completed', className: 'bg-green-100 text-green-800' },
-  CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-800' },
+  APPROVED: {
+    label: 'Đã duyệt',
+    className: 'bg-muted text-foreground border-transparent',
+    icon: Icons.check,
+  },
+  REJECTED: {
+    label: 'Bị từ chối',
+    className: 'bg-danger-soft text-danger border-transparent',
+    icon: Icons.xCircle,
+  },
+  PROCESSING: {
+    label: 'Đang xử lý',
+    className: 'bg-muted text-muted-foreground border-transparent',
+    icon: Icons.refresh,
+  },
+  COMPLETED: {
+    label: 'Hoàn tất',
+    className: 'bg-success-soft text-success border-transparent',
+    icon: Icons.checkCircle,
+  },
+  CANCELLED: {
+    label: 'Đã hủy',
+    className: 'bg-muted text-muted-foreground border-transparent',
+    icon: Icons.ban,
+  },
 };
 
 const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({
@@ -42,13 +68,13 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Request ID</TableHead>
-          <TableHead>Instructor</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Method</TableHead>
-          <TableHead>Date</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className='text-right'>Actions</TableHead>
+          <TableHead>Mã yêu cầu</TableHead>
+          <TableHead>Giảng viên</TableHead>
+          <TableHead>Số tiền</TableHead>
+          <TableHead>Phương thức</TableHead>
+          <TableHead>Ngày tạo</TableHead>
+          <TableHead>Trạng thái</TableHead>
+          <TableHead className='text-right'>Thao tác</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -69,9 +95,22 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({
                 {format(new Date(req.createdAt), 'dd MMM yyyy')}
               </TableCell>
               <TableCell>
-                <Badge className={statusConfig[req.status]?.className}>
-                  {statusConfig[req.status]?.label || req.status}
-                </Badge>
+                {(() => {
+                  const status = statusConfig[req.status];
+                  const StatusIcon = status?.icon ?? Icons.alertCircle;
+                  return (
+                    <Badge
+                      variant='outline'
+                      className={`gap-1 ${
+                        status?.className ??
+                        'bg-muted text-muted-foreground border-transparent'
+                      }`}
+                    >
+                      <StatusIcon className='h-3 w-3' aria-hidden='true' />
+                      {status?.label || req.status}
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell className='text-right'>
                 <Button
@@ -79,7 +118,7 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({
                   size='sm'
                   onClick={() => onReview(req)}
                 >
-                  <Icons.eye className='mr-2 h-4 w-4' /> Review
+                  <Icons.eye className='mr-2 h-4 w-4' /> Xem xét
                 </Button>
               </TableCell>
             </TableRow>
@@ -87,7 +126,7 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({
         ) : (
           <TableRow>
             <TableCell colSpan={7} className='h-24 text-center'>
-              No pending requests found.
+              Chưa có yêu cầu rút tiền nào.
             </TableCell>
           </TableRow>
         )}

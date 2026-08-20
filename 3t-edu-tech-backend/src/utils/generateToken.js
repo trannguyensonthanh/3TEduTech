@@ -14,7 +14,13 @@ const ApiError = require('../core/errors/ApiError');
 const generateAccessToken = (payload) => {
   const expiresIn = `${jwtConfig.accessExpirationMinutes}m`;
   try {
-    return jwt.sign(payload, jwtConfig.secret, { expiresIn });
+    /* [SỬA 19/08/2026] Gắn nhãn loại thẻ. Trước đây hai loại thẻ ký cùng một
+       khóa bí mật và có cùng hình dạng payload, nên thẻ làm mới -- vốn có thời
+       hạn dài và thường được lưu ở nơi kém an toàn hơn -- dùng thay được cho
+       thẻ truy cập, triệt tiêu toàn bộ lợi ích của mô hình cặp thẻ. */
+    return jwt.sign({ ...payload, type: 'access' }, jwtConfig.secret, {
+      expiresIn,
+    });
   } catch (error) {
     logger.error('Error generating access token:', error);
     throw new Error('Could not generate access token');
@@ -29,7 +35,9 @@ const generateAccessToken = (payload) => {
 const generateRefreshToken = (payload) => {
   const expiresIn = `${jwtConfig.refreshExpirationDays}d`;
   try {
-    return jwt.sign(payload, jwtConfig.secret, { expiresIn });
+    return jwt.sign({ ...payload, type: 'refresh' }, jwtConfig.secret, {
+      expiresIn,
+    });
   } catch (error) {
     logger.error('Error generating refresh token:', error);
     throw new Error('Could not generate refresh token');
@@ -48,7 +56,7 @@ const verifyToken = async (token) => {
       jwtConfig.secret,
       jwtConfig.verifyOptions
     );
-    console.log('Token payload:', token);
+    // [GỠ 19/08/2026] Trước đây dòng này in nguyên văn thẻ ra nhật ký.
     return payload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

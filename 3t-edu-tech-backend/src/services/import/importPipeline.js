@@ -202,7 +202,13 @@ const runPipeline = async ({ jobId, zipPath, zipFileName, onProgress }) => {
          `fileClassifier` dùng để quyết định "đây có phải video không". Hai nơi
          đọc chung một hằng số thì không thể lệch nhau; chép lại danh sách ở
          đây là tạo ra một bản sao chắc chắn sẽ trôi dạt theo thời gian. */
-      skipContentExtensions: VIDEO_EXTENSIONS,
+      /* [SUA 19/08/2026] Video NAY DUOC GIAI NEN RA DIA nhu moi tep khac,
+         de doc duoc thoi luong that va tai thang len Cloudinary o giai doan C.
+         Chi giu MIEN TRU KIEM TRA TI LE NEN cho video: tep video khong nen
+         (AVI/MOV lossless cua bai giang man hinh tinh) co ti le nen rat cao
+         va tung bi chan oan la zip bomb. Cac han muc dung luong va so tep
+         VAN AP DUNG day du cho video. */
+      ratioExemptExtensions: VIDEO_EXTENSIONS,
     },
     (done, total) =>
       report(

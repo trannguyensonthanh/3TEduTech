@@ -63,28 +63,31 @@ const socialPlatforms = [
 ];
 // Zod schema definition
 const socialLinkSchema = z.object({
-  platform: z.string().min(1, 'Platform is required').max(50),
-  url: z.string().url('Invalid URL').max(500),
+  platform: z.string().min(1, 'Vui lòng chọn nền tảng').max(50),
+  url: z.string().url('Đường dẫn không hợp lệ').max(500),
 });
 
 const registerInstructorSchema = z
   .object({
-    email: z.string().email('Invalid email').min(1, 'Email is required'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    email: z
+      .string()
+      .email('Email không hợp lệ')
+      .min(1, 'Vui lòng nhập email'),
+    password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
     confirmPassword: z
       .string()
-      .min(8, 'Confirm password must be at least 8 characters'),
-    fullName: z.string().min(1, 'Full name is required').max(150),
+      .min(8, 'Mật khẩu xác nhận phải có ít nhất 8 ký tự'),
+    fullName: z.string().min(1, 'Vui lòng nhập họ và tên').max(150),
     professionalTitle: z.string().max(255).optional().nullable(),
     bio: z.string().max(4000).optional().nullable(),
     skills: z.array(z.string()).optional().nullable(), // Định nghĩa `skills` là một mảng chuỗi
     socialLinks: z.array(socialLinkSchema).optional().nullable(),
     agreedToTerms: z.boolean().refine((val) => val === true, {
-      message: 'You must accept the terms and conditions',
+      message: 'Bạn cần đồng ý với các điều khoản',
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'Mật khẩu xác nhận không khớp',
     path: ['confirmPassword'],
   });
 type RegisterInstructorFormData = z.infer<typeof registerInstructorSchema>;
@@ -92,25 +95,25 @@ type RegisterInstructorFormData = z.infer<typeof registerInstructorSchema>;
 const stepsConfig = [
   {
     id: 1,
-    name: 'Account Setup',
+    name: 'Thiết lập tài khoản',
     icon: <Icons.userCircle className='h-5 w-5' />,
     fields: ['fullName', 'email', 'password', 'confirmPassword'] as const,
   },
   {
     id: 2,
-    name: 'Professional Profile',
+    name: 'Hồ sơ chuyên môn',
     icon: <Icons.fileText className='h-5 w-5' />,
     fields: ['professionalTitle', 'bio', 'skills'] as const,
   },
   {
     id: 3,
-    name: 'Online Presence',
+    name: 'Kênh trực tuyến',
     icon: <Icons.link2 className='h-5 w-5' />,
     fields: ['socialLinks'] as const,
   }, // Thay đổi step 3 thành Social Links
   {
     id: 4,
-    name: 'Agreement & Submit',
+    name: 'Điều khoản và gửi hồ sơ',
     icon: <Icons.shieldCheck className='h-5 w-5' />,
     fields: ['agreedToTerms'] as const,
   }, // Thay đổi step 4
@@ -176,8 +179,8 @@ const InstructorRegisterPage = () => {
       }
       toast({
         variant: 'destructive',
-        title: 'Validation Error',
-        description: 'Please correct the highlighted fields before proceeding.',
+        title: 'Thông tin chưa hợp lệ',
+        description: 'Bạn sửa lại các ô đang báo lỗi rồi đi tiếp nhé.',
       });
       return false;
     }
@@ -203,10 +206,10 @@ const InstructorRegisterPage = () => {
     onSuccess: (data) => {
       toast({
         variant: 'default',
-        title: 'Application Submitted Successfully!',
+        title: 'Đã gửi hồ sơ đăng ký',
         description:
           data.message ||
-          'We will review your application and get back to you soon.',
+          'Chúng tôi sẽ xem xét hồ sơ và phản hồi bạn trong thời gian sớm nhất.',
         duration: 5000,
       });
       reset(); // Reset form
@@ -216,10 +219,9 @@ const InstructorRegisterPage = () => {
     onError: (error) => {
       toast({
         variant: 'destructive',
-        title: 'Submission Failed',
+        title: 'Gửi hồ sơ không thành công',
         description:
-          error?.message ||
-          'An error occurred while submitting your application.',
+          error?.message || 'Đã xảy ra lỗi khi gửi hồ sơ đăng ký của bạn.',
       });
     },
   });
@@ -279,15 +281,13 @@ const InstructorRegisterPage = () => {
   const [direction, setDirection] = useState(0); // Cho hướng animation
   return (
     <Layout>
-      <div className='bg-slate-50 dark:bg-slate-900/30 border-b dark:border-slate-700/60'>
+      <div className='border-b border-border bg-muted/30'>
         <div className='container mx-auto px-4 pt-10 pb-8 md:pt-16 md:pb-10 text-center'>
-          <Icons.userPlus className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-primary dark:text-primary/90' />
-          <h1 className='text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 dark:text-slate-50 mb-3 tracking-tight'>
-            Become an Instructor
-          </h1>
-          <p className='text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto'>
-            Share your expertise, inspire learners, and earn revenue by creating
-            courses on 3TEduTech.
+          <Icons.userPlus className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-primary' />
+          <h1 className='mb-3 text-foreground'>Trở thành giảng viên</h1>
+          <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
+            Chia sẻ chuyên môn, truyền cảm hứng cho người học và có thêm thu
+            nhập từ khóa học bạn xây dựng trên 3TEduTech.
           </p>
         </div>
       </div>
@@ -317,10 +317,10 @@ const InstructorRegisterPage = () => {
                       className={cn(
                         'flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 font-semibold text-sm transition-all duration-300 cursor-default',
                         currentStep === stepInfo.id
-                          ? 'bg-primary border-primary text-primary-foreground shadow-lg scale-110'
+                          ? 'bg-primary border-primary text-primary-foreground scale-110'
                           : currentStep > stepInfo.id
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'bg-background dark:bg-slate-700 border-border dark:border-slate-600 text-muted-foreground'
+                            ? 'bg-success border-success text-success-foreground'
+                            : 'bg-background border-border text-muted-foreground'
                       )}
                     >
                       {currentStep > stepInfo.id ? (
@@ -333,7 +333,7 @@ const InstructorRegisterPage = () => {
                       className={cn(
                         'mt-2 text-xs sm:text-sm font-medium transition-colors',
                         currentStep >= stepInfo.id
-                          ? 'text-primary dark:text-primary/90'
+                          ? 'text-primary'
                           : 'text-muted-foreground'
                       )}
                     >
@@ -356,7 +356,7 @@ const InstructorRegisterPage = () => {
                         'h-1 flex-1 mx-2 sm:mx-3 rounded-full self-start mt-5 sm:mt-6', // self-start và mt-6 để align với circle
                         currentStep > stepInfo.id
                           ? 'bg-primary'
-                          : 'bg-border dark:bg-slate-600'
+                          : 'bg-border'
                       )}
                     />
                   )}
@@ -366,7 +366,7 @@ const InstructorRegisterPage = () => {
           </div>
 
           {/* Form Content */}
-          <Card className='shadow-xl dark:bg-slate-800/40 border dark:border-slate-700/60'>
+          <Card className='rounded-xl border border-border bg-card shadow-none'>
             <form onSubmit={handleSubmit(onSubmit)} className='overflow-hidden'>
               {' '}
               {/* overflow-hidden cho animation */}
@@ -417,7 +417,7 @@ const InstructorRegisterPage = () => {
                 </motion.div>
               </AnimatePresence>
               {/* Navigation Buttons */}
-              <CardFooter className='mt-2 p-6 border-t dark:border-slate-700/60 flex justify-between'>
+              <CardFooter className='mt-2 p-6 border-t border-border flex justify-between'>
                 {currentStep > 1 ? (
                   <Button
                     type='button'
@@ -428,7 +428,7 @@ const InstructorRegisterPage = () => {
                     }}
                     className='h-11 px-6 text-base'
                   >
-                    <Icons.arrowLeft className='mr-2 h-4 w-4' /> Back
+                    <Icons.arrowLeft className='mr-2 h-4 w-4' /> Quay lại
                   </Button>
                 ) : (
                   <Link to='/'>
@@ -437,7 +437,7 @@ const InstructorRegisterPage = () => {
                       variant='ghost'
                       className='h-11 px-6 text-base text-muted-foreground hover:text-foreground'
                     >
-                      Cancel Application
+                      Hủy đăng ký
                     </Button>
                   </Link>
                 )}
@@ -451,7 +451,7 @@ const InstructorRegisterPage = () => {
                     }}
                     className='h-11 px-6 text-base'
                   >
-                    Continue <Icons.arrowRight className='ml-2 h-4 w-4' />
+                    Tiếp tục <Icons.arrowRight className='ml-2 h-4 w-4' />
                   </Button>
                 ) : (
                   <Button
@@ -464,7 +464,7 @@ const InstructorRegisterPage = () => {
                     ) : (
                       <Icons.send className='mr-2 h-5 w-5' />
                     )}
-                    Submit Application
+                    Gửi hồ sơ
                   </Button>
                 )}
               </CardFooter>
@@ -494,19 +494,19 @@ const Step1Content: React.FC<{ control: any; errors: any; register: any }> = ({
           <CardTitle className='text-2xl ml-2'>{stepsConfig[0].name}</CardTitle>
         </div>
         <CardDescription>
-          Provide your basic account details to get started.
+          Điền thông tin tài khoản cơ bản để bắt đầu.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-5 pt-2'>
         <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5'>
           <div className='space-y-1.5'>
             <Label htmlFor='fullName'>
-              Full Name <span className='text-destructive'>*</span>
+              Họ và tên <span className='text-destructive'>*</span>
             </Label>
             <Input
               id='fullName'
               {...register('fullName')}
-              placeholder='e.g., Jane Doe'
+              placeholder='Ví dụ: Nguyễn Thị Lan'
               className={cn(
                 'h-11',
                 errors.fullName &&
@@ -521,13 +521,13 @@ const Step1Content: React.FC<{ control: any; errors: any; register: any }> = ({
           </div>
           <div className='space-y-1.5'>
             <Label htmlFor='email'>
-              Email Address <span className='text-destructive'>*</span>
+              Địa chỉ email <span className='text-destructive'>*</span>
             </Label>
             <Input
               id='email'
               type='email'
               {...register('email')}
-              placeholder='you@example.com'
+              placeholder='ban@vidu.com'
               className={cn(
                 'h-11',
                 errors.email &&
@@ -542,14 +542,14 @@ const Step1Content: React.FC<{ control: any; errors: any; register: any }> = ({
           </div>
           <div className='space-y-1.5'>
             <Label htmlFor='password'>
-              Password <span className='text-destructive'>*</span>
+              Mật khẩu <span className='text-destructive'>*</span>
             </Label>
             <div className='relative'>
               <Input
                 id='password'
                 type={showPassword ? 'text' : 'password'}
                 {...register('password')}
-                placeholder='Min. 8 characters'
+                placeholder='Tối thiểu 8 ký tự'
                 className={cn(
                   'h-11 pr-10',
                   errors.password &&
@@ -579,14 +579,14 @@ const Step1Content: React.FC<{ control: any; errors: any; register: any }> = ({
           </div>
           <div className='space-y-1.5'>
             <Label htmlFor='confirmPassword'>
-              Confirm Password <span className='text-destructive'>*</span>
+              Xác nhận mật khẩu <span className='text-destructive'>*</span>
             </Label>
             <div className='relative'>
               <Input
                 id='confirmPassword'
                 type={showConfirmPassword ? 'text' : 'password'}
                 {...register('confirmPassword')}
-                placeholder='Re-enter password'
+                placeholder='Nhập lại mật khẩu'
                 className={cn(
                   'h-11 pr-10',
                   errors.confirmPassword &&
@@ -645,18 +645,18 @@ const Step2Content: React.FC<{
           <CardTitle className='text-2xl ml-2'>{stepsConfig[1].name}</CardTitle>
         </div>
         <CardDescription>
-          Share your professional background and areas of expertise.
+          Chia sẻ kinh nghiệm nghề nghiệp và lĩnh vực chuyên môn của bạn.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-5 pt-2'>
         <div className='space-y-1.5'>
           <Label htmlFor='professionalTitle'>
-            Professional Title <span className='text-destructive'>*</span>
+            Chức danh chuyên môn <span className='text-destructive'>*</span>
           </Label>
           <Input
             id='professionalTitle'
             {...register('professionalTitle')}
-            placeholder='e.g., Senior Software Engineer, Lead Designer'
+            placeholder='Ví dụ: Kỹ sư phần mềm cao cấp, Trưởng nhóm thiết kế'
             className={cn(
               'h-11',
               errors.professionalTitle && 'border-destructive'
@@ -669,17 +669,17 @@ const Step2Content: React.FC<{
           )}
         </div>
         <div className='space-y-1.5'>
-          <Label htmlFor='bio'>Biography / About You</Label>
+          <Label htmlFor='bio'>Tiểu sử / Giới thiệu bản thân</Label>
           <Textarea
             id='bio'
             {...register('bio')}
-            placeholder='Tell us about your experience, teaching philosophy, and what makes you passionate...'
+            placeholder='Kể về kinh nghiệm, quan điểm giảng dạy và điều khiến bạn tâm huyết…'
             rows={6}
             className={cn(errors.bio && 'border-destructive')}
           />
           <p className='text-xs text-muted-foreground'>
-            This will be displayed on your instructor profile. (Max 4000
-            characters)
+            Nội dung này hiển thị trên trang hồ sơ giảng viên của bạn (tối đa
+            4000 ký tự).
           </p>
           {errors.bio && (
             <p className='text-xs text-destructive mt-1'>
@@ -688,7 +688,7 @@ const Step2Content: React.FC<{
           )}
         </div>
         <div className='space-y-1.5'>
-          <Label>Your Skills (Select up to 5-7 relevant skills)</Label>
+          <Label>Kỹ năng của bạn (nên chọn 5–7 kỹ năng sát nhất)</Label>
           {isSkillsLoading ? (
             <div className='flex flex-wrap gap-2 mt-2'>
               {[...Array(6)].map((_, i) => (
@@ -696,7 +696,7 @@ const Step2Content: React.FC<{
               ))}
             </div>
           ) : skillsData && skillsData.length > 0 ? (
-            <ScrollArea className='h-40 border rounded-md p-3 dark:border-slate-700'>
+            <ScrollArea className='h-40 rounded-md border border-border p-3'>
               <div className='flex flex-wrap gap-2.5'>
                 {skillsData.map((skill) => (
                   <Button
@@ -722,7 +722,7 @@ const Step2Content: React.FC<{
             </ScrollArea>
           ) : (
             <p className='text-sm text-muted-foreground'>
-              No skills available to select.
+              Chưa có kỹ năng nào để chọn.
             </p>
           )}
           {errors.skills && (
@@ -755,8 +755,8 @@ const Step3Content: React.FC<{
           <CardTitle className='text-2xl ml-2'>{stepsConfig[2].name}</CardTitle>
         </div>
         <CardDescription>
-          Share your social media profiles to help students connect with you
-          (optional).
+          Chia sẻ các trang mạng xã hội để học viên dễ kết nối với bạn (không
+          bắt buộc).
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-5 pt-2'>
@@ -767,12 +767,12 @@ const Step3Content: React.FC<{
           ) => (
             <div
               key={fieldItem.id} // useFieldArray cung cấp 'id'
-              className='flex flex-col sm:flex-row items-start sm:items-end gap-3 p-4 border dark:border-slate-700 rounded-lg bg-background dark:bg-slate-800/30'
+              className='flex flex-col sm:flex-row items-start sm:items-end gap-3 rounded-xl border border-border bg-card p-4'
             >
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 flex-grow w-full sm:w-auto'>
                 <div className='space-y-1.5'>
                   <Label htmlFor={`socialLinks.${index}.platform`}>
-                    Platform
+                    Nền tảng
                   </Label>
                   <Controller
                     name={`socialLinks.${index}.platform`}
@@ -788,11 +788,11 @@ const Step3Content: React.FC<{
                           id={`socialLinks.${index}.platform`}
                           className='h-11'
                         >
-                          <SelectValue placeholder='Select Platform' />
+                          <SelectValue placeholder='Chọn nền tảng' />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectLabel>Social Media</SelectLabel>
+                            <SelectLabel>Mạng xã hội</SelectLabel>
                             {socialPlatforms.map(
                               (
                                 p // socialPlatforms cần được truy cập từ scope cha hoặc import
@@ -815,7 +815,7 @@ const Step3Content: React.FC<{
                 </div>
                 <div className='space-y-1.5'>
                   <Label htmlFor={`socialLinks.${index}.url`}>
-                    Profile URL
+                    Đường dẫn trang cá nhân
                   </Label>
                   <Input
                     id={`socialLinks.${index}.url`}
@@ -837,7 +837,7 @@ const Step3Content: React.FC<{
                 size='icon'
                 onClick={() => remove(index)}
                 className='text-muted-foreground hover:text-destructive h-11 w-11 sm:ml-auto mt-2 sm:mt-0 flex-shrink-0'
-                aria-label='Remove social link'
+                aria-label='Xóa liên kết mạng xã hội'
               >
                 <Icons.trash className='h-5 w-5' />
               </Button>
@@ -850,7 +850,7 @@ const Step3Content: React.FC<{
           onClick={() => append({ platform: '', url: '' })}
           className='mt-3 h-10 text-sm border-dashed hover:border-solid hover:bg-accent'
         >
-          <Icons.plusCircle className='mr-2 h-4 w-4' /> Add Another Link
+          <Icons.plusCircle className='mr-2 h-4 w-4' /> Thêm liên kết khác
         </Button>
       </CardContent>
     </>
@@ -870,69 +870,67 @@ const Step4Content: React.FC<{ control: any; errors: any }> = ({
           <CardTitle className='text-2xl ml-2'>{stepsConfig[3].name}</CardTitle>
         </div>
         <CardDescription>
-          Please review and agree to our terms to complete your application.
+          Bạn đọc và đồng ý với điều khoản để hoàn tất hồ sơ đăng ký.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-5 pt-2'>
-        <div className='bg-slate-50 dark:bg-slate-700/30 p-6 rounded-lg border dark:border-slate-600/50'>
+        <div className='rounded-xl border border-border bg-muted/30 p-6'>
           <h3 className='font-semibold text-lg text-foreground mb-3'>
-            Instructor Agreement Summary
+            Tóm tắt thỏa thuận giảng viên
           </h3>
           <ScrollArea className='h-48 custom-scrollbar pr-3'>
-            <div className='text-sm text-slate-700 dark:text-slate-300 space-y-2 leading-relaxed'>
+            <div className='text-sm text-muted-foreground space-y-2 leading-relaxed'>
               <p>
-                By applying to become an instructor on 3TEduTech, you
-                acknowledge and agree to our full Instructor Terms of Service
-                and Privacy Policy. Key responsibilities and terms include:
+                Khi đăng ký làm giảng viên trên 3TEduTech, bạn xác nhận đã đọc
+                và đồng ý với toàn bộ Điều khoản dịch vụ dành cho giảng viên và
+                Chính sách bảo mật. Các trách nhiệm và điều khoản chính gồm:
               </p>
               <ul className='list-disc pl-5 space-y-1.5'>
                 <li>
-                  You confirm that you own or have the necessary licenses,
-                  rights, consents, and permissions to authorize 3TEduTech to
-                  use your submitted content.
+                  Bạn xác nhận mình sở hữu, hoặc có đủ giấy phép, quyền và sự
+                  cho phép cần thiết để 3TEduTech sử dụng nội dung bạn gửi lên.
                 </li>
                 <li>
-                  You will not submit content that is copyrighted, protected by
-                  trade secret or otherwise subject to third party proprietary
-                  rights, including privacy and publicity rights, unless you are
-                  the owner of such rights or have permission from their
-                  rightful owner.
+                  Bạn không đăng nội dung đang được bảo hộ bản quyền, bí mật
+                  kinh doanh, hoặc thuộc quyền sở hữu của bên thứ ba — kể cả
+                  quyền riêng tư và quyền hình ảnh — trừ khi bạn là chủ sở hữu
+                  hoặc đã được chủ sở hữu cho phép.
                 </li>
                 <li>
-                  You are responsible for the accuracy, quality, and legality of
-                  your course content.
+                  Bạn chịu trách nhiệm về tính chính xác, chất lượng và tính hợp
+                  pháp của nội dung khóa học.
                 </li>
                 <li>
-                  Revenue sharing is based on the current Instructor Revenue
-                  Share model outlined in our terms.
+                  Việc chia sẻ doanh thu áp dụng theo mô hình chia sẻ doanh thu
+                  giảng viên hiện hành nêu trong điều khoản.
                 </li>
                 <li>
-                  Payouts are processed according to the schedule and minimum
-                  thresholds specified in our terms.
+                  Tiền được chi trả theo lịch và mức tối thiểu quy định trong
+                  điều khoản.
                 </li>
                 <li>
-                  3TEduTech reserves the right to remove content or instructors
-                  that violate our policies.
+                  3TEduTech có quyền gỡ nội dung hoặc dừng hợp tác với giảng
+                  viên vi phạm chính sách.
                 </li>
               </ul>
               <p className='mt-3'>
-                Please read the full{' '}
+                Bạn hãy đọc kỹ toàn văn{' '}
                 <Link
                   to='/terms-instructor'
                   target='_blank'
                   className='text-primary hover:underline font-medium'
                 >
-                  Instructor Terms
+                  Điều khoản dành cho giảng viên
                 </Link>{' '}
-                and{' '}
+                và{' '}
                 <Link
                   to='/privacy'
                   target='_blank'
                   className='text-primary hover:underline font-medium'
                 >
-                  Privacy Policy
-                </Link>{' '}
-                carefully.
+                  Chính sách bảo mật
+                </Link>
+                .
               </p>
             </div>
           </ScrollArea>
@@ -957,8 +955,8 @@ const Step4Content: React.FC<{ control: any; errors: any }> = ({
               id='agreedToTerms-label'
               className='text-sm font-medium text-foreground cursor-pointer'
             >
-              I have read, understood, and agree to the 3TEduTech Instructor
-              Terms and Privacy Policy.{' '}
+              Tôi đã đọc, hiểu và đồng ý với Điều khoản dành cho giảng viên và
+              Chính sách bảo mật của 3TEduTech.{' '}
               <span className='text-destructive'>*</span>
             </Label>
             {errors.agreedToTerms && (

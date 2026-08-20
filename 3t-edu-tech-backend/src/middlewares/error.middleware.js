@@ -35,7 +35,14 @@ const errorConverter = (err, req, res, next) => {
       message = error.message || httpStatus[statusCode];
     }
 
-    error = new ApiError(statusCode, message, false, err.stack);
+    /* [SỬA 19/08/2026] Trước đây luôn truyền isOperational = false, khiến
+       errorHandler ở môi trường sản xuất ghi đè MỌI mã trạng thái thành 500 --
+       kể cả lỗi kiểm tra dữ liệu đầu vào (400), trùng khóa (409) hay vi phạm
+       khóa ngoại. Giao diện vì vậy không phân biệt được "người dùng nhập sai"
+       với "máy chủ hỏng". Nay các lỗi thuộc nhóm 4xx được coi là lỗi nghiệp vụ
+       và giữ nguyên mã, chỉ nhóm 5xx mới bị che chi tiết. */
+    const isClientError = statusCode >= 400 && statusCode < 500;
+    error = new ApiError(statusCode, message, isClientError, err.stack);
   }
   next(error);
 };

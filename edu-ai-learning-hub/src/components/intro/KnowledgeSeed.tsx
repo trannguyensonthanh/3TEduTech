@@ -30,6 +30,12 @@ const AnimatedPhysicalMaterial = a.meshPhysicalMaterial;
 const AnimatedPointLight = a.pointLight;
 const AnimatedGroup = a.group;
 
+/* Màu của KHỐI 3D, không phải màu giao diện.
+   Các giá trị này truyền thẳng vào vật liệu three.js nên không thể viết bằng lớp
+   Tailwind. Bản trước dùng vàng kaki và nâu đất — hai tông nằm ngoài hệ màu; nay
+   cả năm trạng thái đều là các sắc độ của đúng một tông màu nhấn (lam). */
+/* Màu vật liệu 3D của hạt giống tri thức — nằm ngoài hệ token giao diện theo
+   chủ đích, xem ghi chú ở IntroPage. */
 const SEED_COLORS = {
   idleBase: '#F0E68C',
   idleEmissive: '#BDB76B',

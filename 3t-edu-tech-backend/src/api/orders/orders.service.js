@@ -18,6 +18,7 @@ const settingsService = require('../settings/settings.service');
 const Currency = require('../../core/enums/Currency');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
 const { generateUniqueOrderId } = require('../../utils/generateRandom');
+const { clearCache } = require('../../middlewares/cache.middleware');
 
 /**
  * Hàm xử lý sau khi thanh toán thành công (sẽ được gọi bởi webhook hoặc callback từ cổng thanh toán).
@@ -169,6 +170,14 @@ const processSuccessfulOrder = async (
     if (!useExternalTransaction) {
       await internalTransaction.commit();
     }
+    
+    try {
+      // Xóa cache các khóa học của người dùng để cập nhật trạng thái isEnrolled
+      await clearCache(`cache:u${updatedOrder.AccountID}:*`);
+    } catch (cacheErr) {
+      logger.error('Error clearing cache after successful order:', cacheErr);
+    }
+
     logger.info(
       `Order ${orderId} processed successfully after payment ${paymentId}. Enrollments and Splits created.`
     );
@@ -227,7 +236,20 @@ const processSuccessfulOrder = async (
     );
     if (!useExternalTransaction) {
       await internalTransaction.rollback();
+      return;
     }
+
+    /* [SỬA 19/08/2026] BẮT BUỘC NÉM LẠI LỖI KHI DÙNG GIAO DỊCH BÊN NGOÀI.
+
+       Trước đây hàm này chỉ ghi log rồi kết thúc êm. Khi được gọi từ handler
+       webhook thanh toán (nơi truyền transaction vào), người gọi không hề biết
+       có lỗi và vẫn chạy tiếp tới commit(). Kết quả: đơn hàng COMPLETED,
+       thanh toán SUCCESS, nhưng học viên có thể thiếu bản ghi ghi danh và
+       giảng viên thiếu bút toán doanh thu -- sai lệch âm thầm về tiền.
+
+       Ném lại để người gọi rollback toàn bộ; cổng thanh toán sẽ gửi lại
+       webhook và lần sau xử lý trọn vẹn. */
+    throw error;
   }
 };
 
@@ -270,27 +292,71 @@ const createOrderFromCart = async (accountId, options = {}) => {
             .sort()
             .join(',');
           if (orderCourseIds === currentCartCourseIds) {
-            logger.info(
-              `♻️ [Smart Deduping] Reusing existing PENDING order #${fullOrder.OrderID} for account ${accountId} instead of creating duplicate spam order.`
-            );
-            await cartRepository.clearCart(cartDetails.cartId);
-            return toCamelCaseObject(fullOrder);
+            if (fullOrder.CurrencyID === currency) {
+              logger.info(
+                `♻️ [Smart Deduping] Reusing existing PENDING order #${fullOrder.OrderID} for account ${accountId} instead of creating duplicate spam order.`
+              );
+              await cartRepository.clearCart(cartDetails.cartId);
+              return toCamelCaseObject(fullOrder);
+            } else {
+              logger.info(
+                `🔄 [Currency Changed] Cancelling existing PENDING order #${fullOrder.OrderID} because currency changed from ${fullOrder.CurrencyID} to ${currency}.`
+              );
+              await orderRepository.updateOrderStatus(fullOrder.OrderID, OrderStatus.CANCELLED);
+              // Lặp tiếp để kiểm tra các đơn pending khác
+            }
           }
         }
       }
     }
-    // Nếu có đơn hàng PENDING nhưng không trùng khớp -> Chặn tuyệt đối hành vi spam tạo đơn
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Bạn đang có một đơn hàng chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng cũ trong mục "Đơn hàng" trước khi đặt mua khóa mới!'
+    
+    // Kiểm tra lại xem còn đơn PENDING nào không sau khi đã hủy các đơn khác tiền tệ
+    const remainingPending = await orderRepository.findOrdersByAccountId(
+      accountId,
+      { status: OrderStatus.PENDING_PAYMENT, limit: 1, page: 1 }
     );
+    if (remainingPending && remainingPending.orders && remainingPending.orders.length > 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Bạn đang có một đơn hàng chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng cũ trong mục "Đơn hàng" trước khi đặt mua khóa mới!'
+      );
+    }
   }
 
   const originalTotalPrice = cartDetails.summary.totalOriginalPrice;
   const basePriceBeforePromo = cartDetails.summary.finalPrice;
   let calculatedPromoDiscountAmount = 0;
   let promotionId = null;
-  if (promotionCode) {
+
+  /* ==========================================================================
+     [TẠM VÔ HIỆU HÓA 19/08/2026] LUỒNG ÁP MÃ KHUYẾN MÃI
+
+     Lý do: số tiền truyền vào validateAndApplyPromotion là số tiền ĐÃ QUY ĐỔI
+     sang đơn vị tiền tệ hiển thị mà client tự chọn qua header X-Currency,
+     trong khi DiscountValue / MinOrderValue / MaxDiscountAmount trong bảng
+     Promotions không có cột đơn vị tiền tệ và thực tế đang là VND.
+
+     Hệ quả có thể khai thác: một mã FIXED_AMOUNT trị giá 200000 (ý là 200
+     nghìn đồng) khi đơn hàng hiển thị bằng USD sẽ trừ 200000 lên một giỏ ~10,
+     bị kẹp về đúng giá trị giỏ và đưa finalAmount về 0 -> đơn chuyển thẳng
+     COMPLETED và ghi danh miễn phí.
+
+     Cách khắc phục triệt để (để dành cho phiên bản sau): tính khuyến mãi trên
+     đơn vị tiền tệ CHUẨN của hệ thống, chỉ quy đổi ở bước hiển thị; hoặc bổ
+     sung cột CurrencyID vào bảng Promotions.
+
+     Muốn bật lại: đổi PROMOTION_ENABLED thành true.
+     ========================================================================== */
+  const PROMOTION_ENABLED = false;
+
+  if (!PROMOTION_ENABLED && promotionCode) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Tính năng mã khuyến mãi đang tạm ngưng. Vui lòng đặt hàng không kèm mã giảm giá.'
+    );
+  }
+
+  if (PROMOTION_ENABLED && promotionCode) {
     try {
       const promoResult = await promotionService.validateAndApplyPromotion(
         promotionCode,

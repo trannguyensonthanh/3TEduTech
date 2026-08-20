@@ -48,11 +48,11 @@ export const INSTRUCTOR_SORT_OPTIONS: {
   value: InstructorSortByValue;
   label: string;
 }[] = [
-  { value: 'rating:desc', label: 'Highest Rated' },
-  { value: 'studentCount:desc', label: 'Most Students' },
-  { value: 'courseCount:desc', label: 'Most Courses' },
-  { value: 'name:asc', label: 'Name (A-Z)' },
-  { value: 'name:desc', label: 'Name (Z-A)' },
+  { value: 'rating:desc', label: 'Điểm đánh giá cao nhất' },
+  { value: 'studentCount:desc', label: 'Nhiều học viên nhất' },
+  { value: 'courseCount:desc', label: 'Nhiều khóa học nhất' },
+  { value: 'name:asc', label: 'Tên (A→Z)' },
+  { value: 'name:desc', label: 'Tên (Z→A)' },
   // Thêm 'popularity' nếu backend hỗ trợ (có thể map sang một trường cụ thể)
   // { value: 'popularity', label: 'Most Popular' },
 ];
@@ -180,20 +180,18 @@ const AllInstructorsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className='bg-gradient-to-b from-slate-100 via-slate-50 to-background dark:from-slate-900 dark:via-slate-800/70 dark:to-background border-b dark:border-slate-700/50'>
+      <div className='border-b border-border bg-muted/30'>
         <motion.div
           variants={headerVariants}
           initial='hidden'
           animate='visible'
           className='container mx-auto px-4 pt-10 pb-8 md:pt-16 md:pb-12 text-center'
         >
-          <Icons.usersRound className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-blue-600 dark:text-blue-400' />
-          <h1 className='text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-50 mb-4 tracking-tight'>
-            Meet Our Expert Instructors
-          </h1>
-          <p className='text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto'>
-            Learn from the best. Our instructors are industry leaders passionate
-            about sharing their knowledge and helping you succeed.
+          <Icons.usersRound className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-primary' />
+          <h1 className='mb-4 text-foreground'>Gặp gỡ đội ngũ giảng viên</h1>
+          <p className='text-lg text-muted-foreground max-w-3xl mx-auto'>
+            Học từ những người giỏi nhất. Giảng viên của chúng tôi là các chuyên
+            gia đầu ngành, tận tâm chia sẻ kiến thức và đồng hành cùng bạn.
           </p>
         </motion.div>
       </div>
@@ -210,18 +208,18 @@ const AllInstructorsPage: React.FC = () => {
                 <SheetTrigger asChild>
                   <Button
                     variant='outline'
-                    className='w-full h-12 text-base flex items-center justify-center gap-2 shadow-sm'
+                    className='w-full h-12 text-base flex items-center justify-center gap-2'
                   >
-                    <Icons.filter className='h-5 w-5' /> Filters & Sort
+                    <Icons.filter className='h-5 w-5' /> Bộ lọc và sắp xếp
                   </Button>
                 </SheetTrigger>
                 <SheetContent
                   side='left'
                   className='w-[300px] sm:w-[340px] p-0 flex flex-col'
                 >
-                  <SheetHeader className='p-5 pb-3 border-b dark:border-slate-700'>
+                  <SheetHeader className='p-5 pb-3 border-b border-border'>
                     <SheetTitle className='text-xl'>
-                      Filter Instructors
+                      Lọc giảng viên
                     </SheetTitle>
                   </SheetHeader>
                   <ScrollArea className='flex-grow'>
@@ -235,13 +233,13 @@ const AllInstructorsPage: React.FC = () => {
                       />
                     </div>
                   </ScrollArea>
-                  <div className='p-4 border-t dark:border-slate-700'>
+                  <div className='p-4 border-t border-border'>
                     <SheetClose asChild>
                       <Button
                         className='w-full h-11 text-base'
                         onClick={() => setShowMobileFilters(false)}
                       >
-                        Apply Filters
+                        Áp dụng bộ lọc
                       </Button>
                     </SheetClose>
                   </div>
@@ -266,8 +264,8 @@ const AllInstructorsPage: React.FC = () => {
                 <Icons.search className='absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none' />
                 <Input
                   type='search'
-                  placeholder='Search instructors by name or specialization...'
-                  className='pl-11 h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700 focus-visible:ring-primary'
+                  placeholder='Tìm giảng viên theo tên hoặc lĩnh vực…'
+                  className='pl-11 h-12 text-base rounded-lg border-border bg-card focus-visible:ring-primary'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -282,13 +280,13 @@ const AllInstructorsPage: React.FC = () => {
                   setSortBy(value as InstructorSortByValue)
                 }
               >
-                <SelectTrigger className='w-full md:w-[260px] h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700 focus:ring-primary'>
-                  <SelectValue placeholder='Sort by...' />
+                <SelectTrigger className='w-full md:w-[260px] h-12 text-base rounded-lg border-border bg-card focus:ring-primary'>
+                  <SelectValue placeholder='Sắp xếp theo…' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel className='px-3 py-1.5'>
-                      Sort Instructors By
+                      Sắp xếp giảng viên theo
                     </SelectLabel>
                     {INSTRUCTOR_SORT_OPTIONS.map((opt) => (
                       <SelectItem
@@ -307,23 +305,24 @@ const AllInstructorsPage: React.FC = () => {
             {(isLoadingInstructorsInitial || isFetchingInstructors) &&
               !instructorsData?.instructors && (
                 <div className='text-sm text-muted-foreground mb-4 flex items-center'>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Loading
-                  instructors...
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Đang tải
+                  danh sách giảng viên…
                 </div>
               )}
             {!isLoadingInstructorsInitial &&
               !isFetchingInstructors &&
               !isError && (
                 <div className='mb-5 text-sm text-muted-foreground'>
-                  Showing{' '}
+                  Đang hiển thị{' '}
                   <span className='font-semibold text-foreground'>
                     {instructors.length}
                   </span>{' '}
-                  of{' '}
+                  trong tổng số{' '}
                   <span className='font-semibold text-foreground'>
                     {totalItems}
                   </span>{' '}
-                  instructors.
+                  giảng viên.
+
                   {isFetchingInstructors && (
                     <Loader2 className='inline ml-2 h-4 w-4 animate-spin' />
                   )}
@@ -336,7 +335,7 @@ const AllInstructorsPage: React.FC = () => {
                 {[...Array(ITEMS_PER_PAGE_INSTRUCTORS)].map((_, index) => (
                   <Card
                     key={`instructor-skeleton-${index}`}
-                    className='overflow-hidden rounded-xl'
+                    className='overflow-hidden rounded-xl border border-border bg-card shadow-none'
                   >
                     <CardContent className='p-6 flex flex-col items-center text-center'>
                       <Skeleton className='h-24 w-24 md:h-28 md:w-28 rounded-full mb-4' />
@@ -350,7 +349,7 @@ const AllInstructorsPage: React.FC = () => {
                         <Skeleton className='h-4 w-10' />
                       </div>
                     </CardContent>
-                    <CardFooter className='p-4 border-t dark:border-slate-700/50'>
+                    <CardFooter className='p-4 border-t border-border'>
                       <Skeleton className='h-11 w-full' />
                     </CardFooter>
                   </Card>
@@ -360,20 +359,20 @@ const AllInstructorsPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className='text-center py-16 bg-destructive/10 dark:bg-destructive/20 p-8 rounded-lg border border-destructive/30'
+                className='text-center py-16 rounded-xl border border-border bg-danger-soft p-8'
               >
-                <Icons.alertTriangle className='mx-auto h-16 w-16 mb-6 text-destructive' />
-                <h3 className='text-2xl font-semibold mb-3 text-destructive-foreground dark:text-destructive'>
-                  Failed to Load Instructors
+                <Icons.alertTriangle className='mx-auto h-16 w-16 mb-6 text-danger' />
+                <h3 className='text-2xl font-semibold mb-3 text-danger'>
+                  Không tải được danh sách giảng viên
                 </h3>
-                <p className='text-destructive/80 dark:text-destructive/90 mb-6'>
-                  {error?.message || 'An unexpected error occurred.'}
+                <p className='text-muted-foreground mb-6'>
+                  {error?.message || 'Đã xảy ra lỗi ngoài dự kiến.'}
                 </p>
                 <Button
                   variant='destructive'
                   onClick={() => window.location.reload()}
                 >
-                  Try Again
+                  Thử lại
                 </Button>
               </motion.div>
             ) : instructors.length > 0 ? (
@@ -395,15 +394,15 @@ const AllInstructorsPage: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className='text-center py-20 col-span-full bg-slate-50 dark:bg-slate-800/30 p-8 rounded-lg border-2 border-dashed dark:border-slate-700'
+                  className='text-center py-20 col-span-full rounded-xl border border-dashed border-border bg-muted/30 p-8'
                 >
                   <Icons.usersRound className='mx-auto h-20 w-20 text-muted-foreground opacity-60 mb-6' />
                   <h3 className='text-2xl font-semibold text-foreground mb-3'>
-                    No Instructors Found
+                    Không tìm thấy giảng viên nào
                   </h3>
                   <p className='mt-2 text-muted-foreground max-w-md mx-auto'>
-                    We couldn't find any instructors matching your current
-                    criteria. Try adjusting your search or filters.
+                    Chưa có giảng viên nào khớp với tiêu chí hiện tại. Bạn thử
+                    đổi từ khóa tìm kiếm hoặc bộ lọc xem sao.
                   </p>
                   {(debouncedSearchTerm ||
                     Object.values(activeFilters).some(
@@ -417,8 +416,8 @@ const AllInstructorsPage: React.FC = () => {
                         handleResetFilters();
                       }}
                     >
-                      <Icons.listRestart className='mr-2 h-4 w-4' /> Clear All
-                      Filters & Search
+                      <Icons.listRestart className='mr-2 h-4 w-4' /> Xóa toàn bộ
+                      bộ lọc và từ khóa
                     </Button>
                   )}
                 </motion.div>

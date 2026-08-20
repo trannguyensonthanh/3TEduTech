@@ -288,6 +288,8 @@ const getCourseBySlug = async (slug, user, targetCurrency) => {
         };
         return acc;
       }, {});
+      logger.info(`DEBUG: totalCompletedLessons: ${course.totalCompletedLessons}`);
+      logger.info(`DEBUG: userProgress keys with isCompleted=true: ${Object.values(course.userProgress).filter(p => p.isCompleted).length}`);
     } catch (progressError) {
       if (
         !(

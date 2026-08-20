@@ -12,7 +12,6 @@ import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import { Icons } from '../common/Icons'; // Giả sử có Icons.logo
 import { AnimatePresence, motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +52,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='sm:max-w-md p-0 overflow-hidden border-0 shadow-2xl dark:bg-slate-900'>
+      <DialogContent className='sm:max-w-md p-0 overflow-hidden'>
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -62,7 +61,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
               animate='visible'
               exit='exit'
             >
-              <DialogHeader className='bg-slate-50 dark:bg-slate-800/50 p-6 text-center border-b dark:border-slate-700/80'>
+              <DialogHeader className='bg-muted/40 p-6 text-center border-b border-border'>
                 <Link to='/' className='inline-block mx-auto mb-3'>
                   <Icons.logo className='h-10 w-10 text-primary' />
                 </Link>
@@ -86,16 +85,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   }
                   className='w-full'
                 >
-                  <TabsList className='grid w-full grid-cols-2 mb-6 h-11 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg'>
+                  <TabsList className='grid w-full grid-cols-2 mb-6 h-11 bg-muted p-1 rounded-lg'>
                     <TabsTrigger
                       value='login'
-                      className='text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md rounded-md h-full'
+                      className='text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary rounded-md h-full'
                     >
                       {t('authModal.tabs.login')}
                     </TabsTrigger>
                     <TabsTrigger
                       value='signup'
-                      className='text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md rounded-md h-full'
+                      className='text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary rounded-md h-full'
                     >
                       {t('authModal.tabs.signup')}
                     </TabsTrigger>

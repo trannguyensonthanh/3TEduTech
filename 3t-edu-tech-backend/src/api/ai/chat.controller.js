@@ -11,6 +11,7 @@ const getOrCreateSession = catchAsync(async (req, res) => {
     scope: req.body.scope,
     courseId: req.body.courseId,
     lessonId: req.body.lessonId,
+    forceNew: req.body.forceNew === true,
   });
   res.status(httpStatus.OK).send(session);
 });
@@ -86,12 +87,22 @@ const getSuggestions = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
-/** POST /v1/ai/search-courses — tìm khóa học bằng AI. */
+/**
+ * POST /v1/ai/search-courses — trợ lý tìm khóa học của trang /courses.
+ *
+ * [SỬA 20/08/2026] Truyền thêm `req.targetCurrency` để thẻ khóa học trả về có
+ * giá theo đúng loại tiền người dùng đang xem — cùng cơ chế với danh sách khóa
+ * học công khai. Thiếu tham số này thì giá luôn hiện bằng tiền cơ sở, và người
+ * đang xem bằng USD sẽ thấy con số VND mà không hay biết.
+ */
 const searchCourses = catchAsync(async (req, res) => {
-  const result = await chatService.searchCourses({
-    query: req.body.query,
-    top_k: req.body.topK || 5,
-  });
+  const result = await chatService.searchCourses(
+    {
+      query: req.body.query,
+      top_k: req.body.topK || 5,
+    },
+    req.targetCurrency
+  );
   res.status(httpStatus.OK).send(result);
 });
 

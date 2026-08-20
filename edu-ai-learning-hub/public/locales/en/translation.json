@@ -1034,7 +1034,8 @@
       "youtube": "YouTube",
       "linkedin": "LinkedIn"
     },
-    "copyright": "© {{year}} 3TEduTech, Inc. All rights reserved."
+    "copyright": "© {{year}} 3TEduTech, Inc. All rights reserved.",
+    "madeBy": "Made by the 3TEduTech team"
   },
   "instructorLayout": {
     "title": "Instructor",

@@ -44,8 +44,23 @@ function crc32(buf) {
 }
 
 /**
- * @param {Array<{name: string, data: Buffer|string, deflate?: boolean}>} entries
- *   `name` dùng dấu '/' kể cả trên Windows — đặc tả ZIP quy định vậy.
+ * @param {Array<object>} entries Mỗi phần tử:
+ *   - `name`     {string}  đường dẫn trong ZIP; dùng dấu '/' kể cả trên
+ *                          Windows — đặc tả ZIP quy định vậy.
+ *   - `data`     {Buffer|string}
+ *   - `deflate`  {boolean} nén bằng deflate thay vì lưu nguyên.
+ *
+ *   [THÊM 20/08/2026] Ba trường dưới đây phục vụ các phép thử HÀNG RÀO AN
+ *   TOÀN. Chúng cố ý tạo ra tệp ZIP KHÔNG hợp lệ hoặc độc hại — thư viện đóng
+ *   gói bình thường không cho phép làm vậy, và đó chính là lý do bộ test tự
+ *   dựng từng byte thay vì cài `archiver`.
+ *
+ *   - `method`     {number}  ghi đè mã phương thức nén trong header. Dùng 12
+ *                            (BZIP2) hoặc 14 (LZMA) để thử nhánh "phương thức
+ *                            không hỗ trợ". Dữ liệu vẫn được lưu nguyên.
+ *   - `encrypted`  {boolean} bật bit 0 của cờ chung — báo tệp có mật khẩu.
+ *   - `externalAttrs` {number} thuộc tính ngoài. Đặt `0xA1FF0000` để entry
+ *                            được nhận là liên kết tượng trưng (S_IFLNK).
  * @returns {Buffer}
  */
 function taoZip(entries) {
@@ -56,14 +71,20 @@ function taoZip(entries) {
   for (const e of entries) {
     const nameBuf = Buffer.from(e.name, 'utf8');
     const raw = Buffer.isBuffer(e.data) ? e.data : Buffer.from(e.data, 'utf8');
-    const method = e.deflate ? 8 : 0;
+    /* `method` khai báo trong header có thể KHÁC cách dữ liệu thực sự được
+       ghi: đó là điểm mấu chốt của phép thử "phương thức nén không hỗ trợ" —
+       máy chủ phải từ chối dựa trên mã khai báo, trước khi thử giải nén. */
+    const methodThat = e.deflate ? 8 : 0;
+    const method = e.method !== undefined ? e.method : methodThat;
     const body = e.deflate ? zlib.deflateRawSync(raw, { level: 9 }) : raw;
     const crc = crc32(raw);
+    const flags = 0x0800 | (e.encrypted ? 0x0001 : 0); // 0x0800 = tên tệp UTF-8
+    const externalAttrs = e.externalAttrs || 0;
 
     const lh = Buffer.alloc(30);
     lh.writeUInt32LE(0x04034b50, 0); // chữ ký local file header
     lh.writeUInt16LE(20, 4); // version cần để giải nén
-    lh.writeUInt16LE(0x0800, 6); // cờ: tên tệp mã hóa UTF-8
+    lh.writeUInt16LE(flags, 6); // cờ: UTF-8 (+ bit mật khẩu nếu có)
     lh.writeUInt16LE(method, 8);
     lh.writeUInt16LE(0, 10); // giờ sửa
     lh.writeUInt16LE(0x21, 12); // ngày sửa (1980-01-01, hợp lệ là đủ)
@@ -78,7 +99,7 @@ function taoZip(entries) {
     ch.writeUInt32LE(0x02014b50, 0); // chữ ký central directory
     ch.writeUInt16LE(20, 4); // version tạo bởi
     ch.writeUInt16LE(20, 6); // version cần
-    ch.writeUInt16LE(0x0800, 8);
+    ch.writeUInt16LE(flags, 8);
     ch.writeUInt16LE(method, 10);
     ch.writeUInt16LE(0, 12);
     ch.writeUInt16LE(0x21, 14);
@@ -90,7 +111,7 @@ function taoZip(entries) {
     ch.writeUInt16LE(0, 32); // comment
     ch.writeUInt16LE(0, 34); // số đĩa
     ch.writeUInt16LE(0, 36); // thuộc tính nội bộ
-    ch.writeUInt32LE(0, 38); // thuộc tính ngoài
+    ch.writeUInt32LE(externalAttrs, 38); // thuộc tính ngoài (0xA1FF0000 = symlink)
     ch.writeUInt32LE(offset, 42); // vị trí local header
     centrals.push(ch, nameBuf);
 
@@ -116,4 +137,7 @@ function taoZip(entries) {
 /** Buffer toàn số 0, kích thước tùy ý — deflate xuống gần như không tốn gì. */
 const videoGia = (mb) => Buffer.alloc(Math.round(mb * 1024 * 1024), 0);
 
-module.exports = { taoZip, crc32, videoGia };
+/** Thuộc tính ngoài đánh dấu entry là liên kết tượng trưng (S_IFLNK 0xA000). */
+const ATTR_SYMLINK = 0xa1ff0000;
+
+module.exports = { taoZip, crc32, videoGia, ATTR_SYMLINK };

@@ -34,6 +34,7 @@ import {
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
 import Layout from '@/components/layout/Layout';
+import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,8 +116,8 @@ const CertificatesPage: React.FC = () => {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-16 text-center">
-          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-destructive" />
-          <h2 className="mb-2 text-xl font-semibold text-destructive">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-danger" aria-hidden="true" />
+          <h2 className="mb-2 text-xl font-semibold">
             Lỗi tải dữ liệu
           </h2>
           <p className="text-muted-foreground">{error}</p>
@@ -132,35 +133,27 @@ const CertificatesPage: React.FC = () => {
     <Layout>
       <div className="container mx-auto max-w-6xl px-4 py-10 md:py-14">
         {/* Tiêu đề */}
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold md:text-3xl">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600">
-                <Award className="h-6 w-6 text-white" />
-              </span>
-              Chứng chỉ của tôi
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Mỗi chứng chỉ có mã riêng và trang xác minh công khai — nhà tuyển
-              dụng kiểm chứng được mà không cần tài khoản.
-            </p>
-          </div>
-
-          {certificates.length > 0 && (
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-4 py-2.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              <span className="text-sm">
-                <strong>{validCount}</strong> chứng chỉ hợp lệ
-              </span>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          className="mb-10"
+          title="Chứng chỉ của tôi"
+          description="Mỗi chứng chỉ có mã riêng và trang xác minh công khai — nhà tuyển dụng kiểm chứng được mà không cần tài khoản."
+          actions={
+            certificates.length > 0 ? (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5">
+                <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
+                <span className="text-sm">
+                  <strong className="tabular-nums">{validCount}</strong> chứng chỉ hợp lệ
+                </span>
+              </div>
+            ) : undefined
+          }
+        />
 
         {/* Chưa có chứng chỉ nào */}
         {certificates.length === 0 ? (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-border shadow-none">
             <CardContent className="flex flex-col items-center py-16 text-center">
-              <GraduationCap className="mb-4 h-14 w-14 text-muted-foreground/40" />
+              <GraduationCap className="mb-4 h-14 w-14 text-muted-foreground" aria-hidden="true" />
               <h3 className="mb-2 text-lg font-semibold">
                 Bạn chưa có chứng chỉ nào
               </h3>
@@ -194,7 +187,7 @@ const CertificatesPage: React.FC = () => {
         <DialogContent className="max-w-[95vw] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-cyan-500" />
+              <Award className="h-5 w-5 text-primary" aria-hidden="true" />
               {selected?.courseNameSnapshot}
             </DialogTitle>
           </DialogHeader>
@@ -280,15 +273,11 @@ const CertificateCard = ({
   cert: Certificate;
   onView: () => void;
 }) => (
-  <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-    {/* Dải trang trí gợi lại phối màu của chính tấm chứng chỉ */}
+  <Card className="group overflow-hidden border-border shadow-none transition-colors hover:border-primary/50">
+    {/* Vạch trạng thái: còn hiệu lực dùng màu hành động, đã thu hồi để trung tính.
+        Ý nghĩa vẫn do phù hiệu chữ bên dưới gánh, vạch chỉ là dấu nhắc. */}
     <div
-      className="h-1.5 w-full"
-      style={{
-        background: cert.isValid
-          ? 'linear-gradient(90deg, #22d3ee, #6366f1, #a855f7)'
-          : 'linear-gradient(90deg, #94a3b8, #64748b)',
-      }}
+      className={`h-1.5 w-full ${cert.isValid ? 'bg-primary' : 'bg-muted'}`}
     />
     <CardContent className="p-5">
       <div className="mb-3 flex items-start justify-between gap-2">
@@ -296,19 +285,19 @@ const CertificateCard = ({
           {cert.courseNameSnapshot}
         </h3>
         {cert.isValid ? (
-          <Badge className="shrink-0 bg-emerald-600 hover:bg-emerald-600">
-            <ShieldCheck className="mr-1 h-3 w-3" />
+          <Badge className="shrink-0 bg-success text-success-foreground hover:bg-success">
+            <ShieldCheck className="mr-1 h-3 w-3" aria-hidden="true" />
             Hợp lệ
           </Badge>
         ) : (
           <Badge variant="secondary" className="shrink-0">
-            <ShieldAlert className="mr-1 h-3 w-3" />
+            <ShieldAlert className="mr-1 h-3 w-3" aria-hidden="true" />
             Đã thu hồi
           </Badge>
         )}
       </div>
 
-      <p className="mb-1 font-mono text-xs tracking-wide text-cyan-600 dark:text-cyan-400">
+      <p className="mb-1 font-mono text-xs tracking-wide text-muted-foreground">
         {cert.certificateCode}
       </p>
       <p className="mb-4 text-xs text-muted-foreground">
@@ -325,7 +314,7 @@ const CertificateCard = ({
           href={cert.verifyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm hover:bg-accent"
+          className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           title="Trang xác minh công khai"
         >
           <ShieldCheck className="h-4 w-4" />

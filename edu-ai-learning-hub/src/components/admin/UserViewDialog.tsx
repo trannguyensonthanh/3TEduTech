@@ -13,7 +13,49 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Ban,
+  CheckCircle2,
+  Clock,
+  GraduationCap,
+  MinusCircle,
+  Shield,
+  ShieldCheck,
+  User as UserIcon,
+} from 'lucide-react';
 import { UserProfile } from '@/services/user.service';
+
+/* Vai trò là phân loại chứ không phải trạng thái: màu trung tính, phân biệt
+   bằng biểu tượng kèm nhãn chữ. */
+const roleIcon: Record<string, React.ElementType> = {
+  SA: ShieldCheck,
+  AD: Shield,
+  GV: GraduationCap,
+  NU: UserIcon,
+};
+
+/* Trạng thái dùng màu token, luôn kèm biểu tượng và nhãn chữ. */
+const statusStyle: Record<
+  string,
+  { className: string; icon: React.ElementType }
+> = {
+  ACTIVE: {
+    className: 'bg-success-soft text-success border-transparent',
+    icon: CheckCircle2,
+  },
+  INACTIVE: {
+    className: 'bg-muted text-muted-foreground border-transparent',
+    icon: MinusCircle,
+  },
+  BANNED: {
+    className: 'bg-danger-soft text-danger border-transparent',
+    icon: Ban,
+  },
+  PENDING_VERIFICATION: {
+    className: 'bg-warning-soft text-warning border-transparent',
+    icon: Clock,
+  },
+};
 
 interface SocialLink {
   platform: string;
@@ -56,6 +98,9 @@ interface UserViewDialogProps {
 const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
   const { t } = useTranslation();
   const isInstructor = user.roleId === 'GV';
+  const RoleIcon = roleIcon[user.roleId] ?? UserIcon;
+  const status = statusStyle[user.status] ?? statusStyle.PENDING_VERIFICATION;
+  const StatusIcon = status.icon;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,16 +123,10 @@ const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
                 <h2 className='text-xl font-bold flex flex-col sm:flex-row sm:items-center gap-2'>
                   {user.fullName}
                   <Badge
-                    className={
-                      user.roleId === 'SA'
-                        ? 'bg-red-500 text-white'
-                        : user.roleId === 'AD'
-                          ? 'bg-blue-500 text-white'
-                          : user.roleId === 'GV'
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-gray-500 text-white'
-                    }
+                    variant='outline'
+                    className='gap-1 bg-muted text-foreground border-transparent'
                   >
+                    <RoleIcon className='h-3 w-3' aria-hidden='true' />
                     {t(`userTable.role.${user.roleId}`)}
                   </Badge>
                 </h2>
@@ -97,16 +136,10 @@ const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
                 )}
                 <div className='flex items-center gap-2 mt-1'>
                   <Badge
-                    className={
-                      user.status === 'ACTIVE'
-                        ? 'bg-green-500 text-white'
-                        : user.status === 'INACTIVE'
-                          ? 'bg-yellow-500 text-white'
-                          : user.status === 'BANNED'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-gray-400 text-white'
-                    }
+                    variant='outline'
+                    className={`gap-1 ${status.className}`}
                   >
+                    <StatusIcon className='h-3 w-3' aria-hidden='true' />
                     {t(`userTable.status.${user.status}`)}
                   </Badge>
                   {user.courses > 0 && (
@@ -205,7 +238,7 @@ const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
                         {t('userViewDialog.label.aboutMe')}
                       </h3>
                       <div
-                        className='prose prose-sm max-w-none'
+                        className='prose prose-sm dark:prose-invert max-w-none'
                         dangerouslySetInnerHTML={{ __html: user.aboutMe }}
                       />
                     </div>
@@ -245,7 +278,7 @@ const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
                                   href={link.url}
                                   target='_blank'
                                   rel='noopener noreferrer'
-                                  className='text-blue-600 hover:underline'
+                                  className='text-primary hover:underline'
                                 >
                                   {link.platform}
                                 </a>

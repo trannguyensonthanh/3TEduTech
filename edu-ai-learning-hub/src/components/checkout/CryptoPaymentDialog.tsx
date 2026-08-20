@@ -69,9 +69,9 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
   ) => {
     copyFn(text).then((success) => {
       if (success) {
-        toast.success(`${fieldName} copied to clipboard!`);
+        toast.success(`Đã sao chép ${fieldName}.`);
       } else {
-        toast.error(`Failed to copy ${fieldName}.`);
+        toast.error(`Không sao chép được ${fieldName}.`);
       }
     });
   };
@@ -81,20 +81,24 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
       <DialogContent className='sm:max-w-md bg-card'>
         <DialogHeader>
           <DialogTitle className='text-2xl text-center font-bold flex items-center justify-center gap-2'>
-            <Icons.bitcoin className='h-7 w-7 text-amber-500' />
-            Pay with Crypto
+            <Icons.bitcoin className='h-7 w-7 text-muted-foreground' />
+            Thanh toán bằng tiền mã hóa
           </DialogTitle>
           <DialogDescription className='text-center pt-2'>
-            To complete your purchase, send the exact amount of{' '}
-            {paymentInfo.cryptoCurrency.toUpperCase()} to the address below.
+            Để hoàn tất đơn hàng, hãy gửi đúng số lượng{' '}
+            {paymentInfo.cryptoCurrency.toUpperCase()} tới địa chỉ ví bên dưới.
           </DialogDescription>
         </DialogHeader>
 
         <div className='py-4 space-y-6'>
           <div className='flex flex-col items-center justify-center bg-muted/50 p-6 rounded-lg'>
-            <QRCodeSVG value={paymentInfo.payAddress} size={160} level='H' />
+            {/* Mã QR phải nằm trên nền sáng thì máy quét mới đọc được, nên
+                khối này giữ nền trắng cố định ở cả chế độ sáng lẫn tối. */}
+            <div className='rounded-md bg-white p-3'>
+              <QRCodeSVG value={paymentInfo.payAddress} size={160} level='H' />
+            </div>
             <div className='mt-4 text-center'>
-              <p className='text-sm text-muted-foreground'>Expires in</p>
+              <p className='text-sm text-muted-foreground'>Hết hạn sau</p>
               <CountdownTimer expiry={paymentInfo.expiresAt} />
             </div>
           </div>
@@ -106,7 +110,7 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
                 htmlFor='crypto-amount'
                 className='text-xs text-muted-foreground'
               >
-                Amount to send
+                Số tiền cần gửi
               </Label>
               <div className='flex items-center'>
                 <Input
@@ -123,12 +127,12 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
                     handleCopy(
                       String(paymentInfo.payAmount),
                       copyAmount,
-                      'Amount'
+                      'số tiền'
                     )
                   }
                 >
                   {isAmountCopied ? (
-                    <Icons.check className='h-4 w-4 text-green-500' />
+                    <Icons.check className='h-4 w-4 text-success' />
                   ) : (
                     <Icons.copy className='h-4 w-4' />
                   )}
@@ -142,7 +146,7 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
                 htmlFor='crypto-address'
                 className='text-xs text-muted-foreground'
               >
-                {paymentInfo.network} Address
+                Địa chỉ ví mạng {paymentInfo.network}
               </Label>
               <div className='flex items-center'>
                 <Input
@@ -156,11 +160,11 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
                   size='icon'
                   className='ml-2'
                   onClick={() =>
-                    handleCopy(paymentInfo.payAddress, copyAddress, 'Address')
+                    handleCopy(paymentInfo.payAddress, copyAddress, 'địa chỉ ví')
                   }
                 >
                   {isAddressCopied ? (
-                    <Icons.check className='h-4 w-4 text-green-500' />
+                    <Icons.check className='h-4 w-4 text-success' />
                   ) : (
                     <Icons.copy className='h-4 w-4' />
                   )}
@@ -171,16 +175,20 @@ export const CryptoPaymentDialog: React.FC<CryptoPaymentDialogProps> = ({
         </div>
 
         <DialogFooter className='flex-col gap-2 text-center'>
-          <div className='text-xs p-3 bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 rounded-md'>
+          <div className='flex items-start gap-2 rounded-md bg-warning-soft p-3 text-left text-xs text-warning'>
+            <Icons.alertTriangle
+              className='mt-0.5 h-4 w-4 shrink-0'
+              aria-hidden='true'
+            />
             <p>
-              <strong>Important:</strong> Send only{' '}
-              {paymentInfo.cryptoCurrency.toUpperCase()} on the{' '}
-              {paymentInfo.network} network. Sending any other currency or using
-              a different network may result in the loss of your funds.
+              <strong>Lưu ý quan trọng:</strong> Chỉ gửi{' '}
+              {paymentInfo.cryptoCurrency.toUpperCase()} trên mạng{' '}
+              {paymentInfo.network}. Gửi loại tiền khác hoặc dùng mạng khác có
+              thể khiến bạn mất toàn bộ số tiền.
             </p>
           </div>
           <Button type='button' className='w-full' onClick={onClose}>
-            I have paid / Close
+            Tôi đã thanh toán / Đóng
           </Button>
         </DialogFooter>
       </DialogContent>

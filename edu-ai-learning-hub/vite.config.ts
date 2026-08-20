@@ -17,8 +17,12 @@ export default defineConfig(({ mode }) => ({
       'localhost',
     ],
     watch: {
-      usePolling: false, // Tắt polling: Tránh lỗi rò rỉ RAM, xung đột EBUSY/EPERM khi chỉnh sửa code nhanh trên Windows
+      usePolling: true, // Bật polling: Bắt buộc để nhận diện file thay đổi khi chạy qua Docker/WSL trên Windows
       ignored: ['**/node_modules/**', '**/.git/**'], // Bỏ qua theo dõi node_modules để giải phóng tài nguyên CPU/RAM
+    },
+    hmr: {
+      clientPort: 5173,
+      host: 'localhost',
     },
   },
 

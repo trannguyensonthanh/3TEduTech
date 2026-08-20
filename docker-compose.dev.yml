@@ -9,7 +9,10 @@ services:
       - MSSQL_PID=Developer
       - MSSQL_MEMORY_LIMIT_MB=1200
     ports:
-      - "1434:1433"
+      # [SỬA 20/08/2026] Host port 11434 thay vì 1434.
+      # Hyper-V trên Windows chiếm ngẫu nhiên các dải cổng dưới 10000,
+      # khiến Docker không bind được. Dùng cổng > 10000 để tránh.
+      - "11434:1433"
     volumes:
       - mssql-data-dev:/var/opt/mssql
     restart: always
@@ -193,8 +196,13 @@ services:
         # [THÊM 18/08/2026] Nhóm phụ thuộc tùy chọn — mặc định RỖNG.
         #
         # `faster-whisper` nay không còn nằm trong nhóm bắt buộc (xem
-        # ai-service/pyproject.toml). Trên máy dev, LLM_PROVIDER=gemini nên
-        # phiên âm không được gọi tới, mà gói này nặng ~500MB và tải rất lâu.
+        # ai-service/pyproject.toml). Trên máy dev thường không cần phiên âm,
+        # mà gói này nặng ~500MB và tải rất lâu.
+        #
+        # [SỬA 19/08/2026] Chú thích cũ ở đây viết "trên máy dev
+        # LLM_PROVIDER=gemini" — nay mặc định là `auto`, và điều đó KHÔNG liên
+        # quan gì tới Whisper: chọn mô hình ngôn ngữ và phiên âm là hai việc
+        # tách rời. Whisper vẫn chỉ bật khi bạn tự đặt AI_INSTALL_EXTRAS.
         #
         # Máy Acer Nitro 5 có card RTX 3050 nên VẪN chạy được phiên âm nếu muốn
         # thử — đặt trong .env ở thư mục gốc:
@@ -208,9 +216,14 @@ services:
     container_name: edutech-ai-service-dev
     mem_limit: 2048m
     ports:
-      - "2111:2111"
+      # [SỬA 20/08/2026] Host port 12111 thay vì 2111 — cùng lý do với database.
+      - "12111:2111"
     environment:
       - PORT=2111
+      # [THÊM 20/08/2026] Chuyển WatchFiles sang chế độ polling.
+      # WatchFiles dùng inotify/rust_notify, nhưng trên Docker Desktop Windows
+      # nó liên tục crash (os error 5). Polling ổn định trên mọi nền tảng.
+      - WATCHFILES_FORCE_POLLING=true
     env_file:
       - ./ai-service/.env
     restart: always

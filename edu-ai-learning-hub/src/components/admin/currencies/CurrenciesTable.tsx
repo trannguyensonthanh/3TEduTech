@@ -111,13 +111,10 @@ const CurrenciesTable: React.FC<CurrenciesTableProps> = ({
                 {currency.currencyName}
               </TableCell>
               <TableCell>
+                {/* Loại tiền tệ là phân loại, không phải trạng thái: giữ thẻ
+                    trung tính và để chữ mang nghĩa, thay vì tô xanh/tím. */}
                 <Badge
-                  variant={currency.type === 'FIAT' ? 'secondary' : 'default'}
-                  className={
-                    currency.type === 'FIAT'
-                      ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800'
-                      : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800'
-                  }
+                  variant={currency.type === 'FIAT' ? 'secondary' : 'outline'}
                 >
                   {t(
                     `currenciesTable.type.${currency.type.toLowerCase()}`,

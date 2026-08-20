@@ -78,7 +78,7 @@ const findOrCreateProgress = async (
 /**
  * Cập nhật bản ghi tiến độ.
  * @param {number} progressId - ID của bản ghi LessonProgress.
- * @param {object} updateData - { IsCompleted, CompletedAt, LastWatchedPosition, LastWatchedAt }.
+ * @param {object} updateData - { IsCompleted, CompletedAt, LastWatchedPosition, LastWatchedAt, TimeSpentDelta }.
  * @param {object} [transaction=null] - Transaction nếu có.
  * @returns {Promise<object>} - Bản ghi đã cập nhật.
  */
@@ -115,6 +115,15 @@ const updateProgressById = async (
       updateData.LastWatchedPosition
     );
     setClauses.push('LastWatchedPosition = @LastWatchedPosition');
+  }
+  if (updateData.TotalTimeSpent !== undefined) {
+    executor.input('TotalTimeSpent', sql.Int, updateData.TotalTimeSpent);
+    setClauses.push('TotalTimeSpent = @TotalTimeSpent');
+  }
+  
+  if (updateData.TimeSpentDelta !== undefined && updateData.TimeSpentDelta > 0) {
+    executor.input('TimeSpentDelta', sql.Int, updateData.TimeSpentDelta);
+    setClauses.push('TotalTimeSpent = TotalTimeSpent + @TimeSpentDelta');
   }
 
   if (setClauses.length === 1) return null;

@@ -29,21 +29,26 @@ interface PromotionsTableProps {
   onDelete: (promotion: Promotion) => void;
 }
 
-const statusConfig = {
+/* Trạng thái luôn gồm biểu tượng, nhãn chữ và màu token — màu không đứng
+   một mình gánh ý nghĩa. */
+const statusConfig: Record<
+  string,
+  { label: string; className: string; icon: React.ElementType }
+> = {
   ACTIVE: {
-    label: 'Active',
-    className:
-      'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200',
+    label: 'Đang chạy',
+    className: 'bg-success-soft text-success border-transparent',
+    icon: Icons.checkCircle,
   },
   INACTIVE: {
-    label: 'Inactive',
-    className:
-      'bg-gray-100 text-gray-800 dark:bg-slate-800 dark:text-slate-300 border-gray-200',
+    label: 'Tạm dừng',
+    className: 'bg-muted text-muted-foreground border-transparent',
+    icon: Icons.ban,
   },
   EXPIRED: {
-    label: 'Expired',
-    className:
-      'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200',
+    label: 'Hết hạn',
+    className: 'bg-danger-soft text-danger border-transparent',
+    icon: Icons.xCircle,
   },
 };
 
@@ -59,19 +64,20 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className='min-w-[200px]'>Promotion Name</TableHead>
-          <TableHead>Code</TableHead>
-          <TableHead>Discount</TableHead>
-          <TableHead>Period</TableHead>
-          <TableHead>Usage</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className='text-right'>Actions</TableHead>
+          <TableHead className='min-w-[200px]'>Tên khuyến mãi</TableHead>
+          <TableHead>Mã</TableHead>
+          <TableHead>Mức giảm</TableHead>
+          <TableHead>Thời gian áp dụng</TableHead>
+          <TableHead>Lượt dùng</TableHead>
+          <TableHead>Trạng thái</TableHead>
+          <TableHead className='text-right'>Thao tác</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {promotions.length > 0 ? (
           promotions.map((p) => {
             const config = statusConfig[p.status] || statusConfig.INACTIVE;
+            const StatusIcon = config.icon;
             const usagePercentage =
               p.maxUsageLimit && p.maxUsageLimit > 0
                 ? (p.usageCount / p.maxUsageLimit) * 100
@@ -113,7 +119,7 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
                             />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{usagePercentage.toFixed(0)}% used</p>
+                            <p>Đã dùng {usagePercentage.toFixed(0)}%</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -121,7 +127,11 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant='outline' className={config.className}>
+                  <Badge
+                    variant='outline'
+                    className={`gap-1 ${config.className}`}
+                  >
+                    <StatusIcon className='h-3 w-3' aria-hidden='true' />
                     {config.label}
                   </Badge>
                 </TableCell>
@@ -138,7 +148,7 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Edit Promotion</p>
+                        <p>Sửa khuyến mãi</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -150,11 +160,11 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
                             size='icon'
                             onClick={() => onDeactivate(p)}
                           >
-                            <Icons.rectangleHorizontal className='h-4 w-4 text-amber-600' />
+                            <Icons.rectangleHorizontal className='h-4 w-4 text-muted-foreground' />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Deactivate Promotion</p>
+                          <p>Tạm dừng khuyến mãi</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
@@ -170,7 +180,7 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Delete Promotion</p>
+                        <p>Xóa khuyến mãi</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -184,7 +194,7 @@ const PromotionsTable: React.FC<PromotionsTableProps> = ({
               colSpan={7}
               className='h-32 text-center text-muted-foreground'
             >
-              No promotions found for the current filters.
+              Không có khuyến mãi nào khớp bộ lọc hiện tại.
             </TableCell>
           </TableRow>
         )}

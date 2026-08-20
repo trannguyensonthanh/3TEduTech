@@ -1,19 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useTranslation } from 'react-i18next';
 import { CartItem, ValidatedPromotionInfo } from '@/services/cart.service';
-import { Info, Loader2, ShoppingCart, Lock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, ShoppingCart, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useCreateOrderFromCart } from '@/hooks/queries/order.queries';
 import PayPalButtonsWrapper from '@/components/payment/PayPalButtonsWrapper';
-import { Icons } from '@/components/common/Icons';
 type OrderSummaryProps = {
   items: CartItem[];
   subtotal: number;
@@ -58,16 +53,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   };
   return (
     <div className='lg:col-span-1'>
-      <div className='border rounded-xl p-5 sm:p-6 bg-card shadow-xl sticky top-24'>
-        <h3 className='text-lg font-semibold mb-5 border-b pb-3 flex items-center gap-2'>
+      <div className='rounded-xl border border-border bg-card p-5 sm:p-6 sticky top-24'>
+        <h3 className='text-lg font-semibold mb-5 border-b border-border pb-3 flex items-center gap-2'>
           <ShoppingCart size={20} />
-          Order Summary
+          Tóm tắt đơn hàng
         </h3>
         <ScrollArea className='max-h-64 mb-4 pr-2 -mr-2'>
           {items.map((item: CartItem) => (
             <div
               key={item.cartItemId}
-              className='flex items-center gap-3 py-2.5 border-b last:border-b-0'
+              className='flex items-center gap-3 py-2.5 border-b border-border last:border-b-0'
             >
               <Link to={`/courses/${item.slug}`} className='shrink-0'>
                 {item.thumbnailUrl && item.courseName ? (
@@ -81,7 +76,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
                 ) : (
                   <div className='w-20 h-11 bg-muted rounded flex items-center justify-center'>
                     <span className='text-xs text-muted-foreground'>
-                      No Image
+                      Chưa có ảnh
                     </span>
                   </div>
                 )}
@@ -108,30 +103,33 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         <Separator className='my-4' />
         <div className='space-y-2 text-sm mb-4'>
           <div className='flex justify-between'>
-            <span className='text-muted-foreground'>Subtotal</span>
+            <span className='text-muted-foreground'>Tạm tính</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
           {validatedPromo && (
-            <div className='flex justify-between text-green-600 dark:text-green-400 font-semibold'>
-              <span>Promo "{validatedPromo.discountCode}"</span>
+            <div className='flex justify-between font-semibold text-success'>
+              <span className='flex items-center gap-1.5'>
+                <CheckCircle2 size={14} aria-hidden='true' />
+                Mã giảm giá "{validatedPromo.discountCode}"
+              </span>
               <span>-{formatPrice(promoDiscount)}</span>
             </div>
           )}
         </div>
         <Separator className='my-4' />
         <div className='flex justify-between font-bold text-xl mb-6'>
-          <span>Order Total</span>
+          <span>Tổng thanh toán</span>
           <span>{formatPrice(finalTotal)}</span>
         </div>
 
         <div className='space-y-3'>
           <Label htmlFor='checkout-promo-code' className='text-xs font-medium'>
-            Apply Promo Code
+            Áp dụng mã giảm giá
           </Label>
           <div className='flex space-x-2'>
             <Input
               id='checkout-promo-code'
-              placeholder='Enter code'
+              placeholder='Nhập mã'
               value={promoCodeInput}
               onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
               className='h-9 text-sm'
@@ -146,19 +144,23 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
               {isValidatingPromo ? (
                 <Loader2 className='h-4 w-4 animate-spin' />
               ) : (
-                'Apply'
+                'Áp dụng'
               )}
             </Button>
           </div>
           {validatedPromo?.message && (
             <p
-              className={`text-xs mt-1 ${
+              className={`mt-1 flex items-center gap-1 text-xs ${
                 validatedPromo.discountAmount > 0
-                  ? 'text-green-600'
-                  : 'text-amber-600'
-              } flex items-center`}
+                  ? 'text-success'
+                  : 'text-warning'
+              }`}
             >
-              <Info size={13} className='mr-1' />
+              {validatedPromo.discountAmount > 0 ? (
+                <CheckCircle2 size={13} aria-hidden='true' />
+              ) : (
+                <AlertTriangle size={13} aria-hidden='true' />
+              )}
               {validatedPromo.message}
             </p>
           )}
@@ -185,20 +187,20 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
               ) : (
                 <Lock className='mr-2 h-5 w-5' />
               )}
-              Place Order & Pay
+              Đặt hàng và thanh toán
             </Button>
           )}
         </div>
         <p className='text-xs text-muted-foreground text-center mt-4'>
-          By proceeding, you agree to our{' '}
+          Khi tiếp tục, bạn đồng ý với{' '}
           <Link to='/terms' className='underline hover:text-primary'>
-            Terms
+            Điều khoản sử dụng
           </Link>{' '}
-          and{' '}
+          và{' '}
           <Link to='/privacy' className='underline hover:text-primary'>
-            Privacy Policy
-          </Link>
-          .
+            Chính sách bảo mật
+          </Link>{' '}
+          của chúng tôi.
         </p>
       </div>
     </div>

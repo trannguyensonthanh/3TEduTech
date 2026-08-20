@@ -36,7 +36,7 @@ const CheckoutReturn: React.FC = () => {
     'loading' | 'success' | 'failed' | 'cancelled' | 'pending_confirmation'
   >('loading');
   const [displayMessage, setDisplayMessage] = useState<string>(
-    'Processing your payment result...'
+    'Đang xử lý kết quả thanh toán…'
   );
   const [orderIdDisplay, setOrderIdDisplay] = useState<string | null>(null);
   const [errorCodeDisplay, setErrorCodeDisplay] = useState<string | null>(null);
@@ -80,18 +80,18 @@ const CheckoutReturn: React.FC = () => {
         setStatus('success');
         setDisplayMessage(
           commonMessage ||
-            'Your VNPAY payment was successful and your order is confirmed!'
+            'Thanh toán VNPAY thành công, đơn hàng của bạn đã được xác nhận.'
         );
       } else if (vnpResponseCode === '24') {
         setStatus('cancelled');
         setDisplayMessage(
-          commonMessage || 'You cancelled the VNPAY payment process.'
+          commonMessage || 'Bạn đã hủy giao dịch VNPAY.'
         );
       } else {
         setStatus('failed');
         setDisplayMessage(
           commonMessage ||
-            `VNPAY payment failed (Code: ${vnpResponseCode}). Please try again or contact support.`
+            `Thanh toán VNPAY không thành công (mã ${vnpResponseCode}). Bạn thử lại hoặc liên hệ hỗ trợ nhé.`
         );
       }
     }
@@ -106,13 +106,13 @@ const CheckoutReturn: React.FC = () => {
         setStatus('success');
         setDisplayMessage(
           commonMessage ||
-            'Your MoMo payment was successful and your order is confirmed!'
+            'Thanh toán MoMo thành công, đơn hàng của bạn đã được xác nhận.'
         );
       } else {
         setStatus('failed');
         setDisplayMessage(
           commonMessage ||
-            `MoMo payment failed (Code: ${momoResultCode}). Please try again or contact support.`
+            `Thanh toán MoMo không thành công (mã ${momoResultCode}). Bạn thử lại hoặc liên hệ hỗ trợ nhé.`
         );
       }
     }
@@ -124,18 +124,18 @@ const CheckoutReturn: React.FC = () => {
       const generalStatus = searchParams.get('status');
       if (generalStatus === 'success') {
         setStatus('success');
-        setDisplayMessage(commonMessage || 'Your payment was successful!');
+        setDisplayMessage(commonMessage || 'Thanh toán thành công.');
       } else if (generalStatus === 'failed') {
         setStatus('failed');
-        setDisplayMessage(commonMessage || 'Your payment failed.');
+        setDisplayMessage(commonMessage || 'Thanh toán không thành công.');
       } else if (generalStatus === 'cancelled') {
         setStatus('cancelled');
-        setDisplayMessage(commonMessage || 'Your payment was cancelled.');
+        setDisplayMessage(commonMessage || 'Giao dịch đã bị hủy.');
       } else if (generalStatus === 'pending') {
         setStatus('pending_confirmation');
         setDisplayMessage(
           commonMessage ||
-            'Your payment is pending confirmation. We will notify you shortly.'
+            'Giao dịch đang chờ xác nhận. Chúng tôi sẽ báo bạn ngay khi có kết quả.'
         );
       } else {
         // Nếu không có thông tin gì rõ ràng, mặc định là lỗi hoặc trạng thái không xác định
@@ -144,7 +144,7 @@ const CheckoutReturn: React.FC = () => {
         );
         setStatus('failed'); // Hoặc một trạng thái "unknown"
         setDisplayMessage(
-          'Could not determine payment status. Please check your order history or contact support.'
+          'Không xác định được trạng thái thanh toán. Bạn xem lại lịch sử đơn hàng hoặc liên hệ hỗ trợ nhé.'
         );
       }
     }
@@ -174,35 +174,35 @@ const CheckoutReturn: React.FC = () => {
           <>
             <Loader2 className='h-16 w-16 animate-spin text-primary mx-auto' />
             <p className='mt-4 text-lg text-muted-foreground'>
-              Loading payment status...
+              Đang tải trạng thái thanh toán…
             </p>
           </>
         );
       case 'success':
         return (
           <>
-            <div className='h-20 w-20 rounded-full bg-green-100 dark:bg-green-800/30 flex items-center justify-center mx-auto ring-4 ring-green-200 dark:ring-green-700/40 mb-5'>
-              <CheckCircle className='h-10 w-10 text-green-500 dark:text-green-400' />
+            <div className='h-20 w-20 rounded-full bg-success-soft flex items-center justify-center mx-auto mb-5'>
+              <CheckCircle className='h-10 w-10 text-success' aria-hidden='true' />
             </div>
-            <h3 className='text-2xl font-semibold'>Payment Successful!</h3>
+            <h3 className='text-2xl font-semibold'>Thanh toán thành công</h3>
             <p className='mt-2 text-muted-foreground max-w-sm mx-auto'>
               {displayMessage}
             </p>
             {orderIdDisplay && (
               <p className='text-xs text-muted-foreground mt-1'>
-                Order ID: #{orderIdDisplay}
+                Mã đơn hàng: #{orderIdDisplay}
               </p>
             )}
             <div className='mt-8 flex flex-col sm:flex-row gap-3 justify-center'>
               <Button onClick={handleNavigateToOrder} size='lg'>
-                View My Learning
+                Vào khu học tập
               </Button>
               <Button
                 variant='outline'
                 onClick={() => navigate('/courses')}
                 size='lg'
               >
-                Explore More Courses
+                Khám phá thêm khóa học
               </Button>
             </div>
           </>
@@ -213,45 +213,45 @@ const CheckoutReturn: React.FC = () => {
           <>
             <div
               className={`h-20 w-20 rounded-full ${
-                status === 'cancelled'
-                  ? 'bg-amber-100 dark:bg-amber-800/30 ring-amber-200 dark:ring-amber-700/40'
-                  : 'bg-red-100 dark:bg-red-800/30 ring-red-200 dark:ring-red-700/40'
-              } flex items-center justify-center mx-auto ring-4 mb-5`}
+                status === 'cancelled' ? 'bg-warning-soft' : 'bg-danger-soft'
+              } flex items-center justify-center mx-auto mb-5`}
             >
               {status === 'cancelled' ? (
-                <AlertTriangle className='h-10 w-10 text-amber-500 dark:text-amber-400' />
+                <AlertTriangle className='h-10 w-10 text-warning' aria-hidden='true' />
               ) : (
-                <XCircle className='h-10 w-10 text-red-500 dark:text-red-400' />
+                <XCircle className='h-10 w-10 text-danger' aria-hidden='true' />
               )}
             </div>
             <h3 className='text-2xl font-semibold'>
-              {status === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed'}
+              {status === 'cancelled'
+                ? 'Đã hủy thanh toán'
+                : 'Thanh toán không thành công'}
             </h3>
             <p className='mt-2 text-muted-foreground max-w-sm mx-auto'>
               {displayMessage}
             </p>
             {orderIdDisplay && (
               <p className='text-xs text-muted-foreground mt-1'>
-                Order ID: #{orderIdDisplay}
+                Mã đơn hàng: #{orderIdDisplay}
               </p>
             )}
             {errorCodeDisplay && (
               <p className='text-xs text-muted-foreground mt-1'>
-                Details: Code {errorCodeDisplay}
+                Chi tiết: mã {errorCodeDisplay}
               </p>
             )}
             <div className='mt-8 flex flex-col sm:flex-row gap-3 justify-center'>
               <Button onClick={handleRetryOrBrowse} size='lg'>
                 {status === 'cancelled'
-                  ? 'Browse Courses'
-                  : 'Try Another Payment'}
+                  ? 'Xem các khóa học'
+                  : 'Thử phương thức khác'}
               </Button>
               <Button
                 variant='outline'
                 onClick={() => navigate('/support')}
                 size='lg'
               >
-                Contact Support
+                Liên hệ hỗ trợ
               </Button>
             </div>
           </>
@@ -259,28 +259,28 @@ const CheckoutReturn: React.FC = () => {
       case 'pending_confirmation':
         return (
           <>
-            <Clock className='h-16 w-16 text-amber-500 mx-auto mb-5' />
+            <Clock className='h-16 w-16 text-warning mx-auto mb-5' aria-hidden='true' />
             <h3 className='text-2xl font-semibold'>
-              Payment Pending Confirmation
+              Giao dịch đang chờ xác nhận
             </h3>
             <p className='mt-2 text-muted-foreground max-w-sm mx-auto'>
               {displayMessage}
             </p>
             {orderIdDisplay && (
               <p className='text-xs text-muted-foreground mt-1'>
-                Order ID: #{orderIdDisplay}
+                Mã đơn hàng: #{orderIdDisplay}
               </p>
             )}
             <div className='mt-8 flex flex-col sm:flex-row gap-3 justify-center'>
               <Button onClick={handleNavigateToOrder} size='lg'>
-                Check Order Status
+                Xem trạng thái đơn hàng
               </Button>
               <Button
                 variant='outline'
                 onClick={() => navigate('/courses')}
                 size='lg'
               >
-                Browse Courses
+                Xem các khóa học
               </Button>
             </div>
           </>
@@ -289,18 +289,18 @@ const CheckoutReturn: React.FC = () => {
         return (
           <>
             <AlertTriangle className='h-16 w-16 text-destructive mx-auto mb-5' />
-            <h3 className='text-2xl font-semibold'>Unknown Payment Status</h3>
+            <h3 className='text-2xl font-semibold'>Trạng thái thanh toán chưa rõ</h3>
             <p className='mt-2 text-muted-foreground max-w-sm mx-auto'>
               {displayMessage}
             </p>
             {orderIdDisplay && (
               <p className='text-xs text-muted-foreground mt-1'>
-                Reference Order ID: #{orderIdDisplay}
+                Mã đơn tham chiếu: #{orderIdDisplay}
               </p>
             )}
             <div className='mt-8'>
               <Button onClick={() => navigate('/')} size='lg'>
-                Go to Homepage
+                Về trang chủ
               </Button>
             </div>
           </>
@@ -312,16 +312,16 @@ const CheckoutReturn: React.FC = () => {
     <Layout>
       <div className='container mx-auto py-12 sm:py-16 md:py-20 px-4'>
         <div className='max-w-md mx-auto'>
-          <Card className='shadow-xl border-t-4 border-primary animate-fadeIn'>
+          <Card className='rounded-xl border border-border bg-card shadow-none animate-fadeIn'>
             {' '}
             {/* Thêm animation */}
             <CardHeader className='pb-4'>
               <CardTitle className='text-center text-2xl sm:text-3xl font-bold tracking-tight'>
-                {status === 'loading' && 'Processing...'}
-                {status === 'success' && 'Payment Confirmed'}
-                {status === 'failed' && 'Payment Failed'}
-                {status === 'cancelled' && 'Payment Cancelled'}
-                {status === 'pending_confirmation' && 'Payment Pending'}
+                {status === 'loading' && 'Đang xử lý…'}
+                {status === 'success' && 'Đã xác nhận thanh toán'}
+                {status === 'failed' && 'Thanh toán không thành công'}
+                {status === 'cancelled' && 'Đã hủy thanh toán'}
+                {status === 'pending_confirmation' && 'Đang chờ thanh toán'}
               </CardTitle>
             </CardHeader>
             <CardContent>

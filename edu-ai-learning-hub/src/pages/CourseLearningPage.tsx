@@ -23,6 +23,7 @@ import { useCourseDetailBySlug } from '@/hooks/queries/course.queries';
 import { useUpdateLastWatchedPosition } from '@/hooks/queries/progress.queries';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseNavigation } from '@/hooks/useCourseNavigation';
+import { useLessonTimeTracker } from '@/hooks/useLessonTimeTracker';
 import { CourseLearningData } from '@/types/common.types';
 import { AlertTriangle, InfoIcon, XCircle } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
@@ -94,6 +95,10 @@ const CourseLearningPage: React.FC = () => {
     activeLesson: activeLessonData?.lesson || null,
   });
 
+  // --- Logic Cập nhật thời gian học chung (Time Tracker) ---
+  const isTimeTrackerEnabled = !!user && !!course && (course.isEnrolled || user.role === 'SA' || (course.pricing.display.originalPrice === 0 && course.pricing.display.discountedPrice === 0));
+  useLessonTimeTracker(activeLessonId, isTimeTrackerEnabled);
+
   // --- Logic Cập nhật thời gian xem Video ---
   const { mutate: updatePositionMutate } = useUpdateLastWatchedPosition();
   const debouncedPositionRef = useRef<{
@@ -122,10 +127,10 @@ const CourseLearningPage: React.FC = () => {
     (lessonId: number) => {
       if (
         activeLessonData &&
-        lessonId === activeLessonData.lesson.lessonId &&
+        Number(lessonId) === Number(activeLessonData.lesson.lessonId) &&
         !activeLessonData.lesson.isCompleted
       ) {
-        markCompleteMutate({ lessonId, isCompleted: true });
+        markCompleteMutate({ lessonId: Number(lessonId), isCompleted: true });
       }
     },
     [activeLessonData, markCompleteMutate]
@@ -181,18 +186,18 @@ const CourseLearningPage: React.FC = () => {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center'>
-          <div className='max-w-md mx-auto bg-card p-8 rounded-lg shadow-xl'>
-            <AlertTriangle className='h-16 w-16 mx-auto mb-4 text-amber-500' />
-            <h1 className='text-2xl font-bold'>Authentication Required</h1>
+          <div className='max-w-md mx-auto rounded-xl border border-border bg-card p-8'>
+            <AlertTriangle className='h-16 w-16 mx-auto mb-4 text-warning' />
+            <h1 className='text-2xl font-bold'>Cần đăng nhập</h1>
             <p className='mt-2 text-muted-foreground'>
-              Please{' '}
+              Vui lòng{' '}
               <Link
                 to={`/`}
                 className='text-primary hover:underline font-semibold'
               >
-                log in
+                đăng nhập
               </Link>{' '}
-              to access this course.
+              để vào học khóa này.
             </p>
           </div>
         </div>
@@ -204,14 +209,14 @@ const CourseLearningPage: React.FC = () => {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center'>
-          <div className='max-w-md mx-auto bg-card p-8 rounded-lg shadow-xl'>
+          <div className='max-w-md mx-auto rounded-xl border border-border bg-card p-8'>
             <XCircle className='h-16 w-16 mx-auto mb-4 text-destructive' />
-            <h1 className='text-2xl font-bold'>Error Loading Course</h1>
+            <h1 className='text-2xl font-bold'>Không tải được khóa học</h1>
             <p className='mt-2 text-muted-foreground'>
-              {(error as Error)?.message || 'Could not load course details.'}
+              {(error as Error)?.message || 'Không lấy được thông tin khóa học.'}
             </p>
             <Button asChild className='mt-6'>
-              <Link to='/my-courses'>Back to My Learning</Link>
+              <Link to='/my-courses'>Về khóa học của tôi</Link>
             </Button>
           </div>
         </div>
@@ -229,14 +234,15 @@ const CourseLearningPage: React.FC = () => {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center'>
-          <div className='max-w-md mx-auto bg-card p-8 rounded-lg shadow-xl'>
-            <AlertTriangle className='h-16 w-16 mx-auto mb-4 text-amber-500' />
-            <h1 className='text-2xl font-bold'>Access Denied</h1>
+          <div className='max-w-md mx-auto rounded-xl border border-border bg-card p-8'>
+            <AlertTriangle className='h-16 w-16 mx-auto mb-4 text-warning' />
+            <h1 className='text-2xl font-bold'>Không có quyền truy cập</h1>
             <p className='mt-2 text-muted-foreground'>
-              You are not enrolled in this course or it requires purchase.
+              Bạn chưa ghi danh khóa học này, hoặc khóa học cần mua trước khi
+              học.
             </p>
             <Button asChild className='mt-6'>
-              <Link to={`/courses/${course.slug}`}>Go to Course Page</Link>
+              <Link to={`/courses/${course.slug}`}>Xem trang khóa học</Link>
             </Button>
           </div>
         </div>
@@ -248,14 +254,14 @@ const CourseLearningPage: React.FC = () => {
     return (
       <Layout>
         <div className='container mx-auto p-12 text-center'>
-          <div className='max-w-md mx-auto bg-card p-8 rounded-lg shadow-xl'>
-            <InfoIcon className='h-16 w-16 mx-auto mb-4 text-blue-500' />
-            <h1 className='text-2xl font-bold'>Content Coming Soon</h1>
+          <div className='max-w-md mx-auto rounded-xl border border-border bg-card p-8'>
+            <InfoIcon className='h-16 w-16 mx-auto mb-4 text-primary' />
+            <h1 className='text-2xl font-bold'>Nội dung sắp có</h1>
             <p className='mt-2 text-muted-foreground'>
-              This course doesn't have any lessons yet. Please check back later.
+              Khóa học này chưa có bài giảng nào. Bạn quay lại sau nhé.
             </p>
             <Button asChild className='mt-6'>
-              <Link to='/my-courses'>Back to My Learning</Link>
+              <Link to='/my-courses'>Về khóa học của tôi</Link>
             </Button>
           </div>
         </div>
@@ -264,10 +270,10 @@ const CourseLearningPage: React.FC = () => {
   }
   if (!activeLessonData) {
     // Chưa xác định được bài học active (ví dụ URL sai, logic init lỗi)
-    return <FullScreenLoader text='Finding your lesson...' />; // Hoặc một UI lỗi khác
+    return <FullScreenLoader text='Đang tìm bài học của bạn…' />; // Hoặc một UI lỗi khác
   }
   return (
-    <div className='flex h-screen overflow-hidden bg-muted/10 dark:bg-background'>
+    <div className='flex h-screen overflow-hidden bg-background'>
       <SidebarComponent
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}

@@ -1,5 +1,4 @@
 const httpStatus = require('http-status').status;
-const axios = require('axios');
 const subtitleRepository = require('./subtitle.repository');
 const lessonRepository = require('./lessons.repository');
 const courseRepository = require('../courses/courses.repository');
@@ -12,6 +11,11 @@ const languageRepository = require('../languages/languages.repository');
 const cloudinaryUtil = require('../../utils/cloudinary.util');
 const config = require('../../config');
 const { getAiServiceUrl } = require('../../services/aiSync.service');
+/* [SỬA 19/08/2026] Gọi AI Service qua aiClient để luôn có khóa nội bộ và thời
+   gian chờ. Trước đây dùng axios trần nên khi bật khóa nội bộ, AI Service trả
+   401 còn giao diện vẫn báo với giảng viên là "đã gửi lệnh, quay lại sau 1-3
+   phút" -- phụ đề không bao giờ tới mà không ai biết vì sao. */
+const aiClient = require('../../services/aiClient');
 
 /**
  * Lấy danh sách phụ đề cho một bài học.
@@ -319,20 +323,23 @@ const generateAiSubtitleOnDemand = async (lessonId, user) => {
       });
     }
 
-    const aiBaseUrl = getAiServiceUrl();
-    const aiUrl = `${aiBaseUrl}/api/ingest/transcribe`;
+
     // Webhook URL: AI Service sẽ gọi về Backend qua SERVER_URL (public URL)
     const serverBaseUrl = config.serverUrl || `http://127.0.0.1:${config.port}`;
     const webhookUrl = `${serverBaseUrl}/v1/lessons/${lessonId}/subtitles/auto-webhook`;
 
-    axios
-      .post(aiUrl, {
-        video_url: signedUrl,
-        course_name: courseName,
-        lesson_name: lessonName,
-        lesson_id: Number(lessonId),
-        webhook_url: webhookUrl,
-      })
+    aiClient
+      .post(
+        '/api/ingest/transcribe',
+        {
+          video_url: signedUrl,
+          course_name: courseName,
+          lesson_name: lessonName,
+          lesson_id: Number(lessonId),
+          webhook_url: webhookUrl,
+        },
+        30000
+      )
       .then(() => {
         logger.info(`✨ [AI On-Demand] Giảng viên đã kích hoạt AI dịch video cho bài học #${lessonId}`);
       })

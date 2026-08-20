@@ -435,7 +435,7 @@ const MyCourse: React.FC = () => {
                   </CardContent>
                   <CardFooter className='p-4 pt-0 border-t mt-auto'>
                     <Button asChild size='sm' className='w-full mt-3'>
-                      <Link to={`/courses/${enrollment.slug}`}>
+                      <Link to={`/learn/${enrollment.slug}`}>
                         {progress > 0 && progress < 100
                           ? 'Continue Learning'
                           : progress >= 100

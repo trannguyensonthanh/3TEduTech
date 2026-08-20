@@ -120,11 +120,11 @@ export const ManagePayoutMethodsDialog: React.FC<
     switch (methodId) {
       case 'PAYPAL':
         return (
-          <Icons.paypal className='h-6 w-6 text-blue-600 dark:text-blue-400' />
+          <Icons.paypal className='h-6 w-6 text-muted-foreground' />
         );
       case 'STRIPE':
         return (
-          <Icons.stripe className='h-6 w-6 text-indigo-600 dark:text-indigo-400' />
+          <Icons.stripe className='h-6 w-6 text-muted-foreground' />
         );
       case 'MOMO':
         return (
@@ -144,7 +144,7 @@ export const ManagePayoutMethodsDialog: React.FC<
         );
       default:
         return (
-          <Icons.landmark className='h-6 w-6 text-green-600 dark:text-green-400' />
+          <Icons.landmark className='h-6 w-6 text-muted-foreground' />
         );
     }
   };
@@ -197,8 +197,8 @@ export const ManagePayoutMethodsDialog: React.FC<
           <Card
             key={method.payoutMethodId}
             className={cn(
-              'transition-all',
-              method.isPrimary && 'border-primary shadow-lg'
+              'transition-colors',
+              method.isPrimary && 'border-primary'
             )}
           >
             <div className='flex items-center justify-between p-4 gap-3'>
@@ -260,7 +260,7 @@ export const ManagePayoutMethodsDialog: React.FC<
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className='sm:max-w-lg md:max-w-xl dark:bg-slate-800/80 backdrop-blur-sm'>
+        <DialogContent className='sm:max-w-lg md:max-w-xl'>
           <DialogHeader className='pb-4 border-b'>
             <DialogTitle className='text-2xl font-semibold flex items-center'>
               <Icons.creditCard className='mr-3 h-6 w-6 text-primary' />

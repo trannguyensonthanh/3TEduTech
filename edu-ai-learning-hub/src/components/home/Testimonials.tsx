@@ -31,7 +31,6 @@ interface StatItem {
   icon: React.ReactElement;
   value: string; // "100K+", "2K+", "98%"
   label: string;
-  colorClass: string; // Ví dụ: "text-blue-500"
 }
 
 // --- MOCK DATA (Sẽ thay thế bằng API calls) ---
@@ -75,25 +74,21 @@ const getMockStats = (t: (key: string) => string): StatItem[] => [
     icon: <Icons.students className='w-8 h-8' />,
     value: '100K+',
     label: t('testimonials.stats.activeStudents'),
-    colorClass: 'text-blue-500 dark:text-blue-400',
   },
   {
     icon: <Icons.courses className='w-8 h-8' />,
     value: '2K+',
     label: t('testimonials.stats.qualityCourses'),
-    colorClass: 'text-green-500 dark:text-green-400',
   },
   {
     icon: <Icons.instructors className='w-8 h-8' />,
     value: '150+',
     label: t('testimonials.stats.expertInstructors'),
-    colorClass: 'text-purple-500 dark:text-purple-400',
   },
   {
     icon: <Icons.star className='w-8 h-8' />,
     value: '4.8/5',
     label: t('testimonials.stats.averageRating'),
-    colorClass: 'text-yellow-500 dark:text-yellow-400',
   },
 ];
 // --- END MOCK DATA ---
@@ -163,7 +158,7 @@ const TestimonialsSection = () => {
   // useEffect(() => { if (platformStats) setStats(mapApiStatsToDisplay(platformStats)); }, [platformStats]);
 
   return (
-    <section className='py-16 md:py-24 bg-slate-50 dark:bg-slate-900/70 overflow-hidden'>
+    <section className='overflow-hidden bg-background py-16 md:py-24'>
       <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
         <motion.div
           variants={sectionVariants}
@@ -172,10 +167,10 @@ const TestimonialsSection = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className='text-center mb-12 md:mb-16'>
-            <h2 className='text-3xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tight'>
+            <h2 className='text-3xl font-bold tracking-tight text-foreground sm:text-4xl'>
               {t('testimonials.title')}
             </h2>
-            <p className='mt-4 text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto'>
+            <p className='mx-auto mt-4 max-w-2xl text-lg text-muted-foreground'>
               {t('testimonials.description')}
             </p>
           </div>
@@ -195,7 +190,7 @@ const TestimonialsSection = () => {
                       key={testimonial.id}
                       className='flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.33%] min-w-0 pl-4'
                     >
-                      <Card className='h-full flex flex-col bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden border border-transparent hover:border-blue-500/50 dark:hover:border-blue-500/30 transition-all duration-300'>
+                      <Card className='flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-none transition-colors duration-300 hover:border-primary'>
                         <CardHeader className='pb-4'>
                           <div className='flex items-center mb-3'>
                             {[...Array(5)].map((_, i) => (
@@ -204,22 +199,22 @@ const TestimonialsSection = () => {
                                 className={cn(
                                   'h-5 w-5',
                                   (testimonial.rating || 5) > i
-                                    ? 'text-yellow-400 fill-yellow-400'
-                                    : 'text-slate-300 dark:text-slate-600 fill-slate-300 dark:fill-slate-600'
+                                    ? 'fill-warning text-warning'
+                                    : 'fill-muted text-muted'
                                 )}
                               />
                             ))}
                           </div>
-                          <Icons.quote className='w-8 h-8 text-blue-500 dark:text-blue-400 opacity-30 mb-2' />
+                          <Icons.quote className='mb-2 h-8 w-8 text-muted-foreground' />
                         </CardHeader>
                         <CardContent className='flex-grow'>
-                          <blockquote className='text-slate-700 dark:text-slate-300 leading-relaxed italic'>
+                          <blockquote className='italic leading-relaxed text-foreground'>
                             "{testimonial.quote}"
                           </blockquote>
                         </CardContent>
-                        <div className='p-6 mt-auto bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-700/50'>
+                        <div className='mt-auto border-t border-border bg-muted/40 p-6'>
                           <div className='flex items-center'>
-                            <Avatar className='h-12 w-12 border-2 border-blue-200 dark:border-blue-700'>
+                            <Avatar className='h-12 w-12 border border-border'>
                               <AvatarImage
                                 src={testimonial.avatarUrl}
                                 alt={testimonial.name}
@@ -229,10 +224,10 @@ const TestimonialsSection = () => {
                               </AvatarFallback>
                             </Avatar>
                             <div className='ml-4'>
-                              <p className='font-semibold text-slate-800 dark:text-slate-100'>
+                              <p className='font-semibold text-foreground'>
                                 {testimonial.name}
                               </p>
-                              <p className='text-xs text-slate-500 dark:text-slate-400'>
+                              <p className='text-xs text-muted-foreground'>
                                 {testimonial.title}
                               </p>
                             </div>
@@ -254,10 +249,10 @@ const TestimonialsSection = () => {
                         className={cn(
                           'h-2 w-2 rounded-full transition-all duration-300',
                           index === selectedIndex
-                            ? 'w-6 bg-blue-500'
-                            : 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
+                            ? 'w-6 bg-primary'
+                            : 'bg-border hover:bg-muted-foreground'
                         )}
-                        aria-label={`Go to slide ${index + 1}`}
+                        aria-label={`Tới đánh giá thứ ${index + 1}`}
                       />
                     ))}
                   </div>
@@ -268,28 +263,20 @@ const TestimonialsSection = () => {
           {/* Platform Statistics */}
           <motion.div
             variants={itemVariants}
-            className='bg-white dark:bg-slate-800/70 rounded-2xl shadow-2xl p-8 md:p-12'
+            className='rounded-xl border border-border bg-card p-8 md:p-12'
           >
             <div className='grid grid-cols-2 md:grid-cols-4 gap-8 text-center'>
               {stats.map((stat) => (
                 <div key={stat.label} className='flex flex-col items-center'>
-                  <div
-                    className={`p-3 rounded-full mb-3 ${stat.colorClass
-                      .replace('text-', 'bg-')
-                      .replace('-500', '-100 dark:bg-opacity-20')}`}
-                  >
+                  <div className='mb-3 rounded-full bg-muted p-3 text-muted-foreground'>
                     {React.cloneElement(stat.icon, {
-                      className: cn('w-7 h-7 md:w-8 md:h-8', stat.colorClass),
+                      className: 'w-7 h-7 md:w-8 md:h-8',
                     })}
                   </div>
-                  <p
-                    className={`text-3xl md:text-4xl font-bold ${stat.colorClass} mb-1`}
-                  >
+                  <p className='mb-1 text-3xl font-bold tabular-nums text-foreground'>
                     {stat.value}
                   </p>
-                  <p className='text-sm text-slate-600 dark:text-slate-400'>
-                    {stat.label}
-                  </p>
+                  <p className='text-sm text-muted-foreground'>{stat.label}</p>
                 </div>
               ))}
             </div>

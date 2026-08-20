@@ -15,10 +15,13 @@ const getLearningReport = catchAsync(async (req, res) => {
 
   const report = await learningReportService.getLearningReport(accountId, fullName);
   
-  res.status(httpStatus.OK).json({
-    status: 'success',
-    data: report
-  });
+  /* [SỬA 19/08/2026] Trả thẳng dữ liệu, không bọc thêm lớp {status, data}.
+
+     Mọi controller khác trong dự án đều dùng res.send(data), và apiHelper phía
+     giao diện trả về nguyên thân phản hồi chứ không tự bóc trường `data`. Riêng
+     điểm cuối này bọc thêm một lớp, nên giao diện nhận được {status, data} rồi
+     đọc `report.overview` ra undefined và trang trắng. */
+  res.status(httpStatus.OK).send(report);
 });
 
 module.exports = {

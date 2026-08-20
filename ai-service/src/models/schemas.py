@@ -8,6 +8,17 @@ from pydantic import BaseModel, Field
 class ChatHistoryPair(BaseModel):
     question: str
     answer: str
+    # [THÊM 20/08/2026] Thẻ giao diện mà lượt trả lời đó đã hiển thị.
+    #
+    # `_resolve_course_reference` trong agent.py cần trường này để ánh xạ "khóa
+    # số 1 / số 2 / số 3" về đúng thẻ trong danh sách đã hiện ra. Thiếu nó, nhánh
+    # ánh xạ chính xác là mã chết và hệ thống phải đoán bằng cách bốc chuỗi in
+    # đậm thứ N trong câu trả lời trước — một phép đoán sai thường xuyên, và cái
+    # sai đó dẫn thẳng tới thẻ thanh toán cho khóa học khác.
+    #
+    # Backend Node.js đã lưu sẵn cột UiWidgetJson cho từng tin nhắn nên chỉ cần
+    # đọc lên và gửi kèm, không phát sinh truy vấn mới.
+    ui_widget: dict | None = None
 
 
 # --- Chat Request/Response ---
@@ -76,6 +87,21 @@ class IngestCourseRequest(BaseModel):
     course_name: str = Field(..., description="Course name")
     course_description: str = Field(default="", description="Course description/overview")
     lessons: list[dict] = Field(default=[], description="List of lessons with 'name' and 'content'")
+    # [THÊM 20/08/2026] Bốn trường định danh dưới đây backend VỐN ĐÃ GỬI LÊN
+    # (xem aiSync.service.js) nhưng Pydantic lược bỏ im lặng vì schema không
+    # khai báo. Hệ quả dây chuyền:
+    #   - metadata trong ChromaDB chỉ có `type` và `course_name`;
+    #   - agent.py đọc `meta.get("price", 0)` nên thẻ khóa học trong khung chat
+    #     KHÔNG BAO GIỜ hiện giá (luôn rơi về nhãn "Học liệu đề xuất");
+    #   - `courseId`/`slug` luôn null nên nút "Xem chi tiết" luôn rơi về trang
+    #     tìm kiếm thay vì mở thẳng khóa học, và việc bỏ trùng phải so khớp
+    #     bằng tên;
+    #   - tính năng lọc theo phiên bản khóa học mà chú thích aiSync hứa hẹn
+    #     thực tế chưa hề tồn tại.
+    course_id: int | None = Field(default=None, description="CourseID trong SQL Server")
+    slug: str | None = Field(default=None, description="Slug dùng để mở trang khóa học")
+    price: float | None = Field(default=None, description="Giá hiển thị (tiền cơ sở)")
+    version_number: int | None = Field(default=None, description="Số hiệu phiên bản khóa học")
 
 
 class IngestResponse(BaseModel):
@@ -95,6 +121,18 @@ class SearchRequest(BaseModel):
 class SearchResponse(BaseModel):
     answer: str
     sources: list[SourceInfo] = []
+    # [THÊM 20/08/2026] Ba trường dưới đây phục vụ trợ lý tìm khóa học ở trang
+    # /courses:
+    #   matched_courses — tên khóa học lấy từ kho vector, giữ đúng thứ hạng.
+    #     Backend đối chiếu tên này với bảng Courses rồi dựng thẻ khóa học thật.
+    #     Kho vector KHÔNG giữ giá / ảnh bìa / trạng thái xuất bản vì những thứ
+    #     đó đổi liên tục; nguồn sự thật vẫn là SQL Server.
+    #   out_of_scope — câu hỏi bị hàng rào ý định chặn. Giao diện hiện thông báo
+    #     nhắc nhở thay vì vẽ một ô kết quả rỗng trông như hệ thống hỏng.
+    #   intent — ghi lại để thống kê, không bắt buộc.
+    matched_courses: list[str] = []
+    out_of_scope: bool = False
+    intent: str | None = None
 
 
 # --- AI Agent (Conversational Commerce & Hybrid Search) ---

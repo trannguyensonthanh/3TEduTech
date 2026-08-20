@@ -52,29 +52,55 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        /* Giữ tên `brand` cho tương thích ngược, nhưng nay là cùng một dải
+           xanh với màu nhấn chính thay vì một dải riêng lệch tông. */
         brand: {
-          50: '#e6f7ff',
-          100: '#bae3ff',
-          200: '#7cc4fa',
-          300: '#34a0f0',
-          400: '#0ea5e9',
-          500: '#0284c7',
-          600: '#0369a1',
-          700: '#075985',
-          800: '#0c4a6e',
-          900: '#0c3256',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
         },
-        teal: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
+        /* Trạng thái — luôn đi kèm biểu tượng và nhãn chữ, không bao giờ
+           để riêng màu gánh ý nghĩa. */
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+          soft: 'hsl(var(--success-soft))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+          soft: 'hsl(var(--warning-soft))',
+        },
+        danger: {
+          DEFAULT: 'hsl(var(--danger))',
+          foreground: 'hsl(var(--danger-foreground))',
+          soft: 'hsl(var(--danger-soft))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          soft: 'hsl(var(--info-soft))',
+        },
+        /* Tám khe màu biểu đồ, gán theo thứ tự cố định. */
+        chart: {
+          1: 'var(--chart-1)',
+          2: 'var(--chart-2)',
+          3: 'var(--chart-3)',
+          4: 'var(--chart-4)',
+          5: 'var(--chart-5)',
+          6: 'var(--chart-6)',
+          7: 'var(--chart-7)',
+          8: 'var(--chart-8)',
+          grid: 'var(--chart-grid)',
+          axis: 'var(--chart-axis)',
+          ink: 'var(--chart-ink)',
+          'ink-muted': 'var(--chart-ink-muted)',
         },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
@@ -129,6 +155,10 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         float: 'float 5s ease-in-out infinite',
         bounce_custom: 'bounce_custom 1s infinite',
+      },
+      boxShadow: {
+        /* Đổ bóng chỉ dùng cho lớp nổi (hộp thoại, menu), không dùng cho thẻ. */
+        overlay: '0 8px 24px -8px rgb(15 23 42 / 0.18)',
       },
       fontFamily: {
         sans: ['Open Sans', ...fontFamily.sans],

@@ -75,6 +75,12 @@ async def ingest_course(request: IngestCourseRequest):
             course_name=request.course_name,
             course_description=request.course_description,
             lessons=request.lessons,
+            # [THÊM 20/08/2026] Chuyển tiếp bốn trường định danh xuống metadata.
+            # Backend đã gửi lên từ lâu; trước đây chúng bị lược bỏ ở tầng schema.
+            course_id=request.course_id,
+            slug=request.slug,
+            price=request.price,
+            version_number=request.version_number,
         )
         return IngestResponse(
             message=f"Successfully ingested course '{request.course_name}'",

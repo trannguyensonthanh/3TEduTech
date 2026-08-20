@@ -169,13 +169,87 @@ const createLesson = async (sectionId, lessonData, user) => {
  * @param {object} user - Người dùng (để kiểm tra quyền xem free preview).
  * @returns {Promise<object[]>}
  */
+/**
+ * [THÊM 19/08/2026] Che nội dung trả phí với người không có quyền.
+ *
+ * Trước đây hai hàm đọc bài học nhận tham số `user` nhưng không hề dùng tới,
+ * nên bất kỳ ai gọi thẳng GET /v1/lessons/:id đều đọc trọn `textContent` của
+ * khóa học trả phí -- đi vòng qua toàn bộ lớp kiểm soát ở tầng khóa học.
+ *
+ * Thứ tự cho phép: bài đánh dấu xem thử -> quản trị viên -> giảng viên sở hữu
+ * -> học viên đã ghi danh. Không thuộc nhóm nào thì vẫn trả về cấu trúc bài
+ * học (tên, thứ tự, loại) nhưng nội dung bị thay bằng thông báo.
+ */
+const redactLessonIfNotAllowed = async (lesson, user) => {
+  if (!lesson) return lesson;
+  if (lesson.IsFreePreview) return lesson;
+
+  const isAdmin =
+    user && (user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN);
+  const isOwnerInstructor =
+    user && user.role === Roles.INSTRUCTOR && lesson.InstructorID === user.id;
+  if (isAdmin || isOwnerInstructor) return lesson;
+
+  let isEnrolled = false;
+  if (user && lesson.CourseID) {
+    try {
+      isEnrolled = await enrollmentService.isUserEnrolled(
+        user.id,
+        lesson.CourseID
+      );
+    } catch (e) {
+      isEnrolled = false;
+    }
+  }
+  if (isEnrolled) return lesson;
+
+  return {
+    ...lesson,
+    TextContent: '*** Nội dung chỉ dành cho học viên đã đăng ký khóa học ***',
+    ExternalVideoID: null,
+    VideoSourceType: null,
+  };
+};
+
 const getLessonsBySection = async (sectionId, user) => {
   const section = await sectionRepository.findSectionById(sectionId);
   if (!section) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Chương không tồn tại.');
   }
   const lessons = await lessonRepository.findLessonsBySectionId(sectionId);
-  return lessons;
+
+  const isAdmin =
+    user && (user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN);
+  const isOwnerInstructor =
+    user &&
+    user.role === Roles.INSTRUCTOR &&
+    section.InstructorID === user.id;
+
+  let isEnrolled = false;
+  if (user && !isAdmin && !isOwnerInstructor && section.CourseID) {
+    try {
+      isEnrolled = await enrollmentService.isUserEnrolled(
+        user.id,
+        section.CourseID
+      );
+    } catch (e) {
+      isEnrolled = false;
+    }
+  }
+  const canViewFull = isAdmin || isOwnerInstructor || isEnrolled;
+  if (canViewFull) return lessons;
+
+  return lessons.map((l) =>
+    l.IsFreePreview
+      ? l
+      : {
+          ...l,
+          TextContent:
+            '*** Nội dung chỉ dành cho học viên đã đăng ký khóa học ***',
+          ExternalVideoID: null,
+          VideoSourceType: null,
+        }
+  );
 };
 
 /**
@@ -189,7 +263,8 @@ const getLesson = async (lessonId, user) => {
   if (!lesson) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Bài học không tồn tại.');
   }
-  return toCamelCaseObject(lesson);
+  const safeLesson = await redactLessonIfNotAllowed(lesson, user);
+  return toCamelCaseObject(safeLesson);
 };
 
 /**

@@ -78,6 +78,15 @@ export const useChatbot = ({
   useStreaming = true,
   enabled = true,
 }: UseChatbotOptions) => {
+  /* [THÊM 20/08/2026] `lessonId` chỉ có ý nghĩa với scope LESSON.
+     Với scope COURSE, hook vẫn nhận `lessonId` từ trang học (nó đổi mỗi lần
+     người dùng chuyển bài) nhưng lại ép về null khi gọi API. Vì biến đó nằm
+     trong mảng phụ thuộc của hiệu ứng khởi tạo, mỗi lần chuyển bài là một lượt
+     POST /ai/sessions + GET /messages hoàn toàn thừa (đều tính vào giới hạn tần
+     suất), kèm một lần dựng lại mảng tin nhắn — cuốn mất lời chào và các nút
+     gợi ý đang hiển thị giữa chừng cuộc trò chuyện. */
+  const effectiveLessonId = scope === 'LESSON' ? lessonId : null;
+
   const [messages, setMessages] = useState<ChatMessage[]>(
     initialMessages || []
   );
@@ -112,7 +121,7 @@ export const useChatbot = ({
         const session = await getOrCreateChatSession({
           scope,
           courseId: scope === 'MASTER' ? null : courseId,
-          lessonId: scope === 'LESSON' ? lessonId : null,
+          lessonId: effectiveLessonId,
         });
         if (!active) return;
         setSessionId(session.sessionId);
@@ -155,7 +164,7 @@ export const useChatbot = ({
     // mảng đó ngay trong thân component nên nó có định danh mới mỗi lần render
     // — đưa vào đây sẽ tạo vòng lặp gọi API tạo phiên không dừng.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, scope, courseId, lessonId]);
+  }, [enabled, scope, courseId, effectiveLessonId]);
 
   // Dọn timer và hủy stream đang chạy khi component bị gỡ.
   useEffect(() => {
@@ -188,14 +197,14 @@ export const useChatbot = ({
         const session = await getOrCreateChatSession({
           scope,
           courseId: scope === 'MASTER' ? null : courseId,
-          lessonId: scope === 'LESSON' ? lessonId : null,
+          lessonId: effectiveLessonId,
         });
         setSessionId(session.sessionId);
       } catch (error) {
         console.error('Không tạo lại được phiên chat:', error);
       }
     }
-  }, [sessionId, initialMessages, enabled, scope, courseId, lessonId]);
+  }, [sessionId, initialMessages, enabled, scope, courseId, effectiveLessonId]);
 
   /* ---------------------------------------------------------------------
      Câu hỏi gợi ý

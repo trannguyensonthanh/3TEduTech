@@ -2,7 +2,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Icons } from './Icons'; // Giả sử bạn có Icons.logo
 
 interface FullScreenLoaderProps {
   text?: string;
@@ -53,15 +52,13 @@ const FullScreenLoader: React.FC<FullScreenLoaderProps> = ({ text }) => {
         initial='hidden'
         animate='visible'
         exit='exit'
-        className='fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm'
+        className='fixed inset-0 z-[100] flex items-center justify-center bg-background/90'
       >
         <motion.div
           key='loader-content'
           variants={contentVariants}
-          className='flex flex-col items-center justify-center gap-4 p-8 bg-card rounded-2xl shadow-2xl'
+          className='flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card p-8 shadow-lg'
         >
-          {/* Bạn có thể thay bằng logo của mình */}
-          {/* <Icons.logo className="h-10 w-10 text-primary animate-pulse" /> */}
           <div className='h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent'></div>
 
           <p className='mt-2 text-card-foreground text-base font-medium tracking-wide'>

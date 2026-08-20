@@ -298,7 +298,7 @@ const FaqsManagement: React.FC = () => {
         </div>
 
         {/* Cảnh báo về prompt injection — quản trị viên cần biết mình đang làm gì */}
-        <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="flex gap-3 rounded-xl border border-border bg-warning-soft p-3 text-sm text-warning">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <p>
             Chỉ tải lên tài liệu do chính đội ngũ soạn. Nội dung tệp đi thẳng vào
@@ -357,7 +357,7 @@ const FaqsManagement: React.FC = () => {
                         title="Xem nội dung đã bóc"
                         onClick={() => handleView(doc)}
                       >
-                        <Eye className="h-4 w-4 text-blue-500" />
+                        <Eye className="h-4 w-4 text-muted-foreground" />
                       </Button>
                       {/* `asChild` truyền kiểu dáng của Button xuống thẻ <a>.
                           Radix Slot yêu cầu ĐÚNG MỘT phần tử con — đừng thêm
@@ -372,7 +372,7 @@ const FaqsManagement: React.FC = () => {
                           target="_blank"
                           rel="noreferrer noopener"
                         >
-                          <ExternalLink className="h-4 w-4 text-emerald-600" />
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </a>
                       </Button>
                       <Button
@@ -385,7 +385,7 @@ const FaqsManagement: React.FC = () => {
                         {deletingId === doc.docId ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4 text-danger" />
                         )}
                       </Button>
                     </TableCell>

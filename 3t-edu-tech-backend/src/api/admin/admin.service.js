@@ -300,35 +300,30 @@ const getInstructorAnalyticsReport = async (instructorId, period = 'monthly') =>
       avgCompletion: Number(row.AvgCompletion || 0),
       revenue: Number(row.Revenue || 0),
     })),
+    /* [SỬA 19/08/2026] GỠ TOÀN BỘ SỐ LIỆU MÔ PHỎNG.
+
+       Ba khối quizStats, dropoutBottlenecks và sentiment trước đây trả về hằng
+       số ghi cứng: tỉ lệ đạt 85.4, ba câu hỏi khó bịa, ba điểm nghẽn bỏ học
+       bịa, và hai chủ đề thảo luận kèm TÊN HỌC VIÊN BỊA. Mọi giảng viên đều
+       nhận về đúng một bộ số giống hệt nhau, không hề đến từ cơ sở dữ liệu.
+
+       Nay trả về cấu trúc rỗng kèm cờ `available` để giao diện biết mà hiển thị
+       trạng thái "chưa có dữ liệu" thay vì vẽ biểu đồ từ số giả. Khi nào truy
+       vấn thật được viết xong thì thay phần dưới đây. */
     quizStats: {
-      avgPassRate: 85.4,
-      avgScore: 8.3,
-      totalAttempts: 156,
-      hardestQuestions: [
-        { id: 1, question: 'Hiểu & áp dụng cơ chế Bất đồng bộ (Async/Await) chuyên sâu', passRate: 41, courseName: 'JavaScript Nâng Cao' },
-        { id: 2, question: 'Cơ chế tái tạo Virtual DOM & Fiber Engine trong React', passRate: 48, courseName: 'React & NextJS Masterclass' },
-        { id: 3, question: 'Phân quyền IAM & Best practices bảo mật trên Cloud S3', passRate: 56, courseName: 'Cloud Architecture Pro' }
-      ]
+      available: false,
+      avgPassRate: null,
+      avgScore: null,
+      totalAttempts: 0,
+      hardestQuestions: [],
     },
-    dropoutBottlenecks: [
-      { id: 1, lessonTitle: 'Bài 14: Cấu trúc bộ lọc Middleware & JWT Shield', courseName: 'NodeJS Express Pro', dropRate: 34, completion: 66 },
-      { id: 2, lessonTitle: 'Bài 22: Quản lý State phức tạp với Redux Toolkit', courseName: 'React & NextJS Masterclass', dropRate: 27, completion: 73 },
-      { id: 3, lessonTitle: 'Bài 8: Xử lý Deadlock & Race conditions trong DB', courseName: 'Database Design 101', dropRate: 22, completion: 78 },
-    ],
+    dropoutBottlenecks: [],
     sentiment: {
-      stars: [
-        { stars: 5, percentage: 79, count: 98 },
-        { stars: 4, percentage: 15, count: 18 },
-        { stars: 3, percentage: 4, count: 5 },
-        { stars: 2, percentage: 1, count: 1 },
-        { stars: 1, percentage: 1, count: 1 }
-      ],
-      unansweredQnA: 3,
-      recentTopics: [
-        { id: 1, title: 'Lỗi khi deploy lên Vercel với biến môi trường .env.production', student: 'Trần Văn Long', time: '2 giờ trước', urgent: true },
-        { id: 2, title: 'Hỏi về chiến thuật tối ưu cache SSR trên Redis Cluster', student: 'Nguyễn Thúy Hằng', time: '4 giờ trước', urgent: false }
-      ]
-    }
+      available: false,
+      stars: [],
+      unansweredQnA: null,
+      recentTopics: [],
+    },
   };
 };
 

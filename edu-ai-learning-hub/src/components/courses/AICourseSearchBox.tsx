@@ -1,25 +1,71 @@
 // src/components/courses/AICourseSearchBox.tsx
+//
+/* ============================================================================
+   [VIẾT LẠI 20/08/2026] TRỢ LÝ TÌM KHÓA HỌC — MỘT NHIỆM VỤ DUY NHẤT
+
+   Bản trước là một "trợ lý tư vấn lộ trình" nhận mọi loại câu hỏi. Hai vấn đề:
+
+   1. TRÙNG CHỨC NĂNG. Nó nhận cả câu hỏi về chính sách, thanh toán, kiến thức
+      chuyên môn — đúng những thứ chatbot tổng ở góc màn hình đã làm, và làm tốt
+      hơn vì có ngữ cảnh hội thoại. Người dùng đứng giữa hai ô chat trên cùng
+      một trang, không biết nên gõ vào đâu.
+
+   2. TÌM ĐƯỢC NHƯNG KHÔNG DÙNG ĐƯỢC. Kết quả trả về chỉ là các đoạn văn bản
+      trích từ kho tri thức: tên khóa học kèm 200 ký tự mô tả. Không giá, không
+      ảnh bìa, không đường dẫn. Bấm vào chỉ đổ tên xuống ô tìm kiếm thường —
+      tức là dùng mô hình ngôn ngữ để gợi ý một từ khóa, rồi bắt người dùng tự
+      tìm lại từ đầu.
+
+   Nay:
+   • Phạm vi bị giới hạn cứng ở tầng dịch vụ AI. Câu hỏi ngoài phạm vi bị chặn
+     ngay tại bộ định tuyến ý định, trả về `outOfScope` và KHÔNG gọi mô hình
+     sinh văn bản. Giao diện hiện một thông báo nhắc nhở, chỉ đường sang chatbot
+     tổng, chứ không vẽ ô kết quả rỗng trông như hệ thống hỏng.
+   • Kết quả là THẺ KHÓA HỌC THẬT, dựng bằng đúng component `CourseCardv2` mà
+     lưới bên dưới đang dùng — cùng giá, cùng ảnh, cùng đường dẫn, bấm vào là
+     vào thẳng trang khóa học.
+============================================================================ */
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { searchCoursesWithAI, CourseSearchResponse } from '@/services/ai.service';
-import { Sparkles, Bot, Send, Loader2, BookOpen, ArrowRight, CheckCircle2, RefreshCw, MessageSquare } from 'lucide-react';
+import {
+  searchCoursesWithAI,
+  CourseSearchResponse,
+} from '@/services/ai.service';
+import CourseCardv2 from '@/components/courses/CourseCardv2';
+import {
+  ArrowRight,
+  BookOpen,
+  Info,
+  Loader2,
+  RefreshCw,
+  Search,
+  Send,
+  Sparkles,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 interface AICourseSearchBoxProps {
+  /** Đổ một từ khóa xuống ô tìm kiếm thường của trang. */
   onSelectCourseKeyword?: (keyword: string) => void;
 }
 
+/* Gợi ý viết theo giọng "mô tả thứ mình muốn học" chứ không phải "hỏi trợ lý".
+   Đây là cách rẻ nhất để dạy người dùng phạm vi của ô này mà không cần đọc chữ
+   hướng dẫn: bốn ví dụ cùng một dạng câu thì dạng câu đó chính là hướng dẫn. */
 const QUICK_SUGGESTIONS = [
-  '🧑‍💻 Lộ trình học lập trình Web Fullstack cho người mới bắt đầu',
-  '🤖 Kỹ năng cần thiết để làm nghề AI & Machine Learning',
-  '📱 Học lập trình ứng dụng di động đa nền tảng (Mobile App)',
-  '🎨 Quản trị cơ sở dữ liệu & Thiết kế UI/UX chuyên nghiệp',
+  'Tôi muốn học lập trình web từ con số không',
+  'Khóa nào dạy phân tích dữ liệu bằng Python',
+  'Tôi muốn làm ứng dụng di động đa nền tảng',
+  'Học thiết kế giao diện và trải nghiệm người dùng',
 ];
 
-export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({ onSelectCourseKeyword }) => {
+export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({
+  onSelectCourseKeyword,
+}) => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CourseSearchResponse | null>(null);
@@ -36,12 +82,15 @@ export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({ onSelectCo
     try {
       /* [SỬA 19/08/2026] `top_k` -> `topK`. Backend nhận `topK`
          (chat.validation.js) rồi mới tự đổi sang `top_k` khi gọi AI Service
-         (chat.controller.js dòng 93). Gửi `top_k` thì Joi bỏ qua trường lạ và
-         số kết quả luôn rơi về mặc định — sai lặng lẽ, không báo lỗi. */
-      const data = await searchCoursesWithAI({ query: targetQuery, topK: 5 });
+         (chat.controller.js). Gửi `top_k` thì Joi bỏ qua trường lạ và số kết
+         quả luôn rơi về mặc định — sai lặng lẽ, không báo lỗi. */
+      const data = await searchCoursesWithAI({ query: targetQuery, topK: 6 });
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || 'Không thể kết nối đến Trợ lý AI. Vui lòng thử lại.');
+    } catch (err) {
+      setError(
+        (err as Error)?.message ||
+          'Không kết nối được tới trợ lý tìm kiếm. Vui lòng thử lại.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -53,172 +102,216 @@ export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({ onSelectCo
     setError(null);
   };
 
-  return (
-    <div className="w-full mb-8 relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-slate-900/95 via-purple-950/40 to-slate-900/95 p-6 shadow-2xl backdrop-blur-xl text-white">
-      {/* Background ambient light effects */}
-      <div className="absolute top-0 left-1/4 w-72 h-72 bg-violet-600/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
+  const courses = result?.courses ?? [];
+  const isOutOfScope = result?.outOfScope === true;
 
-      <div className="relative z-10 space-y-5">
-        {/* Header Badge */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+  return (
+    <div className="mb-8 w-full rounded-xl border border-border bg-card p-5 text-card-foreground">
+      <div className="space-y-5">
+        {/* ---------------------------------------------------- Tiêu đề --- */}
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-cyan-500 shadow-lg shadow-purple-500/30 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white animate-spin" style={{ animationDuration: '8s' }} />
-            </div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Sparkles className="h-5 w-5" aria-hidden="true" />
+            </span>
             <div>
-              <h3 className="text-xl font-black tracking-tight bg-gradient-to-r from-white via-violet-200 to-cyan-200 bg-clip-text text-transparent flex items-center gap-2">
-                AI Learning Advisor <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/40">Powered by Gemini & RAG</span>
+              <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                Tìm khóa học bằng AI
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  Tìm theo ý nghĩa, không chỉ theo từ khóa
+                </span>
               </h3>
-              <p className="text-xs text-slate-300">
-                Hãy nhập mong muốn nghề nghiệp hoặc mục tiêu của bạn, Trợ lý AI sẽ tư vấn lộ trình và đề xuất khóa học phù hợp nhất!
+              <p className="mt-1 text-sm text-muted-foreground">
+                Mô tả thứ bạn muốn học bằng lời của mình, trợ lý sẽ tìm những
+                khóa học sát nhất và hiển thị ngay bên dưới.
               </p>
             </div>
           </div>
           {result && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              className="text-slate-400 hover:text-white hover:bg-white/5 text-xs h-8 px-3 gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Hỏi mục tiêu khác
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Tìm điều khác
             </Button>
           )}
         </div>
 
-        {/* Search Bar Input */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* ------------------------------------------------------ Ô nhập --- */}
+        <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-grow">
-            <Bot className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-violet-400 pointer-events-none" />
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               type="text"
-              placeholder="Ví dụ: Tôi muốn tự học lập trình trang web cho người chưa có nền tảng..."
+              placeholder="Ví dụ: tôi muốn tự học lập trình web từ con số không…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-11 pr-4 h-12 text-sm bg-slate-950/60 border-white/15 rounded-xl text-white placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-violet-500/50 shadow-inner"
+              className="h-12 pl-11 pr-4 text-sm"
+              aria-label="Mô tả khóa học bạn muốn tìm"
             />
           </div>
           <Button
             onClick={() => handleSearch()}
             disabled={isLoading || !query.trim()}
-            className="h-12 px-6 bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 flex items-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            className="h-12 px-6"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Đang phân tích...</span>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>Đang tìm…</span>
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" />
-                <span>Tư Vấn Ngay</span>
+                <Send className="h-4 w-4" aria-hidden="true" />
+                <span>Tìm khóa học</span>
               </>
             )}
           </Button>
         </div>
 
-        {/* Quick Suggestion Chips */}
+        {/* -------------------------------------------------- Gợi ý nhanh --- */}
         {!result && !isLoading && (
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-cyan-400" /> Gợi ý mong muốn phổ biến:
+            <span className="text-xs font-medium text-muted-foreground">
+              Thử một trong các mô tả sau:
             </span>
             <div className="flex flex-wrap gap-2">
-              {QUICK_SUGGESTIONS.map((suggestion, idx) => (
+              {QUICK_SUGGESTIONS.map((suggestion) => (
                 <button
-                  key={idx}
+                  key={suggestion}
+                  type="button"
                   onClick={() => handleSearch(suggestion)}
-                  className="text-xs text-left px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 transition-colors flex items-center gap-1.5"
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <span>{suggestion}</span>
-                  <ArrowRight className="w-3 h-3 opacity-60" />
+                  <ArrowRight
+                    className="h-3 w-3 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Loading Indicator */}
+        {/* --------------------------------------------------- Đang xử lý --- */}
         <AnimatePresence>
           {isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="p-6 rounded-xl bg-slate-950/60 border border-violet-500/30 text-center space-y-3"
+              className="space-y-3 rounded-lg border border-border p-6 text-center"
             >
-              <Loader2 className="w-8 h-8 text-violet-400 animate-spin mx-auto" />
-              <p className="text-sm text-violet-200 font-medium animate-pulse">
-                🧠 Trợ lý AI đang rà soát kho dữ liệu Vector ChromaDB và tổng hợp lộ trình dành riêng cho bạn...
+              <Loader2
+                className="mx-auto h-7 w-7 animate-spin text-muted-foreground"
+                aria-hidden="true"
+              />
+              <p className="text-sm text-muted-foreground">
+                Đang đối chiếu mô tả của bạn với kho tri thức khóa học…
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Error Message */}
+        {/* -------------------------------------------------------- Lỗi --- */}
         {error && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-center gap-2">
-            <span className="font-bold">⚠️ Lỗi:</span> {error}
+          <div className="flex items-start gap-2 rounded-lg bg-danger-soft p-4 text-sm text-danger">
+            <span className="font-semibold">Lỗi:</span>
+            <span>{error}</span>
           </div>
         )}
 
-        {/* AI Recommendations Result Display */}
+        {/* ----------------------------------------------------- Kết quả --- */}
         <AnimatePresence>
           {result && !isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-5 pt-2"
+              className="space-y-5 pt-1"
             >
-              <div className="p-5 rounded-xl bg-slate-950/70 border border-white/10 shadow-inner space-y-4">
-                <div className="flex items-center gap-2 text-sm font-bold text-cyan-400 pb-2 border-b border-white/10">
-                  <Bot className="w-5 h-5" />
-                  <span>LỜI KHUYÊN & TRỢ HẢO TỪ GIÁO TRÌNH AI</span>
-                </div>
-                <div className="prose prose-invert max-w-none text-sm text-slate-200 leading-relaxed space-y-2">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {result.answer}
-                  </ReactMarkdown>
-                </div>
-              </div>
-
-              {/* Matched Courses (Sources) */}
-              {result.sources && result.sources.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300">
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen className="w-4 h-4 text-emerald-400" />
-                      Khóa học liên quan trong hệ thống ({result.sources.length}):
-                    </span>
-                    {onSelectCourseKeyword && (
-                      <span className="text-[11px] text-slate-400 font-normal">Bấm vào tên để tìm kiếm ngay</span>
-                    )}
+              {/* Ngoài phạm vi — thông báo riêng, không phải thẻ trả lời.
+                  Dùng tông thông tin chứ không phải tông lỗi: người dùng không
+                  làm gì sai, chỉ là gõ nhầm ô. */}
+              {isOutOfScope ? (
+                <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info-soft p-4">
+                  <Info
+                    className="mt-0.5 h-5 w-5 shrink-0 text-info"
+                    aria-hidden="true"
+                  />
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-foreground [&_p]:my-1">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {result.answer}
+                    </ReactMarkdown>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {result.sources.map((src, index) => (
-                      <div
-                        key={index}
-                        onClick={() => onSelectCourseKeyword && onSelectCourseKeyword(src.file_name)}
-                        className={`p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800/80 border border-white/10 hover:border-violet-500/50 transition-all ${onSelectCourseKeyword ? 'cursor-pointer hover:shadow-lg hover:shadow-violet-500/10 transform hover:-translate-y-0.5' : ''}`}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <h4 className="text-sm font-bold text-violet-300 truncate flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            {src.file_name}
-                          </h4>
-                          <span className="text-[10px] uppercase font-bold bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded">
-                            Matched
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 line-clamp-2">
-                          {src.content}
-                        </p>
+                </div>
+              ) : (
+                <>
+                  {/* Lời tư vấn ngắn */}
+                  {result.answer && (
+                    <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-5">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Sparkles
+                          className="h-4 w-4 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span>Gợi ý từ trợ lý</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed text-foreground">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {result.answer}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Thẻ khóa học thật */}
+                  {courses.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold">
+                          <BookOpen className="h-4 w-4" aria-hidden="true" />
+                          {courses.length} khóa học phù hợp nhất
+                        </span>
+                        {onSelectCourseKeyword && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onSelectCourseKeyword(query)}
+                          >
+                            Lọc cả danh sách theo mô tả này
+                            <ArrowRight
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {courses.map((course) => (
+                          <CourseCardv2
+                            key={course.courseId}
+                            course={course}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Tìm được đoạn văn bản nhưng không khớp khóa học nào đang
+                       xuất bản. Nói thẳng thay vì im lặng — trạng thái này
+                       thường có nghĩa là kho tri thức đang lệch với CSDL (khóa
+                       đã đổi tên hoặc đã gỡ xuất bản), và đó là thông tin quản
+                       trị viên cần biết. */
+                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Chưa có khóa học nào đang mở khớp với mô tả này. Bạn thử
+                        mô tả theo cách khác, hoặc dùng bộ lọc bên trái nhé.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -227,4 +320,5 @@ export const AICourseSearchBox: React.FC<AICourseSearchBoxProps> = ({ onSelectCo
     </div>
   );
 };
+
 export default AICourseSearchBox;

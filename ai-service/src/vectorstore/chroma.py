@@ -64,6 +64,37 @@ async def add_documents(
         existing_count = collection.count()
         ids = [f"doc_{existing_count + i}" for i in range(len(documents))]
 
+    # [THÊM 19/08/2026] Dọn các đoạn CŨ của cùng một nguồn trước khi nạp lại.
+    #
+    # Định danh đoạn được băm từ (nguồn, chỉ số, NỘI DUNG). Nội dung đổi một ký
+    # tự là sinh định danh mới, và trước đây bản cũ ở lại vĩnh viễn vì hàm này
+    # chỉ bỏ qua định danh trùng chứ không xóa gì. Kho vector vì vậy tích tụ dần
+    # nội dung lỗi thời: sửa chính sách hoàn tiền từ 7 ngày xuống 3 ngày thì cả
+    # hai bản cùng nằm trong kho và trợ lý trích dẫn bản đã hết hiệu lực.
+    #
+    # Cách dọn: với mỗi nguồn có trong lô đang nạp, xóa những đoạn thuộc nguồn
+    # đó mà KHÔNG nằm trong danh sách định danh mới. Các đoạn không thay đổi giữ
+    # nguyên định danh nên không bị xóa, và vẫn được bỏ qua ở bước tạo vector
+    # bên dưới -- lợi ích tiết kiệm lời gọi mô hình được giữ nguyên.
+    incoming_ids = set(ids)
+    sources = {
+        m.get("source")
+        for m in (metadatas or [])
+        if isinstance(m, dict) and m.get("source")
+    }
+    for src in sources:
+        try:
+            stale = collection.get(where={"source": src})
+            stale_ids = [i for i in stale.get("ids", []) if i not in incoming_ids]
+            if stale_ids:
+                collection.delete(ids=stale_ids)
+                logger.info(
+                    f"🧹 Đã dọn {len(stale_ids)} đoạn lỗi thời của nguồn '{src}' "
+                    f"trong collection '{collection_name}'."
+                )
+        except Exception as e:
+            logger.warning(f"Không dọn được đoạn cũ của nguồn '{src}': {e}")
+
     # Smart RAG Deduplication: Check existing IDs in ChromaDB before calling Gemini Embedding API
     existing = collection.get(ids=ids)
     existing_ids_set = set(existing.get("ids", []))

@@ -4,6 +4,13 @@ import { Icons } from '../common/Icons';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Chân trang.
+ *
+ * Bản trước dùng lớp `footer-premium` (chuyển sắc riêng trong App.css) cùng
+ * thang xám và thang lam tự chế. Nay chỉ còn nền nhạt `bg-muted/40`, một đường
+ * kẻ `border-border` phân tách với nội dung, và màu nhấn cho trạng thái di chuột.
+ */
 const socialLinks = [
   { name: 'Facebook', href: '#', icon: <Icons.facebook className='h-5 w-5' /> },
   { name: 'Twitter', href: '#', icon: <Icons.twitter className='h-5 w-5' /> },
@@ -62,18 +69,18 @@ const Footer = () => {
   ];
 
   return (
-    <footer className='footer-premium text-slate-600 dark:text-slate-400 relative'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16'>
-        {/* Top Section */}
-        <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 mb-10 md:mb-12 items-start'>
+    <footer className='border-t border-border bg-muted/40'>
+      <div className='container mx-auto px-4 py-12 sm:px-6 md:py-16 lg:px-8'>
+        {/* Khối trên */}
+        <div className='mb-10 grid grid-cols-1 items-start gap-8 md:mb-12 md:gap-12 lg:grid-cols-12'>
           <div className='lg:col-span-4'>
-            <Link to='/' className='flex items-center space-x-2.5 mb-4 group'>
-              <Icons.logo className='h-9 w-9 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6' />
-              <span className='text-2xl font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors'>
+            <Link to='/' className='group mb-4 flex items-center space-x-2.5'>
+              <Icons.logo className='h-9 w-9 text-primary' />
+              <span className='text-xl font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary'>
                 3TEduTech
               </span>
             </Link>
-            <p className='text-sm leading-relaxed mb-6 max-w-sm text-slate-500 dark:text-slate-400'>
+            <p className='mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground'>
               {t('footer.slogan')}
             </p>
             <div className='flex space-x-3'>
@@ -84,7 +91,7 @@ const Footer = () => {
                   target='_blank'
                   rel='noopener noreferrer'
                   aria-label={t(`footer.social.${social.name.toLowerCase()}`)}
-                  className='w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-300 hover:scale-105'
+                  className='flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-primary'
                 >
                   {social.icon}
                 </a>
@@ -92,10 +99,10 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Navigation Links Columns */}
+          {/* Các cột liên kết */}
           {footerSectionsI18n.slice(0, 2).map((section) => (
             <div key={section.title} className='lg:col-span-2'>
-              <h3 className='text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-wider uppercase mb-5'>
+              <h3 className='mb-5 text-sm font-semibold uppercase tracking-wider text-foreground'>
                 {section.title}
               </h3>
               <ul className='space-y-3'>
@@ -103,12 +110,9 @@ const Footer = () => {
                   <li key={link.label}>
                     <Link
                       to={link.href}
-                      className='text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative group'
+                      className='text-sm text-muted-foreground transition-colors hover:text-primary'
                     >
-                      <span className='relative'>
-                        {link.label}
-                        <span className='absolute bottom-0 left-0 w-0 h-[1px] bg-blue-500 transition-all duration-300 group-hover:w-full' />
-                      </span>
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -116,10 +120,10 @@ const Footer = () => {
             </div>
           ))}
 
-          <div className='lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-12'>
+          <div className='grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-12 lg:col-span-4'>
             {footerSectionsI18n.slice(2).map((section) => (
               <div key={section.title} className='sm:col-span-1'>
-                <h3 className='text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-wider uppercase mb-5'>
+                <h3 className='mb-5 text-sm font-semibold uppercase tracking-wider text-foreground'>
                   {section.title}
                 </h3>
                 <ul className='space-y-3'>
@@ -127,12 +131,9 @@ const Footer = () => {
                     <li key={link.label}>
                       <Link
                         to={link.href}
-                        className='text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 relative group'
+                        className='text-sm text-muted-foreground transition-colors hover:text-primary'
                       >
-                        <span className='relative'>
-                          {link.label}
-                          <span className='absolute bottom-0 left-0 w-0 h-[1px] bg-blue-500 transition-all duration-300 group-hover:w-full' />
-                        </span>
+                        {link.label}
                       </Link>
                     </li>
                   ))}
@@ -142,22 +143,12 @@ const Footer = () => {
           </div>
         </div>
 
-        <Separator className='dark:bg-slate-800/80' />
+        <Separator />
 
-        {/* Bottom Section */}
-        <div className='mt-8 md:mt-10 flex flex-col sm:flex-row justify-between items-center text-xs'>
-          <p className='text-slate-400 dark:text-slate-500 mb-4 sm:mb-0'>
-            {t('footer.copyright', { year })}
-          </p>
-          <div className='flex items-center space-x-1'>
-            <span className='text-slate-400 dark:text-slate-500'>
-              Made with
-            </span>
-            <span className='text-red-400 animate-pulse text-sm'>♥</span>
-            <span className='text-slate-400 dark:text-slate-500'>
-              by 3TEduTech Team
-            </span>
-          </div>
+        {/* Khối dưới */}
+        <div className='mt-8 flex flex-col items-center justify-between text-xs text-muted-foreground sm:flex-row md:mt-10'>
+          <p className='mb-4 sm:mb-0'>{t('footer.copyright', { year })}</p>
+          <p>{t('footer.madeBy', 'Được thực hiện bởi đội ngũ 3TEduTech')}</p>
         </div>
       </div>
     </footer>

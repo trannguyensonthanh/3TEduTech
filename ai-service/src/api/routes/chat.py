@@ -11,7 +11,18 @@ from src.models.schemas import (
     SuggestionResponse,
 )
 from src.rag.chain import query_master, query_course
-from src.core.gemini import generate_suggested_questions
+# [SỬA 19/08/2026] Chuyển từ src.core.gemini sang src.core.llm_provider.
+#
+# Trước đây tệp này gọi THẲNG Gemini, nên lớp chọn mô hình (llm_provider)
+# chỉ được đúng MỘT endpoint dùng tới — nghĩa là Qwen/vLLM trên GPU EC2 #1
+# thực tế chưa bao giờ phục vụ chatbot. Hạn mức Gemini cạn là cả hệ thống
+# hỏng, dù GPU vẫn đang chạy và tính tiền.
+#
+# Đặt bí danh trùng tên hàm cũ để mọi lời gọi bên dưới không phải sửa —
+# chữ ký hai bên đã được đối chiếu là khớp nhau.
+from src.core.llm_provider import (
+    generate_suggestions as generate_suggested_questions,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat"])

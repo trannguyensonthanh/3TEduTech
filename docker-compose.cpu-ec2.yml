@@ -50,7 +50,11 @@ services:
     container_name: edutech-backend
     mem_limit: 1024m
     ports:
-      - "5000:5000"
+      # [SỬA 19/08/2026] Chỉ mở trên loopback, giống redis và ai-service.
+      # Trước đây ánh xạ ra mọi giao diện mạng nên có thể gọi thẳng
+      # http://<ip-máy-chủ>:5000/v1/... , đi vòng qua Nginx và mất toàn bộ
+      # tiêu đề bảo mật, nén, giới hạn kích thước thân yêu cầu và TLS.
+      - "127.0.0.1:5000:5000"
     env_file:
       - ./3t-edu-tech-backend/.env.production
     environment:

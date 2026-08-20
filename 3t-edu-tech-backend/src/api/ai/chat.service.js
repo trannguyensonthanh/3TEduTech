@@ -35,6 +35,7 @@ const aiClient = require('../../services/aiClient');
 const ApiError = require('../../core/errors/ApiError');
 const logger = require('../../utils/logger');
 const Roles = require('../../core/enums/Roles');
+const pricingUtil = require('../../utils/pricing.util');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
 
 /**
@@ -101,7 +102,10 @@ const assertScopeAccess = async (user, scope, courseId) => {
  * Lấy phiên đang mở theo ngữ cảnh, chưa có thì tạo mới.
  * @returns {Promise<object>} Phiên (camelCase).
  */
-const getOrCreateSession = async (user, { scope, courseId, lessonId }) => {
+const getOrCreateSession = async (
+  user,
+  { scope, courseId, lessonId, forceNew = false }
+) => {
   if (!VALID_SCOPES.includes(scope)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Ngữ cảnh chat không hợp lệ.');
   }
@@ -111,12 +115,19 @@ const getOrCreateSession = async (user, { scope, courseId, lessonId }) => {
   // MASTER bắt buộc CourseID = NULL để thỏa ràng buộc CK_ChatSessions_ScopeCourse.
   const normalizedCourseId = scope === 'MASTER' ? null : courseId;
 
-  const existing = await chatRepository.findActiveSession(
-    user.id,
-    scope,
-    normalizedCourseId
-  );
-  if (existing) return toCamelCaseObject(existing);
+  /* [SỬA 20/08/2026] `forceNew` bỏ qua bước tìm phiên đang mở.
+     Chỉ áp dụng cho MASTER: với COURSE/LESSON, mỗi khóa học đúng một phiên là
+     hành vi mong muốn (trợ lý trong khóa học không có khái niệm "cuộc trò
+     chuyện thứ hai"), còn cho tạo tùy ý thì mỗi lần mở lại hộp thoại là một
+     phiên rỗng mới và lịch sử vỡ vụn. */
+  if (!(forceNew && scope === 'MASTER')) {
+    const existing = await chatRepository.findActiveSession(
+      user.id,
+      scope,
+      normalizedCourseId
+    );
+    if (existing) return toCamelCaseObject(existing);
+  }
 
   const created = await chatRepository.createSession({
     AccountID: user.id,
@@ -226,7 +237,21 @@ const buildHistoryFromDb = async (sessionId) => {
   const pairs = [];
   for (let i = 0; i < rows.length - 1; i += 1) {
     if (rows[i].Role === 'user' && rows[i + 1].Role === 'assistant') {
-      pairs.push({ question: rows[i].Content, answer: rows[i + 1].Content });
+      pairs.push({
+        question: rows[i].Content,
+        answer: rows[i + 1].Content,
+        /* [THÊM 20/08/2026] Gửi kèm thẻ giao diện của lượt trả lời đó.
+           AI Service cần nó để ánh xạ "khóa số 1 / số 2 / số 3" về đúng thẻ
+           trong danh sách đã hiển thị. Thiếu trường này, nhánh ánh xạ chính xác
+           trong `_resolve_course_reference` là mã chết và hệ thống phải đoán
+           bằng cách bốc chuỗi in đậm thứ N trong câu trả lời trước — một phép
+           đoán sai thường xuyên, và cái sai đó dẫn thẳng tới thẻ thanh toán
+           cho một khóa học khác.
+
+           Dữ liệu lấy từ cột UiWidgetJson đã lưu sẵn nên không phát sinh truy
+           vấn mới. */
+        ui_widget: safeJsonParse(rows[i + 1].UiWidgetJson, null),
+      });
       i += 1; // bỏ qua luôn phần tử assistant vừa ghép
     }
   }
@@ -345,6 +370,26 @@ const sendMessage = async (user, sessionId, body) => {
  */
 const streamMessage = async (user, sessionId, body, res) => {
   const session = await getOwnedSession(user, sessionId);
+
+  /* [THÊM 20/08/2026] Chặn phiên không phải MASTER.
+     Hàm này gọi thẳng `postAgentActionStream`, tức endpoint của tác tử bán
+     hàng, không hề nhìn tới `session.Scope` — khác hẳn `sendMessage` phía trên
+     vốn phân nhánh MASTER / COURSE đàng hoàng. Nếu ai đó gọi endpoint streaming
+     với một phiên COURSE, câu hỏi về bài giảng sẽ đi qua tác tử bán hàng: mất
+     hoàn toàn phần truy hồi theo `course_name`, và trợ lý trong khóa học có thể
+     trả về thẻ chào mời mua khóa học khác.
+
+     Hiện chưa lộ ra vì AIAssistantDialog đặt `useStreaming: false`, nhưng đó là
+     một cái bẫy đặt sẵn cho lần bật streaming tiếp theo. AI Service chưa có
+     endpoint `course-query-stream`, nên chặn rõ ràng ở đây là đúng hơn là im
+     lặng trả lời sai. */
+  if (session.Scope !== 'MASTER') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phiên trò chuyện trong khóa học chưa hỗ trợ chế độ nhả chữ theo thời gian thực. Hãy dùng POST /chat thay cho /chat/stream.'
+    );
+  }
+
   const query = String(body.query || '').trim();
   if (!query) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Nội dung câu hỏi trống.');
@@ -510,11 +555,38 @@ const getSuggestions = async (payload) => {
   }
 };
 
-/** Tìm kiếm khóa học bằng AI (không lưu vào lịch sử — đây là tra cứu, không phải hội thoại). */
-const searchCourses = async (payload) => {
+/* ==========================================================================
+ * TRỢ LÝ TÌM KHÓA HỌC (trang /courses)
+ * [VIẾT LẠI 20/08/2026]
+ *
+ * Không lưu vào lịch sử hội thoại — đây là tra cứu, không phải trò chuyện.
+ *
+ * Hai việc hàm này làm thêm so với bản cũ:
+ *
+ * 1. ĐỐI CHIẾU TÊN KHÓA HỌC VỚI CƠ SỞ DỮ LIỆU rồi trả về THẺ KHÓA HỌC THẬT.
+ *    Bản cũ trả thẳng `sources` của kho vector cho giao diện — mỗi mục chỉ có
+ *    tên khóa và 200 ký tự mô tả, không có giá, ảnh bìa, xếp hạng hay đường
+ *    dẫn. Người dùng thấy AI "tìm được khóa học" nhưng không bấm vào đâu được;
+ *    bấm vào tên thì chỉ đổ chữ đó xuống ô tìm kiếm thường.
+ *
+ *    Nay AI chỉ trả về TÊN, còn dữ liệu hiển thị lấy lại từ SQL Server qua
+ *    `findPublishedCoursesByNames`. Cách này còn bịt luôn một lỗ: kho vector
+ *    không biết khóa học nào đã bị gỡ xuất bản, nên nếu dựng thẻ từ kho vector
+ *    thì khóa đã gỡ vẫn hiện ra và vẫn bán được.
+ *
+ * 2. GẮN GIÁ THEO ĐÚNG LOẠI TIỀN người dùng đang xem, dùng đúng
+ *    `pricingUtil.createPricingObject` mà danh sách khóa học công khai dùng —
+ *    nên thẻ trả về ở đây có hình dạng giống hệt `CourseListItem`, giao diện
+ *    dựng lại được bằng chính component thẻ khóa học sẵn có.
+ *
+ * @param {object} payload - { query, top_k }
+ * @param {string} targetCurrency - 'VND' | 'USD', lấy từ req.targetCurrency
+ * ========================================================================== */
+const searchCourses = async (payload, targetCurrency = 'VND') => {
+  let data;
   try {
     const response = await aiClient.postCourseSearch(payload);
-    return response.data;
+    data = response.data || {};
   } catch (error) {
     logger.error(`[AI Chat] Tìm kiếm AI lỗi: ${error.message}`);
     throw new ApiError(
@@ -522,6 +594,48 @@ const searchCourses = async (payload) => {
       'Dịch vụ tìm kiếm AI tạm thời không phản hồi.'
     );
   }
+
+  const base = {
+    answer: data.answer || '',
+    sources: data.sources || [],
+    outOfScope: Boolean(data.out_of_scope),
+    intent: data.intent || null,
+    courses: [],
+  };
+
+  // Câu hỏi bị hàng rào ý định chặn thì không có gì để tra — trả về ngay.
+  if (base.outOfScope) return base;
+
+  const names = Array.isArray(data.matched_courses) ? data.matched_courses : [];
+  if (names.length === 0) return base;
+
+  try {
+    const rows = await courseRepository.findPublishedCoursesByNames(names);
+    base.courses = await Promise.all(
+      rows.map(async (course) => {
+        const pricing = await pricingUtil.createPricingObject(
+          course,
+          targetCurrency
+        );
+        const camel = toCamelCaseObject(course);
+        // Bỏ hai cột giá thô đi cho khớp với hình dạng mà danh sách khóa học
+        // công khai trả về: giao diện chỉ được đọc giá qua `pricing`, để mọi
+        // chỗ hiển thị tiền đều đi qua một đường quy đổi duy nhất.
+        delete camel.originalPrice;
+        delete camel.discountedPrice;
+        return { ...camel, pricing };
+      })
+    );
+  } catch (error) {
+    /* Tra cứu CSDL hỏng thì VẪN TRẢ câu trả lời của AI, chỉ thiếu phần thẻ.
+       Ném lỗi ở đây nghĩa là một sự cố ở bước làm đẹp kết quả sẽ xóa sạch cả
+       phần nội dung đã tốn tiền gọi mô hình để sinh ra. */
+    logger.error(
+      `[AI Chat] Không tra được khóa học từ CSDL sau khi tìm bằng AI: ${error.message}`
+    );
+  }
+
+  return base;
 };
 
 module.exports = {

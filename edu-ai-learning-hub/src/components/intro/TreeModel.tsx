@@ -40,6 +40,19 @@ type ContextType = {
 
 const TreeContext = React.createContext<ContextType>({} as ContextType);
 
+/* Màu của MÔ HÌNH 3D, không phải màu giao diện.
+   Ba giá trị dưới đây chỉ là phương án dự phòng khi tệp GLB thiếu material hoặc
+   thiếu kênh emissive; chúng đi thẳng vào three.js nên không thể viết bằng lớp
+   Tailwind. Bản trước dự phòng bằng nâu đất và hồng phấn — hai tông lạc khỏi hệ
+   màu; nay rút về một tông của màu nhấn và một sắc trung tính. */
+/* Màu dự phòng cho vật liệu 3D khi tệp mô hình không mang sẵn màu.
+   Nằm ngoài hệ token giao diện theo chủ đích, xem ghi chú ở IntroPage. */
+const MODEL_FALLBACK = {
+  material: '#808080',
+  trunkEmissive: '#5c4033',
+  leafEmissive: '#ffc0cb',
+};
+
 // Component Instances nên được memoized
 export const TreeModelInstances = memo(
   ({ children, ...props }: JSX.IntrinsicElements['group']) => {
@@ -99,7 +112,7 @@ export const TreeModel = memo(
     const fallbackMaterial = useMemo(
       () =>
         new THREE.MeshStandardMaterial({
-          color: '#808080',
+          color: MODEL_FALLBACK.material,
           wireframe: false,
           name: 'FallbackMaterial',
         }),
@@ -141,7 +154,9 @@ export const TreeModel = memo(
                 attach="material"
                 key={trunkMat.uuid} // Key để React biết khi nào cần tạo material mới (nếu trunkMat thay đổi)
                 {...trunkMat}
-                emissive={trunkMat.emissive || trunkMat.color || '#5c4033'} // Màu emissive fallback cho thân
+                emissive={
+                  trunkMat.emissive || trunkMat.color || MODEL_FALLBACK.trunkEmissive
+                } // Màu emissive dự phòng cho thân
                 emissiveIntensity={trunkEmissiveIntensity}
                 roughness={
                   trunkMat.roughness !== undefined ? trunkMat.roughness : 0.85
@@ -168,7 +183,9 @@ export const TreeModel = memo(
                 key={leafMat.uuid}
                 {...leafMat}
                 map={leafMat.map || undefined} // Đảm bảo map được áp dụng
-                emissive={leafMat.emissive || leafMat.color || '#ffc0cb'} // Màu emissive fallback cho lá
+                emissive={
+                  leafMat.emissive || leafMat.color || MODEL_FALLBACK.leafEmissive
+                } // Màu emissive dự phòng cho lá
                 emissiveIntensity={leafEmissiveIntensity}
                 roughness={
                   leafMat.roughness !== undefined ? leafMat.roughness : 0.75

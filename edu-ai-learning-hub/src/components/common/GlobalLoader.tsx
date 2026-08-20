@@ -15,13 +15,13 @@ const LogoIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <rect width='200' height='200' rx='30' fill='currentColor' />
     <path
       d='M60 40 L60 160 M40 40 L80 40 M40 100 L80 100'
-      stroke='#FFFFFF'
+      stroke='hsl(var(--primary-foreground))'
       strokeWidth='15'
       strokeLinecap='round'
     />
     <path
       d='M140 40 L140 160 M120 40 L160 40 M120 100 L160 100'
-      stroke='#FFFFFF'
+      stroke='hsl(var(--primary-foreground))'
       strokeWidth='15'
       strokeLinecap='round'
     />
@@ -108,7 +108,7 @@ export const GlobalLoader: React.FC<GlobalLoaderProps> = ({
         initial='initial'
         animate='animate'
         exit='exit'
-        className='fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm'
+        className='fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/90'
       >
         <LoaderContent />
       </motion.div>

@@ -57,10 +57,10 @@ const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
   return (
     <div className='space-y-4'>
       <div className='relative group'>
-        <Icons.search className='absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-500/70 group-focus-within:text-indigo-500 transition-colors' />
+        <Icons.search className='absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors' />
         <Input
           placeholder='Tìm kiếm khóa học của bạn theo tên...'
-          className='pl-10 h-11 rounded-xl bg-background/80 border-white/20 dark:border-slate-800/80 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-500/40 text-sm font-medium transition-all duration-300'
+          className='pl-10 h-11 rounded-xl border border-border bg-card text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring transition-colors'
           value={filters.searchTerm}
           onChange={(e) => updateFilter('searchTerm', e.target.value)}
         />
@@ -80,14 +80,16 @@ const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
           onValueChange={(value) => handleSelectChange('statusId', value)}
           disabled={isLoadingStatuses}
         >
-          <SelectTrigger className='h-11 rounded-xl bg-background/80 border-white/20 dark:border-slate-800/80 shadow-sm font-medium hover:border-indigo-500/40 transition-colors'>
+          <SelectTrigger className='h-11 rounded-xl border border-border bg-card font-medium hover:border-primary/40 transition-colors'>
             <div className='flex items-center gap-2'>
-              <Icons.filter className='h-3.5 w-3.5 text-fuchsia-500' />
+              <Icons.filter className='h-3.5 w-3.5 text-muted-foreground' />
               <SelectValue placeholder='Trạng thái' />
             </div>
           </SelectTrigger>
-          <SelectContent className='rounded-xl border-white/10 dark:border-slate-800 backdrop-blur-xl bg-popover/95'>
-            <SelectItem value='ALL' className='font-semibold text-indigo-400'>🌟 Tất cả trạng thái</SelectItem>
+          <SelectContent className='rounded-xl border border-border bg-popover'>
+            <SelectItem value='ALL' className='font-semibold'>
+              Tất cả trạng thái
+            </SelectItem>
             {statusesData?.map((status) => (
               <SelectItem key={status.statusId} value={status.statusId} className='font-medium'>
                 {status.statusName}
@@ -101,14 +103,16 @@ const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
           onValueChange={(value) => handleSelectChange('categoryId', value)}
           disabled={isLoadingCategories}
         >
-          <SelectTrigger className='h-11 rounded-xl bg-background/80 border-white/20 dark:border-slate-800/80 shadow-sm font-medium hover:border-indigo-500/40 transition-colors'>
+          <SelectTrigger className='h-11 rounded-xl border border-border bg-card font-medium hover:border-primary/40 transition-colors'>
             <div className='flex items-center gap-2 truncate'>
-              <Icons.layers className='h-3.5 w-3.5 text-cyan-500' />
+              <Icons.layers className='h-3.5 w-3.5 text-muted-foreground' />
               <SelectValue placeholder='Danh mục' />
             </div>
           </SelectTrigger>
-          <SelectContent className='rounded-xl border-white/10 dark:border-slate-800 backdrop-blur-xl bg-popover/95 max-h-72'>
-            <SelectItem value='ALL' className='font-semibold text-cyan-400'>📚 Tất cả danh mục</SelectItem>
+          <SelectContent className='rounded-xl border border-border bg-popover max-h-72'>
+            <SelectItem value='ALL' className='font-semibold'>
+              Tất cả danh mục
+            </SelectItem>
             {categoriesData?.categories.map((cat) => (
               <SelectItem
                 key={cat.categoryId}
@@ -126,14 +130,16 @@ const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
           onValueChange={(value) => handleSelectChange('levelId', value)}
           disabled={isLoadingLevels}
         >
-          <SelectTrigger className='h-11 rounded-xl bg-background/80 border-white/20 dark:border-slate-800/80 shadow-sm font-medium hover:border-indigo-500/40 transition-colors'>
+          <SelectTrigger className='h-11 rounded-xl border border-border bg-card font-medium hover:border-primary/40 transition-colors'>
             <div className='flex items-center gap-2'>
-              <Icons.certificate className='h-3.5 w-3.5 text-amber-500' />
+              <Icons.certificate className='h-3.5 w-3.5 text-muted-foreground' />
               <SelectValue placeholder='Cấp độ' />
             </div>
           </SelectTrigger>
-          <SelectContent className='rounded-xl border-white/10 dark:border-slate-800 backdrop-blur-xl bg-popover/95'>
-            <SelectItem value='ALL' className='font-semibold text-amber-400'>🔥 Tất cả cấp độ</SelectItem>
+          <SelectContent className='rounded-xl border border-border bg-popover'>
+            <SelectItem value='ALL' className='font-semibold'>
+              Tất cả cấp độ
+            </SelectItem>
             {levelsData?.levels.map((level) => (
               <SelectItem key={level.levelId} value={level.levelId.toString()} className='font-medium'>
                 {level.levelName}
@@ -146,13 +152,13 @@ const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
           <Button
             variant='destructive'
             onClick={clearFilters}
-            className='h-11 rounded-xl text-xs font-bold shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all'
+            className='h-11 rounded-xl text-xs font-bold transition-colors'
           >
-            <Icons.x className='mr-2 h-4 w-4 stroke-[2.5]' /> Xóa Tất Cả Bộ Lọc
+            <Icons.x className='mr-2 h-4 w-4 stroke-[2.5]' /> Xóa tất cả bộ lọc
           </Button>
         ) : (
           <div className='hidden lg:flex items-center justify-end pr-2 text-xs font-medium text-muted-foreground opacity-75'>
-            <span>✨ Bộ lọc nhanh studio</span>
+            <span>Bộ lọc nhanh</span>
           </div>
         )}
       </div>

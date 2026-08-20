@@ -3,13 +3,32 @@
 
 import logging
 from src.config import get_settings
-from src.core.gemini import generate_chat_response, generate_suggested_questions
+# [SỬA 19/08/2026] Chuyển từ src.core.gemini sang src.core.llm_provider.
+#
+# Trước đây tệp này gọi THẲNG Gemini, nên lớp chọn mô hình (llm_provider)
+# chỉ được đúng MỘT endpoint dùng tới — nghĩa là Qwen/vLLM trên GPU EC2 #1
+# thực tế chưa bao giờ phục vụ chatbot. Hạn mức Gemini cạn là cả hệ thống
+# hỏng, dù GPU vẫn đang chạy và tính tiền.
+#
+# Đặt bí danh trùng tên hàm cũ để mọi lời gọi bên dưới không phải sửa —
+# chữ ký hai bên đã được đối chiếu là khớp nhau.
+from src.core.llm_provider import (
+    generate_response as generate_chat_response,
+    generate_suggestions as generate_suggested_questions,
+)
 from src.vectorstore.chroma import search_documents
 from src.rag.prompts import (
     MASTER_SYSTEM_PROMPT,
     COURSE_SYSTEM_PROMPT,
     COURSE_SEARCH_PROMPT,
+    COURSE_SEARCH_OUT_OF_SCOPE_MESSAGE,
+    COURSE_SEARCH_EMPTY_MESSAGE,
 )
+# [THÊM 20/08/2026] Hai import dưới đây phục vụ trợ lý tìm khóa học ở trang
+# /courses: hàng rào ý định dùng chung bộ định tuyến với chatbot, và bộ truy hồi
+# lai dùng chung với agent — để hai đường không còn lệch chất lượng tìm kiếm.
+from src.core.intent_router import classify_intent, UserIntent
+from src.rag.hybrid_search import hybrid_course_search
 
 logger = logging.getLogger(__name__)
 
@@ -213,42 +232,126 @@ async def query_course(
 
 async def search_courses_with_ai(query: str, top_k: int = 5) -> dict:
     """
-    AI-powered course search — retrieves and recommends courses.
+    Trợ lý TÌM KHÓA HỌC của trang /courses — chuyên biệt, một nhiệm vụ duy nhất.
 
-    Args:
-        query: User's learning goal / search query.
-        top_k: Number of courses to consider.
+    [VIẾT LẠI 20/08/2026]
+
+    Ba khác biệt so với bản cũ:
+
+    1. CÓ HÀNG RÀO PHẠM VI. Bản cũ nhận mọi câu hỏi và trả lời bằng mô hình lớn,
+       nên nó vừa trùng chức năng với chatbot tổng, vừa đốt token cho những câu
+       chẳng liên quan gì tới chọn khóa học. Nay câu hỏi đi qua bộ định tuyến ý
+       định (mô hình định tuyến rẻ, cùng bộ với chatbot) và chỉ ý định
+       SEARCH_COURSE hoặc BUY_COURSE mới được đi tiếp. Mọi ý định khác bị chặn
+       TRƯỚC khi chạm tới mô hình sinh văn bản.
+
+    2. DÙNG TÌM KIẾM LAI thay vì chỉ tìm theo vector. Trước đây hàm này gọi
+       thẳng `search_documents` (chỉ vector đặc), trong khi chatbot tổng đã dùng
+       `hybrid_course_search` (BM25 + vector + hợp nhất RRF). Nghịch lý: đúng
+       chỗ người dùng gõ tên khóa học chính xác nhất lại là chỗ KHÔNG có khớp
+       từ khóa. Nay hai đường dùng chung một bộ truy hồi.
+
+    3. TRẢ VỀ TÊN KHÓA HỌC TÁCH RIÊNG (`matched_courses`) để backend đối chiếu
+       với cơ sở dữ liệu rồi dựng thẻ khóa học thật. Kho vector không giữ giá,
+       ảnh bìa hay trạng thái xuất bản — và cũng KHÔNG NÊN giữ, vì những thứ đó
+       đổi liên tục. Nguồn sự thật vẫn là SQL Server.
 
     Returns:
-        Dict with 'answer' (recommendation) and 'sources'.
+        dict gồm: answer, sources, matched_courses, out_of_scope, intent.
     """
     settings = get_settings()
+    clean_query = (query or "").strip()
 
-    # Search course content
-    results = await search_documents(
-        collection_name=settings.chroma_collection_courses,
-        query=query,
+    # --- Hàng rào 0: câu quá ngắn thì không gọi mô hình nào cả ---------------
+    if len(clean_query) < 3:
+        return {
+            "answer": COURSE_SEARCH_EMPTY_MESSAGE,
+            "sources": [],
+            "matched_courses": [],
+            "out_of_scope": False,
+            "intent": None,
+        }
+
+    # --- Hàng rào 1: phân loại ý định ---------------------------------------
+    # Chỉ hai ý định được đi tiếp:
+    #   SEARCH_COURSE — "tôi muốn học lập trình web"
+    #   BUY_COURSE    — "cho tôi mua khóa Python" (vẫn là đang tìm khóa học,
+    #                   chỉ khác ở chỗ người dùng đã quyết định mua)
+    # Bốn ý định còn lại (FAQ_QUERY, COURSE_LEARN, GENERAL_CHAT,
+    # CONFIRM_PAYMENT) thuộc về chatbot tổng, không phải ô này.
+    allowed = {UserIntent.SEARCH_COURSE, UserIntent.BUY_COURSE}
+    intent_value = None
+    try:
+        routed = await classify_intent(clean_query)
+        detected = routed.get("intent")
+        intent_value = detected.value if hasattr(detected, "value") else str(detected)
+        if detected not in allowed:
+            logger.info(
+                "[Course Search] Chan cau hoi ngoai pham vi (intent=%s): %s",
+                intent_value,
+                clean_query[:80],
+            )
+            return {
+                "answer": COURSE_SEARCH_OUT_OF_SCOPE_MESSAGE,
+                "sources": [],
+                "matched_courses": [],
+                "out_of_scope": True,
+                "intent": intent_value,
+            }
+    except Exception as e:
+        # Bộ định tuyến hỏng thì CHO ĐI TIẾP chứ không chặn. Chặn khi không phân
+        # loại được nghĩa là một sự cố của mô hình định tuyến sẽ làm chết luôn
+        # chức năng tìm kiếm — mà tìm kiếm mới là nhiệm vụ chính. Sai theo hướng
+        # vẫn phục vụ được người dùng.
+        logger.warning("[Course Search] Bo dinh tuyen y dinh loi, bo qua hang rao: %s", e)
+
+    # --- Truy hồi: tìm kiếm lai trên phần mô tả tổng quan của khóa học -------
+    results = await hybrid_course_search(
+        query=clean_query,
         top_k=top_k,
+        collection_name=settings.chroma_collection_courses,
         where={"type": "course_overview"},
     )
 
     if not results:
         return {
-            "answer": "I couldn't find any courses matching your query. Try different keywords!",
+            "answer": COURSE_SEARCH_EMPTY_MESSAGE,
             "sources": [],
+            "matched_courses": [],
+            "out_of_scope": False,
+            "intent": intent_value,
         }
 
+    # --- Gom tên khóa học, giữ nguyên thứ hạng, bỏ trùng --------------------
+    matched_courses = []
+    seen = set()
+    for r in results:
+        name = (r.get("metadata") or {}).get("course_name")
+        if not name:
+            continue
+        key = name.strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        matched_courses.append(name.strip())
+
     context = "\n\n".join([r["content"] for r in results])
-    prompt = COURSE_SEARCH_PROMPT.format(query=query, context=context)
+    prompt = COURSE_SEARCH_PROMPT.format(query=clean_query, context=context)
 
     answer = await generate_chat_response(query=prompt)
 
     sources = [
         {
-            "file_name": r["metadata"].get("course_name", "Unknown Course"),
+            "file_name": (r.get("metadata") or {}).get("course_name", "Khoa hoc"),
             "content": r["content"][:200],
         }
         for r in results
     ]
 
-    return {"answer": answer, "sources": sources}
+    return {
+        "answer": answer,
+        "sources": sources,
+        "matched_courses": matched_courses,
+        "out_of_scope": False,
+        "intent": intent_value,
+    }

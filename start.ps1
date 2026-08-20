@@ -1,4 +1,4 @@
-﻿<#
+<#
     start.ps1 — Khởi động toàn bộ hệ thống 3T EduTech ở chế độ phát triển,
                 rồi TỰ KIỂM TRA từng lớp và báo cáo.
 
@@ -148,7 +148,7 @@ Write-Step 'Cho cac dich vu san sang'
 Write-Info 'Lan dau co the mat 2-5 phut (SQL Server khoi tao + Flyway chay V1..V8).'
 
 $beUp = Wait-Url 'Backend'    'http://localhost:5000/v1/'   300
-$aiUp = Wait-Url 'AI Service' 'http://localhost:2111/health' 180
+$aiUp = Wait-Url 'AI Service' 'http://localhost:12111/health' 120
 $feUp = Wait-Url 'Frontend'   'http://localhost:5173/'       120
 
 # ── 4. Kiểm tra sâu ──────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ if ($beUp) {
 
 # 4.2 AI Service
 if ($aiUp) {
-    $a = Invoke-RestMethod 'http://localhost:2111/health' -TimeoutSec 10
+    $a = Invoke-RestMethod 'http://localhost:12111/health' -TimeoutSec 10
     Check 'AI Service song' $true
     Check 'Dung Gemini (khong cho vLLM)' ($a.llm_provider -eq 'gemini') `
           "Dang la '$($a.llm_provider)'. Doi LLM_PROVIDER=gemini trong ai-service/.env."
@@ -190,7 +190,7 @@ Check 'Backend qua duoc xac thuc noi bo' ($codeAuth -match '200') `
       "Nhan duoc '$codeAuth'. 401 = hai khoa lech nhau."
 
 try {
-    $codeNoAuth = (Invoke-WebRequest 'http://localhost:2111/api/extract/formats' -UseBasicParsing -TimeoutSec 5).StatusCode
+    $codeNoAuth = (Invoke-WebRequest 'http://localhost:12111/api/extract/formats' -UseBasicParsing -TimeoutSec 5).StatusCode
 } catch { $codeNoAuth = $_.Exception.Response.StatusCode.value__ }
 Check 'Nguoi ngoai bi chan (401)' ($codeNoAuth -eq 401) `
       "Nhan duoc '$codeNoAuth'. Neu la 200 thi AI Service dang chay KHONG xac thuc."
@@ -309,7 +309,7 @@ Check 'Endpoint /v1/faqs tra ve 200' ($faqCode -eq 200) `
       "Nhan duoc '$faqCode'. FAQ doc tu ma nguon chu KHONG tu CSDL, nen 500 o day KHONG lien quan toi Flyway - xem log backend."
 
 # 4.6 Worker đã khởi động
-$log = (& docker @Compose logs --tail 400 backend 2>$null) -join "`n"
+$log = (& docker @Compose logs --tail 2000 backend 2>$null) -join "`n"
 Check 'Worker nhap khoa hoc da chay'  ($log -match 'Worker nh.*p kh.*a h.*c|\[Import\].*Worker') `
       'Khong thay dong log khoi dong worker.'
 Check 'Worker tai video da chay'      ($log -match 'MediaUpload') `
@@ -326,7 +326,7 @@ if ($script:Failures -eq 0) {
     Write-Host ''
     Write-Host '  Frontend    http://localhost:5173'  -ForegroundColor White
     Write-Host '  Backend     http://localhost:5000/v1/' -ForegroundColor White
-    Write-Host '  AI Service  http://localhost:2111/docs' -ForegroundColor White
+    Write-Host '  AI Service  http://localhost:12111/docs' -ForegroundColor White
     Write-Host ''
     Write-Host '  Thu tinh nang nhap khoa hoc:' -ForegroundColor Cyan
     Write-Host '    Dang nhap tai khoan giang vien' -ForegroundColor DarkGray

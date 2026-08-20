@@ -34,6 +34,12 @@ router.patch(
   orderController.cancelOrder
 );
 
+// [ADD] Route for Mock Payment
+router.post(
+  '/:orderId/mock-payment',
+  orderController.mockPayment
+);
+
 // Route cho Webhook từ cổng thanh toán
 const webhookRouter = express.Router();
 
@@ -54,10 +60,21 @@ const nowPaymentsRawBody = (req, res, next) => {
   });
 };
 
+/* [SỬA 19/08/2026] express.raw() đã đọc cạn luồng dữ liệu của request và đặt
+   sẵn thân thô vào req.body dưới dạng Buffer. Middleware nowPaymentsRawBody
+   phía sau mới đăng ký req.on('data'/'end') nên sự kiện 'end' không bao giờ
+   bắn, next() không được gọi và request treo tới hết thời gian chờ -- webhook
+   tiền mã hóa vì vậy chưa bao giờ ghi nhận được thanh toán.
+   Nay chỉ chuyển Buffer thành chuỗi để giữ nguyên hợp đồng req.rawBody. */
 webhookRouter.post(
   '/crypto',
   express.raw({ type: 'application/json' }),
-  nowPaymentsRawBody,
+  (req, res, next) => {
+    req.rawBody = Buffer.isBuffer(req.body)
+      ? req.body.toString('utf8')
+      : req.body;
+    next();
+  },
   paymentController.handleCryptoWebhook
 );
 

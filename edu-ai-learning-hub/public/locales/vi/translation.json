@@ -1071,7 +1071,8 @@
       "youtube": "YouTube",
       "linkedin": "LinkedIn"
     },
-    "copyright": "© {{year}} 3TEduTech, Inc. Bảo lưu mọi quyền."
+    "copyright": "© {{year}} 3TEduTech, Inc. Bảo lưu mọi quyền.",
+    "madeBy": "Được thực hiện bởi đội ngũ 3TEduTech"
   },
   "instructorLayout": {
     "title": "Giảng viên",

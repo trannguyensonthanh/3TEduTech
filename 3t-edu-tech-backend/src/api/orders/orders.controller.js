@@ -74,6 +74,22 @@ const cancelOrder = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send({ message: 'Đã hủy đơn hàng thành công.', order });
 });
 
+const mockPayment = catchAsync(async (req, res) => {
+  const accountId = req.user.id;
+  const { orderId } = req.params;
+  const { status } = req.body; // 'success' or 'failed'
+  
+  if (status === 'success') {
+    // Gọi internal function để xử lý đơn hàng thành công
+    await orderService.processSuccessfulOrder(orderId, null);
+    res.status(httpStatus.OK).send({ message: 'Mock payment success processed' });
+  } else {
+    // Hủy đơn hàng
+    await orderService.cancelPendingOrder(accountId, orderId);
+    res.status(httpStatus.OK).send({ message: 'Mock payment failed processed (cancelled)' });
+  }
+});
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -81,4 +97,5 @@ module.exports = {
   cancelOrder,
   handlePaymentWebhook,
   handleStripeWebhook,
+  mockPayment,
 };

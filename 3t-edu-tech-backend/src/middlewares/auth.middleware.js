@@ -26,6 +26,18 @@ const authenticate = async (req, res, next) => {
 
   try {
     const payload = await verifyToken(token);
+
+    /* [THÊM 19/08/2026] Từ chối thẻ làm mới ở đây. Thẻ làm mới chỉ được dùng
+       cho đúng một việc là xin cấp thẻ truy cập mới. */
+    if (payload && payload.type === 'refresh') {
+      return next(
+        new ApiError(
+          httpStatus.UNAUTHORIZED,
+          'Không thể dùng thẻ làm mới để truy cập tài nguyên.'
+        )
+      );
+    }
+
     if (!payload || !payload.accountId) {
       return next(
         new ApiError(

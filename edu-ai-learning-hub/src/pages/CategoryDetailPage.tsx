@@ -256,17 +256,16 @@ const CategoryDetailPage = () => {
     return (
       <Layout>
         <div className='container mx-auto px-4 py-10'>
-          <div className='text-center py-16 bg-destructive/10 p-8 rounded-lg'>
-            <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6 text-destructive' />
-            <h3 className='text-2xl font-semibold mb-3 text-destructive'>
-              Category Not Found
+          <div className='text-center py-16 rounded-xl border border-border bg-danger-soft p-8'>
+            <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6 text-danger' />
+            <h3 className='text-2xl font-semibold mb-3 text-danger'>
+              Không tìm thấy lĩnh vực
             </h3>
             <p className='text-muted-foreground mb-6'>
-              The category "{slug}" you're looking for doesn't exist or has been
-              removed.
+              Lĩnh vực "{slug}" bạn đang tìm không tồn tại hoặc đã bị gỡ.
             </p>
             <Button variant='outline' asChild>
-              <Link to='/categories'>Browse All Categories</Link>
+              <Link to='/categories'>Xem tất cả lĩnh vực</Link>
             </Button>
           </div>
         </div>
@@ -285,7 +284,9 @@ const CategoryDetailPage = () => {
       {/* Category Header Section */}
       {category && (
         <>
-          <div className='relative pt-10 pb-8 md:pt-16 md:pb-12 bg-gradient-to-b from-slate-100 to-background dark:from-slate-900 dark:to-background'>
+          <div className='relative pt-10 pb-8 md:pt-16 md:pb-12 border-b border-border bg-muted/30'>
+            {/* `dark:` ở đây chỉ chỉnh độ mờ của ẢNH nền, không phải màu — token
+                không diễn tả được nên giữ theo mục 5 của DESIGN-SYSTEM.md. */}
             <div className='absolute inset-0 opacity-30 dark:opacity-20 overflow-hidden'>
               <img
                 src={categoryImage}
@@ -298,13 +299,13 @@ const CategoryDetailPage = () => {
                 <BreadcrumbList>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to='/'>Home</Link>
+                      <Link to='/'>Trang chủ</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to='/categories'>Categories</Link>
+                      <Link to='/categories'>Lĩnh vực</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
@@ -320,9 +321,9 @@ const CategoryDetailPage = () => {
                 variants={headerVariants}
                 initial='hidden'
                 animate='visible'
-                className='text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-100 mb-3 tracking-tight'
+                className='mb-3 text-foreground'
               >
-                {category.categoryName} Courses
+                Khóa học {category.categoryName}
               </motion.h1>
               {category.description && (
                 <motion.p
@@ -336,15 +337,15 @@ const CategoryDetailPage = () => {
                   }}
                   initial='hidden'
                   animate='visible'
-                  className='text-lg text-slate-600 dark:text-slate-400 max-w-3xl mb-1'
+                  className='text-lg text-muted-foreground max-w-3xl mb-1'
                 >
                   {category.description}
                 </motion.p>
               )}
               <p className='text-sm text-muted-foreground'>
                 {totalCoursesInCategory > 0
-                  ? `${totalCoursesInCategory} courses available`
-                  : 'No courses yet in this category.'}
+                  ? `Có ${totalCoursesInCategory} khóa học`
+                  : 'Lĩnh vực này chưa có khóa học nào.'}
               </p>
             </div>
           </div>
@@ -375,8 +376,8 @@ const CategoryDetailPage = () => {
                     <Icons.search className='absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
                     <Input
                       type='search'
-                      placeholder={`Search within ${category.categoryName}...`}
-                      className='pl-11 h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700'
+                      placeholder={`Tìm trong ${category.categoryName}…`}
+                      className='pl-11 h-12 text-base rounded-lg border-border bg-card'
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -389,16 +390,16 @@ const CategoryDetailPage = () => {
                           variant='outline'
                           className='w-full sm:w-auto h-12 text-base flex items-center justify-center gap-2'
                         >
-                          <Icons.filter className='h-5 w-5' /> Filters & Sort
+                          <Icons.filter className='h-5 w-5' /> Bộ lọc và sắp xếp
                         </Button>
                       </SheetTrigger>
                       <SheetContent
                         side='left'
                         className='w-[320px] sm:w-[360px] p-0 flex flex-col'
                       >
-                        <SheetHeader className='p-6 pb-4 border-b'>
+                        <SheetHeader className='p-6 pb-4 border-b border-border'>
                           <SheetTitle className='text-xl'>
-                            Filters & Sort
+                            Bộ lọc và sắp xếp
                           </SheetTitle>
                         </SheetHeader>
                         <ScrollArea className='flex-grow'>
@@ -415,9 +416,9 @@ const CategoryDetailPage = () => {
                             />
                           </div>
                         </ScrollArea>
-                        <div className='p-4 border-t'>
+                        <div className='p-4 border-t border-border'>
                           <SheetClose asChild>
-                            <Button className='w-full'>Apply Filters</Button>
+                            <Button className='w-full'>Áp dụng bộ lọc</Button>
                           </SheetClose>
                         </div>
                       </SheetContent>
@@ -436,7 +437,7 @@ const CategoryDetailPage = () => {
                       (_, index) => (
                         <Card
                           key={index}
-                          className='overflow-hidden rounded-xl border dark:border-slate-700'
+                          className='overflow-hidden rounded-xl border border-border bg-card shadow-none'
                         >
                           <Skeleton className='w-full aspect-[16/10]' />
                           <CardContent className='p-5 space-y-3'>
@@ -454,14 +455,14 @@ const CategoryDetailPage = () => {
                   </motion.div>
                 )}
                 {coursesError && (
-                  <div className='text-center py-16 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-8 rounded-lg'>
+                  <div className='text-center py-16 rounded-xl border border-border bg-danger-soft p-8 text-danger'>
                     <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6' />
-                    <h3 className='text-2xl font-semibold mb-3 text-destructive'>
-                      Failed to Load Courses
+                    <h3 className='text-2xl font-semibold mb-3 text-danger'>
+                      Không tải được danh sách khóa học
                     </h3>
-                    <p className='text-red-700 dark:text-red-300'>
-                      There was an issue fetching courses for this category.
-                      Please try again.
+                    <p className='text-muted-foreground'>
+                      Có trục trặc khi lấy khóa học của lĩnh vực này. Bạn thử
+                      lại nhé.
                     </p>
                   </div>
                 )}
@@ -481,20 +482,20 @@ const CategoryDetailPage = () => {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className='text-center py-16 bg-slate-50 dark:bg-slate-800/30 p-8 rounded-lg'
+                    className='text-center py-16 rounded-xl border border-border bg-muted/30 p-8'
                   >
                     <Icons.packageOpen className='h-20 w-20 text-muted-foreground mx-auto mb-6 opacity-70' />
                     <h3 className='text-2xl font-semibold text-foreground mb-3'>
                       {debouncedSearchTerm ||
                       Object.keys(activeSubFilters).length > 0
-                        ? 'No Matching Courses Found'
-                        : 'No Courses Yet'}
+                        ? 'Không tìm thấy khóa học phù hợp'
+                        : 'Chưa có khóa học nào'}
                     </h3>
                     <p className='text-muted-foreground mb-6 max-w-md mx-auto'>
                       {debouncedSearchTerm ||
                       Object.keys(activeSubFilters).length > 0
-                        ? `We couldn't find any courses matching your criteria in "${category.categoryName}". Try adjusting your search or filters.`
-                        : `There are currently no courses available in the "${category.categoryName}" category. Please check back later!`}
+                        ? `Không có khóa học nào khớp với tiêu chí của bạn trong "${category.categoryName}". Bạn thử đổi từ khóa hoặc bộ lọc xem sao.`
+                        : `Lĩnh vực "${category.categoryName}" hiện chưa có khóa học nào. Bạn quay lại sau nhé.`}
                     </p>
                     {(debouncedSearchTerm ||
                       Object.keys(activeSubFilters).length > 0) && (
@@ -514,7 +515,7 @@ const CategoryDetailPage = () => {
                           // setCurrentPage(1); // Đã có useEffect xử lý
                         }}
                       >
-                        Clear Search & Filters
+                        Xóa từ khóa và bộ lọc
                       </Button>
                     )}
                   </motion.div>

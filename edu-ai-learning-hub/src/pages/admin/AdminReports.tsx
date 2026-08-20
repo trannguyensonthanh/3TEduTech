@@ -11,395 +11,456 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import PageHeader from '@/components/common/PageHeader';
+import SectionCard from '@/components/common/SectionCard';
+import StatCard from '@/components/common/StatCard';
 import {
-  BarChart, Bar, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import {
-  BookOpen, Users, TrendingUp,
-  Target, BarChart2, GraduationCap, Star, ArrowUpRight,
+  ArrowUpRight,
+  GraduationCap,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
-
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-  gradient?: string;
-}> = ({ children, className = '', gradient }) => (
-  <div
-    className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${gradient || 'from-slate-900/80 to-slate-800/50'} backdrop-blur-xl shadow-2xl ${className}`}
-  >
-    <div className='absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none' />
-    <div className='relative z-10'>{children}</div>
-  </div>
-);
-
-const StatBadge: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color?: string;
-}> = ({ icon, label, value, color = 'text-violet-400' }) => (
-  <GlassCard gradient='from-slate-800/60 to-slate-900/40' className='p-5'>
-    <div className='flex items-center gap-3'>
-      <div className={`p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className='text-xs text-slate-400 uppercase tracking-wider'>{label}</p>
-        <p className='text-2xl font-bold text-white mt-0.5'>{value}</p>
-      </div>
-    </div>
-  </GlassCard>
-);
+import {
+  axisProps,
+  barRadiusHorizontal,
+  gridProps,
+  seriesColor,
+  tooltipProps,
+} from '@/lib/chart-theme';
 
 const AdminReports: React.FC = () => {
   const [activeTab, setActiveTab] = useState('effectiveness');
 
   const { data: quizData, isLoading: quizLoading } = useQuizScoreReport();
-  const { data: effectivenessData, isLoading: effectivenessLoading } = useCourseEffectivenessReport();
-  const { data: enrollmentData, isLoading: enrollmentLoading } = useEnrollmentStatsReport();
+  const { data: effectivenessData, isLoading: effectivenessLoading } =
+    useCourseEffectivenessReport();
+  const { data: enrollmentData, isLoading: enrollmentLoading } =
+    useEnrollmentStatsReport();
 
   const isLoading = quizLoading || effectivenessLoading || enrollmentLoading;
 
-  // Calculate overview stats
-  const totalEnrollments = effectivenessData?.reduce((s, c) => s + c.totalEnrollments, 0) || 0;
+  const totalEnrollments =
+    effectivenessData?.reduce((s, c) => s + c.totalEnrollments, 0) || 0;
+  const completedStudents =
+    effectivenessData?.reduce((s, c) => s + c.completedStudents, 0) || 0;
   const avgCompletionOverall = effectivenessData?.length
-    ? Math.round(effectivenessData.reduce((s, c) => s + c.completionRate, 0) / effectivenessData.length)
+    ? Math.round(
+        effectivenessData.reduce((s, c) => s + c.completionRate, 0) /
+          effectivenessData.length
+      )
     : 0;
   const totalCourses = effectivenessData?.length || 0;
-  const avgRatingOverall = effectivenessData?.filter(c => c.averageRating).length
-    ? (effectivenessData.filter(c => c.averageRating).reduce((s, c) => s + (c.averageRating || 0), 0) /
-       effectivenessData.filter(c => c.averageRating).length).toFixed(1)
-    : '0';
+  const ratedCourses = effectivenessData?.filter((c) => c.averageRating) ?? [];
+  const avgRatingOverall = ratedCourses.length
+    ? (
+        ratedCourses.reduce((s, c) => s + (c.averageRating || 0), 0) /
+        ratedCourses.length
+      ).toFixed(1)
+    : '—';
 
-  // Pie chart data for completion breakdown
   const completionPieData = [
-    { name: 'Completed', value: effectivenessData?.reduce((s, c) => s + c.completedStudents, 0) || 0 },
-    { name: 'In Progress', value: totalEnrollments - (effectivenessData?.reduce((s, c) => s + c.completedStudents, 0) || 0) },
+    { name: 'Đã hoàn thành', value: completedStudents },
+    { name: 'Đang học', value: Math.max(totalEnrollments - completedStudents, 0) },
   ];
 
-  return (
-    <AdminLayout>
-      <div className='min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 -m-6 p-6'>
-        {/* Ambient glow effects */}
-        <div className='fixed inset-0 pointer-events-none overflow-hidden'>
-          <div className='absolute top-0 left-1/4 w-96 h-96 bg-violet-600/8 rounded-full blur-3xl animate-pulse' />
-          <div className='absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-600/8 rounded-full blur-3xl animate-pulse' style={{ animationDelay: '2s' }} />
-          <div className='absolute top-1/2 left-1/2 w-64 h-64 bg-emerald-600/6 rounded-full blur-3xl animate-pulse' style={{ animationDelay: '4s' }} />
-        </div>
+  /* Chỉ lấy số lượt ghi danh cho biểu đồ cột.
+     Bản trước vẽ chung số lượt ghi danh và tỷ lệ hoàn thành trên CÙNG một trục —
+     một bên là số đếm hàng nghìn, một bên là phần trăm từ 0 đến 100, nên cột phần
+     trăm luôn dẹp thành một vạch và biểu đồ không đọc được gì. Tỷ lệ hoàn thành
+     nay nằm ở cột riêng trong bảng bên dưới, nơi nó so sánh được đúng cách. */
+  const topByEnrollment = effectivenessData?.slice(0, 8) ?? [];
 
-        <div className='relative z-10 space-y-8'>
-          {/* Header */}
-          <div className='flex flex-col sm:flex-row justify-between sm:items-center gap-4'>
-            <div>
-              <h1 className='text-4xl font-black bg-gradient-to-r from-violet-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent'>
-                Platform Reports
-              </h1>
-              <p className='text-slate-400 mt-1'>
-                Deep analytics & performance insights for your learning platform
-              </p>
-            </div>
+  return (
+    <AdminLayout pageTitle="Báo cáo thống kê">
+      <PageHeader
+        title="Báo cáo thống kê"
+        description="Phân tích hiệu quả khóa học, xu hướng ghi danh và kết quả bài kiểm tra trên toàn nền tảng."
+      />
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Tổng lượt ghi danh"
+            value={totalEnrollments.toLocaleString('vi-VN')}
+            icon={Users}
+          />
+          <StatCard
+            label="Tỷ lệ hoàn thành trung bình"
+            value={`${avgCompletionOverall}%`}
+            icon={Target}
+            hint={`trên ${totalCourses} khóa học`}
+          />
+          <StatCard
+            label="Số khóa học có dữ liệu"
+            value={totalCourses.toLocaleString('vi-VN')}
+            icon={TrendingUp}
+          />
+          <StatCard
+            label="Điểm đánh giá trung bình"
+            value={avgRatingOverall}
+            icon={Star}
+            hint={ratedCourses.length ? `từ ${ratedCourses.length} khóa` : undefined}
+          />
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="effectiveness">Hiệu quả khóa học</TabsTrigger>
+          <TabsTrigger value="enrollments">Ghi danh</TabsTrigger>
+          <TabsTrigger value="quizzes">Bài kiểm tra</TabsTrigger>
+        </TabsList>
+
+        {/* ===== Hiệu quả khóa học ===== */}
+        <TabsContent value="effectiveness" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <SectionCard
+              title="Tình trạng hoàn thành"
+              description="Trên tổng số lượt ghi danh"
+            >
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={completionPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={88}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="hsl(var(--card))"
+                    strokeWidth={2}
+                  >
+                    <Cell fill={seriesColor(0)} />
+                    <Cell fill={seriesColor(1)} />
+                  </Pie>
+                  <Tooltip {...tooltipProps} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => (
+                      <span className="text-sm text-muted-foreground">{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </SectionCard>
+
+            <SectionCard
+              title="Tám khóa học có nhiều lượt ghi danh nhất"
+              className="lg:col-span-2"
+            >
+              {effectivenessLoading ? (
+                <Skeleton className="h-60" />
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart
+                    data={topByEnrollment}
+                    layout="vertical"
+                    margin={{ left: 8, right: 16 }}
+                  >
+                    <CartesianGrid {...gridProps} vertical horizontal={false} />
+                    <XAxis type="number" {...axisProps} />
+                    <YAxis
+                      type="category"
+                      dataKey="courseName"
+                      width={170}
+                      {...axisProps}
+                      tick={{ fill: 'var(--chart-ink)', fontSize: 11 }}
+                    />
+                    <Tooltip {...tooltipProps} />
+                    <Bar
+                      dataKey="totalEnrollments"
+                      name="Lượt ghi danh"
+                      fill={seriesColor(0)}
+                      radius={barRadiusHorizontal}
+                      maxBarSize={18}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </SectionCard>
           </div>
 
-          {/* Overview Stats */} 
-          {isLoading ? (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className='h-24 rounded-2xl bg-slate-800/50' />)}
-            </div>
-          ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-              <StatBadge
-                icon={<Users className='w-5 h-5' />}
-                label='Total Enrollments'
-                value={totalEnrollments.toLocaleString()}
-                color='text-violet-400'
-              />
-              <StatBadge
-                icon={<Target className='w-5 h-5' />}
-                label='Avg Completion'
-                value={`${avgCompletionOverall}%`}
-                color='text-cyan-400'
-              />
-              <StatBadge
-                icon={<BookOpen className='w-5 h-5' />}
-                label='Active Courses'
-                value={totalCourses}
-                color='text-emerald-400'
-              />
-              <StatBadge
-                icon={<Star className='w-5 h-5' />}
-                label='Avg Rating'
-                value={avgRatingOverall}
-                color='text-amber-400'
-              />
-            </div>
-          )}
-
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className='space-y-6'>
-            <TabsList className='bg-slate-800/60 border border-white/10 p-1 rounded-xl backdrop-blur-sm'>
-              <TabsTrigger value='effectiveness' className='data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-lg px-5 text-slate-400'>
-                <BarChart2 className='w-4 h-4 mr-2' />
-                Course Effectiveness
-              </TabsTrigger>
-              <TabsTrigger value='enrollments' className='data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-lg px-5 text-slate-400'>
-                <TrendingUp className='w-4 h-4 mr-2' />
-                Enrollment Analytics
-              </TabsTrigger>
-              <TabsTrigger value='quizzes' className='data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-5 text-slate-400'>
-                <GraduationCap className='w-4 h-4 mr-2' />
-                Quiz Scores
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ===== TAB 1: Course Effectiveness ===== */}
-            <TabsContent value='effectiveness' className='space-y-6'>
-              <div className='grid gap-6 lg:grid-cols-3'>
-                {/* Completion Pie Chart */}
-                <GlassCard className='p-6'>
-                  <h3 className='text-lg font-semibold text-white mb-4'>Completion Overview</h3>
-                  <ResponsiveContainer width='100%' height={250}>
-                    <PieChart>
-                      <Pie
-                        data={completionPieData}
-                        cx='50%' cy='50%'
-                        innerRadius={60} outerRadius={90}
-                        paddingAngle={5}
-                        dataKey='value'
-                      >
-                        <Cell fill='#10b981' />
-                        <Cell fill='#6366f1' />
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#e2e8f0' }}
-                      />
-                      <Legend
-                        wrapperStyle={{ color: '#94a3b8' }}
-                        formatter={(value) => <span className='text-slate-300 text-sm'>{value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </GlassCard>
-
-                {/* Top Rated */}
-                <GlassCard className='p-6 lg:col-span-2'>
-                  <h3 className='text-lg font-semibold text-white mb-4'>Course Performance Matrix</h3>
-                  {effectivenessLoading ? (
-                    <Skeleton className='h-64 bg-slate-800/50' />
-                  ) : (
-                    <ResponsiveContainer width='100%' height={250}>
-                      <BarChart data={effectivenessData?.slice(0, 8)} layout='vertical'>
-                        <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)' />
-                        <XAxis type='number' tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <YAxis type='category' dataKey='courseName' width={160} tick={{ fill: '#e2e8f0', fontSize: 11 }} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#e2e8f0' }}
-                        />
-                        <Bar dataKey='totalEnrollments' fill='#8b5cf6' name='Enrollments' radius={[0, 6, 6, 0]} />
-                        <Bar dataKey='completionRate' fill='#10b981' name='Completion %' radius={[0, 6, 6, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </GlassCard>
-              </div>
-
-              {/* Course Table */}
-              <GlassCard className='p-6'>
-                <h3 className='text-lg font-semibold text-white mb-4'>All Courses — Detailed Breakdown</h3>
-                <div className='overflow-x-auto'>
-                  <table className='w-full text-sm'>
-                    <thead>
-                      <tr className='text-slate-400 border-b border-white/10'>
-                        <th className='text-left py-3 px-4'>Course</th>
-                        <th className='text-center py-3 px-2'>Instructor</th>
-                        <th className='text-center py-3 px-2'>Enrollments</th>
-                        <th className='text-center py-3 px-2'>Completion</th>
-                        <th className='text-center py-3 px-2'>Avg Score</th>
-                        <th className='text-center py-3 px-2'>Rating</th>
-                        <th className='text-center py-3 px-2'>Lessons</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {effectivenessData?.map((course) => (
-                        <tr key={course.courseId} className='border-b border-white/5 hover:bg-white/5 transition-colors'>
-                          <td className='py-3 px-4'>
-                            <Link to={`/courses/${course.slug}`} className='text-white font-medium hover:text-violet-400 transition-colors flex items-center gap-2'>
-                              {course.courseName}
-                              <ArrowUpRight className='w-3 h-3 opacity-50' />
-                            </Link>
-                          </td>
-                          <td className='text-center py-3 px-2 text-slate-300'>{course.instructorName}</td>
-                          <td className='text-center py-3 px-2'>
-                            <Badge variant='secondary' className='bg-violet-500/20 text-violet-300 border-0'>
-                              {course.totalEnrollments}
-                            </Badge>
-                          </td>
-                          <td className='text-center py-3 px-2'>
-                            <div className='flex items-center gap-2 justify-center'>
-                              <Progress value={course.completionRate} className='w-16 h-2' />
-                              <span className='text-emerald-400 text-xs font-mono'>{course.completionRate}%</span>
-                            </div>
-                          </td>
-                          <td className='text-center py-3 px-2'>
-                            <span className={`font-mono text-sm ${course.avgQuizScore >= 70 ? 'text-emerald-400' : course.avgQuizScore > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
-                              {course.avgQuizScore > 0 ? course.avgQuizScore.toFixed(1) : '—'}
-                            </span>
-                          </td>
-                          <td className='text-center py-3 px-2'>
-                            <span className='text-amber-400 flex items-center justify-center gap-1'>
-                              <Star className='w-3 h-3 fill-current' />
-                              {course.averageRating?.toFixed(1) || '—'}
-                            </span>
-                          </td>
-                          <td className='text-center py-3 px-2 text-slate-300'>{course.totalLessons}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {(!effectivenessData || effectivenessData.length === 0) && (
-                    <p className='text-center text-slate-500 py-12'>No course data available yet.</p>
-                  )}
-                </div>
-              </GlassCard>
-            </TabsContent>
-
-            {/* ===== TAB 2: Enrollment Analytics ===== */}
-            <TabsContent value='enrollments' className='space-y-6'>
-              <div className='grid gap-6 lg:grid-cols-2'>
-                {/* Enrollment Trend */}
-                <GlassCard className='p-6 lg:col-span-2'>
-                  <h3 className='text-lg font-semibold text-white mb-1'>Enrollment Trend</h3>
-                  <p className='text-slate-400 text-sm mb-4'>New enrollments over the last 12 months</p>
-                  {enrollmentLoading ? (
-                    <Skeleton className='h-72 bg-slate-800/50' />
-                  ) : (
-                    <ResponsiveContainer width='100%' height={300}>
-                      <AreaChart data={enrollmentData?.trend}>
-                        <defs>
-                          <linearGradient id='enrollGrad' x1='0' y1='0' x2='0' y2='1'>
-                            <stop offset='5%' stopColor='#8b5cf6' stopOpacity={0.4} />
-                            <stop offset='95%' stopColor='#8b5cf6' stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id='studentGrad' x1='0' y1='0' x2='0' y2='1'>
-                            <stop offset='5%' stopColor='#06b6d4' stopOpacity={0.4} />
-                            <stop offset='95%' stopColor='#06b6d4' stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)' />
-                        <XAxis dataKey='month' tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#e2e8f0' }}
-                        />
-                        <Area type='monotone' dataKey='newEnrollments' stroke='#8b5cf6' fill='url(#enrollGrad)' name='New Enrollments' strokeWidth={2} />
-                        <Area type='monotone' dataKey='uniqueStudents' stroke='#06b6d4' fill='url(#studentGrad)' name='Unique Students' strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  )}
-                </GlassCard>
-              </div>
-
-              {/* Top Courses by Enrollment */}
-              <GlassCard className='p-6'>
-                <h3 className='text-lg font-semibold text-white mb-4'>Top Courses by Enrollment</h3>
-                <div className='grid gap-3'>
-                  {enrollmentData?.topCoursesByEnrollment?.map((course, index) => (
-                    <div key={course.courseId} className='flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all group'>
-                      <div className='flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm'>
-                        {index + 1}
-                      </div>
-                      {course.thumbnailUrl && (
-                        <img src={course.thumbnailUrl} alt='' className='w-12 h-8 rounded-lg object-cover' />
-                      )}
-                      <div className='flex-1 min-w-0'>
-                        <Link to={`/courses/${course.slug}`} className='text-white font-medium hover:text-violet-400 truncate block'>
-                          {course.courseName}
+          <SectionCard title="Chi tiết theo từng khóa học" bodyClassName="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-5 py-3 font-medium">Khóa học</th>
+                    <th className="px-3 py-3 font-medium">Giảng viên</th>
+                    <th className="px-3 py-3 text-right font-medium">Ghi danh</th>
+                    <th className="px-3 py-3 font-medium">Hoàn thành</th>
+                    <th className="px-3 py-3 text-right font-medium">Điểm KT</th>
+                    <th className="px-3 py-3 text-right font-medium">Đánh giá</th>
+                    <th className="px-5 py-3 text-right font-medium">Bài học</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {effectivenessData?.map((course) => (
+                    <tr
+                      key={course.courseId}
+                      className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
+                    >
+                      <td className="px-5 py-3">
+                        <Link
+                          to={`/courses/${course.slug}`}
+                          className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-primary"
+                        >
+                          <span className="truncate">{course.courseName}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         </Link>
-                        <p className='text-xs text-slate-400'>{course.instructorName}</p>
+                      </td>
+                      <td className="px-3 py-3 text-muted-foreground">
+                        {course.instructorName}
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {course.totalEnrollments.toLocaleString('vi-VN')}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <Progress value={course.completionRate} className="h-1.5 w-16" />
+                          <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+                            {course.completionRate}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {course.avgQuizScore > 0
+                          ? course.avgQuizScore.toFixed(1)
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="flex items-center justify-end gap-1 tabular-nums">
+                          {course.averageRating ? (
+                            <>
+                              <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                              {course.averageRating.toFixed(1)}
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {course.totalLessons}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(!effectivenessData || effectivenessData.length === 0) && (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  Chưa có dữ liệu khóa học.
+                </p>
+              )}
+            </div>
+          </SectionCard>
+        </TabsContent>
+
+        {/* ===== Ghi danh ===== */}
+        <TabsContent value="enrollments" className="space-y-6">
+          <SectionCard
+            title="Xu hướng ghi danh"
+            description="Số lượt ghi danh mới trong mười hai tháng gần nhất"
+          >
+            {enrollmentLoading ? (
+              <Skeleton className="h-72" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={enrollmentData?.trend} margin={{ left: 0, right: 8 }}>
+                  <defs>
+                    <linearGradient id="fillEnroll" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={seriesColor(0)} stopOpacity={0.18} />
+                      <stop offset="100%" stopColor={seriesColor(0)} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="fillStudent" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={seriesColor(1)} stopOpacity={0.18} />
+                      <stop offset="100%" stopColor={seriesColor(1)} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" {...axisProps} />
+                  <YAxis {...axisProps} />
+                  <Tooltip {...tooltipProps} />
+                  <Legend
+                    iconType="line"
+                    formatter={(value) => (
+                      <span className="text-sm text-muted-foreground">{value}</span>
+                    )}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="newEnrollments"
+                    name="Lượt ghi danh mới"
+                    stroke={seriesColor(0)}
+                    strokeWidth={2}
+                    fill="url(#fillEnroll)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="uniqueStudents"
+                    name="Học viên khác nhau"
+                    stroke={seriesColor(1)}
+                    strokeWidth={2}
+                    fill="url(#fillStudent)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Khóa học dẫn đầu về lượt ghi danh">
+            <div className="space-y-2">
+              {enrollmentData?.topCoursesByEnrollment?.map((course, index) => (
+                <div
+                  key={course.courseId}
+                  className="flex items-center gap-4 rounded-lg border border-transparent px-3 py-2.5 transition-colors hover:border-border hover:bg-muted/50"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  {course.thumbnailUrl ? (
+                    <img
+                      src={course.thumbnailUrl}
+                      alt=""
+                      className="h-9 w-14 shrink-0 rounded object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/courses/${course.slug}`}
+                      className="block truncate font-medium transition-colors hover:text-primary"
+                    >
+                      {course.courseName}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {course.instructorName}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 tabular-nums">
+                    {course.totalEnrollments} học viên
+                  </Badge>
+                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                    <Progress value={course.avgCompletion} className="h-1.5 w-16" />
+                    <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+                      {course.avgCompletion.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {(!enrollmentData?.topCoursesByEnrollment ||
+                enrollmentData.topCoursesByEnrollment.length === 0) && (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  Chưa có dữ liệu ghi danh.
+                </p>
+              )}
+            </div>
+          </SectionCard>
+        </TabsContent>
+
+        {/* ===== Bài kiểm tra ===== */}
+        <TabsContent value="quizzes" className="space-y-6">
+          {quizLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-xl" />
+              ))}
+            </div>
+          ) : quizData && quizData.length > 0 ? (
+            quizData.map((courseReport) => (
+              <SectionCard
+                key={courseReport.courseId}
+                title={courseReport.courseName}
+                description={`${courseReport.quizzes.length} bài kiểm tra`}
+              >
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {courseReport.quizzes.map((quiz) => (
+                    <div
+                      key={quiz.lessonId}
+                      className="rounded-lg border border-border p-4"
+                    >
+                      <h4 className="mb-3 truncate text-sm font-medium">
+                        {quiz.lessonName}
+                      </h4>
+                      <div className="mb-1 flex items-baseline justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Điểm trung bình
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums">
+                          {quiz.avgScore.toFixed(1)}%
+                        </span>
                       </div>
-                      <Badge variant='secondary' className='bg-violet-500/20 text-violet-300 border-0'>
-                        {course.totalEnrollments} students
-                      </Badge>
-                      <div className='flex items-center gap-2'>
-                        <Progress value={course.avgCompletion} className='w-16 h-2' />
-                        <span className='text-xs text-slate-400 w-10 text-right'>{course.avgCompletion.toFixed(0)}%</span>
-                      </div>
+                      <Progress value={quiz.avgScore} className="h-1.5" />
+
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Lượt làm</dt>
+                          <dd className="font-medium tabular-nums">
+                            {quiz.totalAttempts}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Tỷ lệ đạt</dt>
+                          <dd className="font-medium tabular-nums">{quiz.passRate}%</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Cao nhất</dt>
+                          <dd className="font-medium tabular-nums">
+                            {quiz.highestScore}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Thấp nhất</dt>
+                          <dd className="font-medium tabular-nums">
+                            {quiz.lowestScore}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
                   ))}
-                  {(!enrollmentData?.topCoursesByEnrollment || enrollmentData.topCoursesByEnrollment.length === 0) && (
-                    <p className='text-center text-slate-500 py-12'>No enrollment data available yet.</p>
-                  )}
                 </div>
-              </GlassCard>
-            </TabsContent>
-
-            {/* ===== TAB 3: Quiz Scores ===== */}
-            <TabsContent value='quizzes' className='space-y-6'>
-              {quizLoading ? (
-                <div className='space-y-4'>
-                  {[...Array(3)].map((_, i) => <Skeleton key={i} className='h-48 rounded-2xl bg-slate-800/50' />)}
-                </div>
-              ) : quizData && quizData.length > 0 ? (
-                quizData.map((courseReport) => (
-                  <GlassCard key={courseReport.courseId} className='p-6'>
-                    <div className='flex items-center gap-3 mb-6'>
-                      <div className='p-2 rounded-xl bg-emerald-500/20'>
-                        <GraduationCap className='w-5 h-5 text-emerald-400' />
-                      </div>
-                      <div>
-                        <h3 className='text-lg font-semibold text-white'>{courseReport.courseName}</h3>
-                        <p className='text-xs text-slate-400'>{courseReport.quizzes.length} quizzes</p>
-                      </div>
-                    </div>
-
-                    <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-                      {courseReport.quizzes.map((quiz) => (
-                        <div key={quiz.lessonId} className='rounded-xl bg-white/5 p-4 border border-white/5 hover:border-white/10 transition-all'>
-                          <h4 className='text-sm font-semibold text-white mb-3 truncate'>{quiz.lessonName}</h4>
-                          <div className='space-y-2'>
-                            <div className='flex justify-between text-xs'>
-                              <span className='text-slate-400'>Avg Score</span>
-                              <span className={`font-mono font-bold ${quiz.avgScore >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                {quiz.avgScore.toFixed(1)}%
-                              </span>
-                            </div>
-                            <Progress value={quiz.avgScore} className='h-1.5' />
-                            <div className='grid grid-cols-2 gap-2 mt-3 text-xs'>
-                              <div className='text-center p-2 rounded-lg bg-white/5'>
-                                <p className='text-slate-400'>Attempts</p>
-                                <p className='text-white font-bold'>{quiz.totalAttempts}</p>
-                              </div>
-                              <div className='text-center p-2 rounded-lg bg-white/5'>
-                                <p className='text-slate-400'>Pass Rate</p>
-                                <p className='text-emerald-400 font-bold'>{quiz.passRate}%</p>
-                              </div>
-                              <div className='text-center p-2 rounded-lg bg-white/5'>
-                                <p className='text-slate-400'>Highest</p>
-                                <p className='text-cyan-400 font-bold'>{quiz.highestScore}</p>
-                              </div>
-                              <div className='text-center p-2 rounded-lg bg-white/5'>
-                                <p className='text-slate-400'>Lowest</p>
-                                <p className='text-red-400 font-bold'>{quiz.lowestScore}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </GlassCard>
-                ))
-              ) : (
-                <GlassCard className='p-12 text-center'>
-                  <GraduationCap className='w-12 h-12 text-slate-600 mx-auto mb-4' />
-                  <h3 className='text-lg font-semibold text-slate-300'>No Quiz Data Available</h3>
-                  <p className='text-slate-500 mt-1'>Quiz score reports will appear here once students start taking quizzes.</p>
-                </GlassCard>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+              </SectionCard>
+            ))
+          ) : (
+            <SectionCard>
+              <div className="py-12 text-center">
+                <GraduationCap
+                  className="mx-auto mb-3 h-10 w-10 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <h3 className="text-base font-medium">Chưa có dữ liệu bài kiểm tra</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Báo cáo sẽ xuất hiện khi học viên bắt đầu làm bài.
+                </p>
+              </div>
+            </SectionCard>
+          )}
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };

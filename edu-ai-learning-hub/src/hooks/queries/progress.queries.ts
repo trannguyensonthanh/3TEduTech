@@ -14,6 +14,7 @@ import {
   CourseProgressResponse,
 } from '@/services/progress.service';
 import { courseKeys } from './course.queries'; // Để invalidate course detail (userProgress)
+import { toast } from 'sonner';
 // import { lessonKeys } from './lesson.queries'; // Để invalidate lesson detail? (ít cần)
 
 // Query Key Factory
@@ -62,42 +63,68 @@ export const useMarkLessonCompletion = (
     mutationFn: ({ lessonId, isCompleted }) =>
       markLessonCompletion(Number(lessonId), isCompleted),
     onSuccess: (data, variables) => {
-      // Invalidate cache progress của khóa học chứa bài học này
-      // Cần lấy courseId từ data hoặc variables? -> Hơi khó, cách đơn giản là invalidate all course progress
       queryClient.invalidateQueries({ queryKey: progressKeys.all });
-      // Hoặc invalidate cache chi tiết khóa học để cập nhật userProgress
-      queryClient.invalidateQueries({ queryKey: courseKeys.details() }); // Invalidate all course details
+      
+      // Update cache manually for instant UI update
+      queryClient.setQueriesData(
+        { queryKey: courseKeys.details() },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          const newProgress = { ...(oldData.userProgress || {}) };
+          newProgress[variables.lessonId] = {
+            ...(newProgress[variables.lessonId] || {}),
+            isCompleted: variables.isCompleted,
+          };
+          return {
+            ...oldData,
+            userProgress: newProgress,
+          };
+        }
+      );
+      
       console.log(
         `Lesson ${variables.lessonId} completion marked as ${variables.isCompleted}.`
       );
     },
     onError: (error) => {
       console.error('Mark lesson completion failed:', error.message);
+      toast.error(error.message || 'Đánh dấu hoàn thành thất bại');
     },
     ...options,
   });
 };
 
 /** Hook cập nhật vị trí xem video */
-export const useUpdateLastWatchedPosition = (
-  options?: UseMutationOptions<
-    LessonProgress,
-    Error,
-    { lessonId: number; position: number }
-  >
-) => {
+export const useUpdateLastWatchedPosition = (options?: UseMutationOptions<LessonProgress, Error, { lessonId: number; position: number; timeSpentDelta?: number }>) => {
   const queryClient = useQueryClient();
   return useMutation<
     LessonProgress,
     Error,
-    { lessonId: number; position: number }
+    { lessonId: number; position: number; timeSpentDelta?: number }
   >({
-    mutationFn: ({ lessonId, position }) =>
-      updateLastWatchedPosition(lessonId, position),
+    mutationFn: ({ lessonId, position, timeSpentDelta }) =>
+      updateLastWatchedPosition(lessonId, position, timeSpentDelta),
     onSuccess: (data, variables) => {
-      // Có thể cập nhật cache course progress hoặc chi tiết khóa học nếu cần ngay lập tức
+      // Có thể cập nhật cache course progress nếu cần
       queryClient.invalidateQueries({ queryKey: progressKeys.all });
-      queryClient.invalidateQueries({ queryKey: courseKeys.details() });
+      
+      // Update cache manually instead of invalidating to prevent stale server cache overwrites
+      queryClient.setQueriesData(
+        { queryKey: courseKeys.details() },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          const newProgress = { ...(oldData.userProgress || {}) };
+          newProgress[variables.lessonId] = {
+            ...(newProgress[variables.lessonId] || {}),
+            lastWatchedPosition: variables.position,
+          };
+          return {
+            ...oldData,
+            userProgress: newProgress,
+          };
+        }
+      );
+      
       console.log(
         `Lesson ${variables.lessonId} position updated to ${variables.position}.`
       );

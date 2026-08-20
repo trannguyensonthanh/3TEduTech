@@ -239,19 +239,17 @@ const CoursesPage: React.FC = () => {
   return (
     <Layout>
       {/* Header Section */}
-      <div className='bg-gradient-to-b from-slate-100 via-slate-50 to-background dark:from-slate-900 dark:via-slate-800/70 dark:to-background border-b dark:border-slate-700/50'>
+      <div className='border-b border-border bg-muted/30'>
         <motion.div
           variants={headerVariants}
           initial='hidden'
           animate='visible'
           className='container mx-auto px-4 pt-10 pb-8 md:pt-16 md:pb-12 text-center'
         >
-          <h1 className='text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-50 mb-4 tracking-tight'>
-            Explore Our Courses
-          </h1>
-          <p className='text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto'>
-            Find your next learning adventure. Filter by category, level, price,
-            and more to discover the perfect course.
+          <h1 className='mb-4 text-foreground'>Khám phá các khóa học</h1>
+          <p className='text-lg text-muted-foreground max-w-3xl mx-auto'>
+            Tìm hành trình học tiếp theo của bạn. Lọc theo lĩnh vực, trình độ,
+            mức giá và nhiều tiêu chí khác để chọn đúng khóa học.
           </p>
         </motion.div>
       </div>
@@ -271,17 +269,19 @@ const CoursesPage: React.FC = () => {
                 <SheetTrigger asChild>
                   <Button
                     variant='outline'
-                    className='w-full h-12 text-base flex items-center justify-center gap-2 shadow-sm'
+                    className='w-full h-12 text-base flex items-center justify-center gap-2'
                   >
-                    <Icons.filter className='h-5 w-5' /> Show Filters & Sort
+                    <Icons.filter className='h-5 w-5' /> Bộ lọc và sắp xếp
                   </Button>
                 </SheetTrigger>
                 <SheetContent
                   side='left'
                   className='w-[320px] sm:w-[350px] p-0 flex flex-col'
                 >
-                  <SheetHeader className='p-5 pb-3 border-b dark:border-slate-700'>
-                    <SheetTitle className='text-xl'>Filters & Sort</SheetTitle>
+                  <SheetHeader className='p-5 pb-3 border-b border-border'>
+                    <SheetTitle className='text-xl'>
+                      Bộ lọc và sắp xếp
+                    </SheetTitle>
                   </SheetHeader>
                   <ScrollArea className='flex-grow'>
                     <div className='p-5'>
@@ -296,13 +296,13 @@ const CoursesPage: React.FC = () => {
                       />
                     </div>
                   </ScrollArea>
-                  <div className='p-4 border-t dark:border-slate-700'>
+                  <div className='p-4 border-t border-border'>
                     <SheetClose asChild>
                       <Button
                         className='w-full h-11 text-base'
                         onClick={() => setShowMobileFilters(false)}
                       >
-                        Apply & View Courses
+                        Áp dụng và xem khóa học
                       </Button>
                     </SheetClose>
                   </div>
@@ -340,8 +340,8 @@ const CoursesPage: React.FC = () => {
                 <Icons.search className='absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none' />
                 <Input
                   type='search'
-                  placeholder="Search courses, e.g., 'Python', 'Web Design'..."
-                  className='pl-11 h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700 focus-visible:ring-primary'
+                  placeholder="Tìm khóa học, ví dụ: 'Python', 'Thiết kế web'…"
+                  className='pl-11 h-12 text-base rounded-lg border-border bg-card focus-visible:ring-primary'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -355,12 +355,12 @@ const CoursesPage: React.FC = () => {
                 value={sortBy}
                 onValueChange={(value) => setSortBy(value as SortByValue)}
               >
-                <SelectTrigger className='w-full md:w-[240px] h-12 text-base rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700 focus:ring-primary'>
-                  <SelectValue placeholder='Sort by...' />
+                <SelectTrigger className='w-full md:w-[240px] h-12 text-base rounded-lg border-border bg-card focus:ring-primary'>
+                  <SelectValue placeholder='Sắp xếp theo…' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectLabel className='px-3 py-1.5'>Sort By</SelectLabel>
+                    <SelectLabel className='px-3 py-1.5'>Sắp xếp theo</SelectLabel>
                     {SORT_OPTIONS.map((opt) => (
                       <SelectItem
                         key={opt.value}
@@ -377,21 +377,21 @@ const CoursesPage: React.FC = () => {
             {/* Results Count and Status */}
             {(isLoadingCoursesInitial || isFetchingCourses) && !courseData && (
               <div className='text-sm text-muted-foreground mb-4 flex items-center'>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Loading
-                courses...
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Đang tải
+                khóa học…
               </div>
             )}
             {!isLoadingCoursesInitial && !isFetchingCourses && !isError && (
               <div className='mb-5 text-sm text-muted-foreground'>
-                Showing{' '}
+                Đang hiển thị{' '}
                 <span className='font-semibold text-foreground'>
                   {courses.length}
                 </span>{' '}
-                of{' '}
+                trong tổng số{' '}
                 <span className='font-semibold text-foreground'>
                   {totalItems}
                 </span>{' '}
-                courses.
+                khóa học.
                 {isFetchingCourses && (
                   <Loader2 className='inline ml-2 h-4 w-4 animate-spin' />
                 )}
@@ -403,7 +403,7 @@ const CoursesPage: React.FC = () => {
                 {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
                   <Card
                     key={`course-skeleton-${index}`}
-                    className='flex flex-col rounded-xl overflow-hidden'
+                    className='flex flex-col rounded-xl overflow-hidden border border-border bg-card shadow-none'
                   >
                     <Skeleton className='aspect-video w-full' />
                     <CardHeader className='p-4 pb-2'>
@@ -415,7 +415,7 @@ const CoursesPage: React.FC = () => {
                       <Skeleton className='h-3 w-full mb-2' />
                       <Skeleton className='h-3 w-1/2' />
                     </CardContent>
-                    <CardFooter className='p-4 pt-2 border-t mt-auto dark:border-slate-700'>
+                    <CardFooter className='p-4 pt-2 border-t border-border mt-auto'>
                       <Skeleton className='h-7 w-1/3' />
                       <Skeleton className='h-5 w-1/4 ml-auto' />
                     </CardFooter>
@@ -426,20 +426,20 @@ const CoursesPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className='text-center py-16 bg-destructive/10 dark:bg-destructive/20 p-8 rounded-lg border border-destructive/30'
+                className='text-center py-16 rounded-xl border border-border bg-danger-soft p-8'
               >
-                <Icons.alertTriangle className='mx-auto h-16 w-16 mb-6 text-destructive' />
-                <h3 className='text-2xl font-semibold mb-3 text-destructive-foreground dark:text-destructive'>
-                  Failed to Load Courses
+                <Icons.alertTriangle className='mx-auto h-16 w-16 mb-6 text-danger' />
+                <h3 className='text-2xl font-semibold mb-3 text-danger'>
+                  Không tải được danh sách khóa học
                 </h3>
-                <p className='text-destructive/80 dark:text-destructive/90 mb-6'>
-                  {error?.message || 'An unexpected error occurred.'}
+                <p className='text-muted-foreground mb-6'>
+                  {error?.message || 'Đã xảy ra lỗi ngoài dự kiến.'}
                 </p>
                 <Button
                   variant='destructive'
                   onClick={() => window.location.reload()}
                 >
-                  Try Again
+                  Thử lại
                 </Button>
               </motion.div>
             ) : courses.length > 0 ? (
@@ -458,16 +458,15 @@ const CoursesPage: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className='text-center py-20 col-span-full bg-slate-50 dark:bg-slate-800/30 p-8 rounded-lg border-2 border-dashed dark:border-slate-700'
+                  className='text-center py-20 col-span-full rounded-xl border border-dashed border-border bg-muted/30 p-8'
                 >
                   <Icons.packageOpen className='mx-auto h-20 w-20 text-muted-foreground opacity-60 mb-6' />
                   <h3 className='text-2xl font-semibold text-foreground'>
-                    No Courses Found
+                    Không tìm thấy khóa học nào
                   </h3>
                   <p className='mt-2 text-muted-foreground max-w-md mx-auto'>
-                    We couldn't find any courses matching your current criteria.
-                    Try adjusting your search or filters, or check back later
-                    for new additions!
+                    Chưa có khóa học nào khớp với tiêu chí hiện tại. Bạn thử đổi
+                    từ khóa, đổi bộ lọc, hoặc quay lại sau để xem khóa học mới.
                   </p>
                   {(debouncedSearchTerm ||
                     Object.values(activeFilters).some(
@@ -485,8 +484,8 @@ const CoursesPage: React.FC = () => {
                         handleResetFilters();
                       }}
                     >
-                      <Icons.listRestart className='mr-2 h-4 w-4' /> Clear All
-                      Filters & Search
+                      <Icons.listRestart className='mr-2 h-4 w-4' /> Xóa toàn bộ
+                      bộ lọc và từ khóa
                     </Button>
                   )}
                 </motion.div>

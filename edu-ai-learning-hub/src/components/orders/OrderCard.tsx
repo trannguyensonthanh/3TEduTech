@@ -89,17 +89,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const itemCountText =
     orderItemsToDisplay.length > 0
       ? orderItemsToDisplay.length === 1
-        ? '1 item'
-        : `${orderItemsToDisplay.length} items`
-      : order.items && order.items.length > 0 // Nếu API list có trả về số lượng items ban đầu
-        ? `${order.items.length} item(s)`
+        ? '1 khóa học'
+        : `${orderItemsToDisplay.length} khóa học`
+      : order.items && order.items.length > 0
+        ? `${order.items.length} khóa học`
         : isExpanded && isLoadingDetails
-          ? '' // Sẽ hiển thị spinner ở chỗ khác
-          : 'View items';
+          ? ''
+          : 'Xem khóa học';
 
   const formattedDate = order.orderDate
-    ? format(parseISO(order.orderDate), 'MMM dd, yyyy - HH:mm', { locale: vi })
-    : 'Date not available';
+    ? format(parseISO(order.orderDate), 'dd/MM/yyyy - HH:mm', { locale: vi })
+    : 'Không có ngày';
 
   const handleToggleExpand = () => {
     setIsExpanded((prev) => !prev);
@@ -156,10 +156,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3'>
             <div>
               <CardTitle className='text-lg md:text-xl font-semibold text-foreground'>
-                Order <span className='text-primary'>#{order.orderId}</span>
+                Đơn hàng <span className='text-primary'>#{order.orderId}</span>
               </CardTitle>
               <CardDescription className='mt-1 text-xs md:text-sm'>
-                Placed on: {formattedDate}
+                Ngày đặt: {formattedDate}
               </CardDescription>
             </div>
             <div className='flex items-center space-x-3 self-start sm:self-center'>
@@ -182,16 +182,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm mb-4'>
             <div className='mb-2 sm:mb-0'>
               <span className='font-medium text-muted-foreground'>
-                Payment via:
+                Thanh toán qua:
               </span>{' '}
               <span className='font-semibold text-foreground'>
                 {order.paymentMethodName || 'Chưa thanh toán'}
               </span>
             </div>
             <div className='font-semibold text-lg text-foreground'>
-              Total:{' '}
+              Tổng:{' '}
               <span className='text-primary'>
-                ${(order.finalAmount || 0).toFixed(2)}
+                {formatPrice(order.finalAmount || 0, order.currencyId)}
               </span>
             </div>
           </div>
@@ -207,7 +207,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               >
                 <Separator className='mb-4 dark:bg-slate-700/60' />
                 <h4 className='text-base font-semibold mb-3 text-foreground'>
-                  Order Items
+                  Khóa học
                 </h4>
                 {isLoadingDetails ? (
                   <div className='space-y-3'>
@@ -233,7 +233,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 ) : isDetailsError ? (
                   <p className='text-sm text-destructive p-3 bg-destructive/10 rounded-md'>
                     <Icons.alertTriangle className='inline h-4 w-4 mr-1.5' />
-                    Could not load order items. Please try again.
+                    Không thể tải thông tin khóa học. Vui lòng thử lại.
                   </p>
                 ) : orderItemsToDisplay.length > 0 ? (
                   <div className='space-y-3'>
@@ -262,21 +262,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
                           {item.instructorName && (
                             <p className='text-xs text-muted-foreground mt-0.5'>
-                              By {item.instructorName}
+                              Bởi {item.instructorName}
                             </p>
                           )}
                         </div>
                         <div className='font-semibold text-sm sm:text-base text-foreground whitespace-nowrap'>
-                          {currency === 'VND'
-                            ? formatPrice(item?.pricing?.display?.price ?? 0)
-                            : `$${((item?.pricing?.display?.price ?? 0) / 25000).toFixed(2)}`}
+                          {formatPrice(
+                            item?.pricing?.display?.price ?? 0,
+                            item?.pricing?.display?.currency ?? order.currencyId
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className='text-sm text-muted-foreground p-3 bg-slate-50 dark:bg-slate-800/30 rounded-md'>
-                    No items found in this order.
+                    Không có khóa học nào trong đơn hàng này.
                   </p>
                 )}
               </motion.div>
@@ -297,12 +298,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <>
                 {' '}
                 <Icons.spinner className='mr-1.5 h-4 w-4 animate-spin' />{' '}
-                Loading Details...
+                Đang tải...
               </>
             ) : isExpanded ? (
-              'Hide Details'
+              'Ẩn chi tiết'
             ) : (
-              'View Details'
+              'Xem chi tiết'
             )}
             {!(isLoadingDetails && isExpanded) && (
               <motion.div
@@ -329,7 +330,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 ) : (
                   <Icons.fileText className='h-4 w-4 mr-1.5' />
                 )}
-                View Invoice
+                Xem hóa đơn
               </Button>
             )}
             {fullOrderDataForActions.orderStatus === 'COMPLETED' && (
@@ -338,7 +339,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 onClick={() => navigate('/my-courses')}
                 className='h-9 text-xs sm:text-sm'
               >
-                My Learning <Icons.arrowRight className='ml-1.5 h-4 w-4' />
+                Khóa học của tôi <Icons.arrowRight className='ml-1.5 h-4 w-4' />
               </Button>
             )}
             {fullOrderDataForActions.orderStatus === 'PENDING_PAYMENT' && (
@@ -378,8 +379,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 className='h-9 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs sm:text-sm'
               >
                 {fullOrderDataForActions.orderStatus === 'FAILED'
-                  ? 'Retry Payment'
-                  : 'Complete Payment'}
+                  ? 'Thử lại thanh toán'
+                  : 'Hoàn tất thanh toán'}
               </Button>
             )}
           </div>

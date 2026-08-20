@@ -38,12 +38,22 @@ import {
 const ITEMS_PER_PAGE_ORDERS = 5; // Số đơn hàng mỗi trang
 
 const TABS_CONFIG: { value: OrderStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All Orders' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'PENDING_PAYMENT', label: 'Pending' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'all', label: 'Tất cả đơn' },
+  { value: 'COMPLETED', label: 'Hoàn tất' },
+  { value: 'PENDING_PAYMENT', label: 'Chờ thanh toán' },
+  { value: 'FAILED', label: 'Thất bại' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
 ];
+
+/* Nhãn trạng thái đơn hàng bằng tiếng Việt, dùng cho phần trạng thái rỗng.
+   Trước đây câu chữ được ghép từ chính mã trạng thái tiếng Anh. */
+const ORDER_STATUS_LABELS: Record<OrderStatus | 'all', string> = {
+  all: 'tất cả',
+  COMPLETED: 'hoàn tất',
+  PENDING_PAYMENT: 'chờ thanh toán',
+  FAILED: 'thất bại',
+  CANCELLED: 'đã hủy',
+};
 
 // Animation Variants
 const headerVariants = {
@@ -130,18 +140,18 @@ const OrderHistoryPage: React.FC = () => {
     }
   };
   const getStatusText = (status?: OrderStatus): string => {
-    if (!status) return 'Unknown';
+    if (!status) return 'Không rõ';
     switch (status) {
       case 'COMPLETED':
-        return 'Completed';
+        return 'Hoàn tất';
       case 'PENDING_PAYMENT':
-        return 'Pending Payment';
+        return 'Chờ thanh toán';
       case 'FAILED':
-        return 'Payment Failed';
+        return 'Thanh toán thất bại';
       case 'CANCELLED':
-        return 'Cancelled';
+        return 'Đã hủy';
       default:
-        return 'Unknown Status';
+        return 'Trạng thái không rõ';
     }
   };
 
@@ -164,12 +174,12 @@ const OrderHistoryPage: React.FC = () => {
         paymentMethodName: orderWithItems.paymentMethodName || 'N/A',
         items: orderWithItems.items.map((item) => ({
           courseId: item.courseId,
-          courseName: item.courseName || 'Unknown Course',
+          courseName: item.courseName || 'Khóa học không xác định',
           priceAtOrder: item.priceAtOrder,
           instructorName: (item as any).instructorName,
         })),
         customerInfo: {
-          fullName: currentUser.fullName || 'Valued Customer',
+          fullName: currentUser.fullName || 'Quý khách hàng',
           email: currentUser.email,
         },
         companyInfo: {
@@ -188,20 +198,18 @@ const OrderHistoryPage: React.FC = () => {
   return (
     <Layout>
       {/* Header Section */}
-      <div className='bg-gradient-to-b from-slate-100 via-slate-50 to-background dark:from-slate-900 dark:via-slate-800/70 dark:to-background border-b dark:border-slate-700/50'>
+      <div className='border-b border-border bg-muted/30'>
         <motion.div
           variants={headerVariants}
           initial='hidden'
           animate='visible'
           className='container mx-auto px-4 pt-10 pb-8 md:pt-16 md:pb-12 text-center'
         >
-          <Icons.shoppingCart className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-primary dark:text-primary/90' />
-          <h1 className='text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-50 mb-4 tracking-tight'>
-            My Order History
-          </h1>
-          <p className='text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto'>
-            Review your past purchases, track current orders, and manage your
-            invoices all in one place.
+          <Icons.shoppingCart className='h-16 w-16 md:h-20 md:w-20 mx-auto mb-4 text-primary' />
+          <h1 className='mb-4 text-foreground'>Lịch sử đơn hàng</h1>
+          <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
+            Xem lại các lần mua trước, theo dõi đơn đang xử lý và quản lý hóa
+            đơn ở cùng một nơi.
           </p>
         </motion.div>
       </div>
@@ -216,12 +224,12 @@ const OrderHistoryPage: React.FC = () => {
             className='w-full'
           >
             <ScrollArea className='w-full pb-2 mb-6 md:mb-8'>
-              <TabsList className='inline-flex h-11 min-w-full sm:min-w-0 sm:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shadow-sm'>
+              <TabsList className='inline-flex h-11 min-w-full sm:min-w-0 sm:w-auto bg-muted p-1 rounded-lg'>
                 {TABS_CONFIG.map((tab) => (
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className='px-3.5 py-2 sm:px-5 sm:py-2.5 text-sm font-medium flex-1 sm:flex-none data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md rounded-md h-auto leading-normal'
+                    className='px-3.5 py-2 sm:px-5 sm:py-2.5 text-sm font-medium flex-1 sm:flex-none data-[state=active]:bg-background data-[state=active]:text-primary rounded-md h-auto leading-normal'
                   >
                     {tab.label}
                     {/* TODO: Add count for each tab if API supports `countsByStatus` */}
@@ -245,9 +253,9 @@ const OrderHistoryPage: React.FC = () => {
                     {[...Array(3)].map((_, index) => (
                       <Card
                         key={`order-skeleton-${index}`}
-                        className='overflow-hidden rounded-xl border dark:border-slate-700/60'
+                        className='overflow-hidden rounded-xl border border-border bg-card shadow-none'
                       >
-                        <CardHeader className='p-5 md:p-6 bg-slate-50 dark:bg-slate-800/40 border-b dark:border-slate-700/60'>
+                        <CardHeader className='p-5 md:p-6 bg-muted/30 border-b border-border'>
                           <div className='flex justify-between items-start'>
                             <Skeleton className='h-6 w-3/5' />
                             <Skeleton className='h-5 w-20' />
@@ -262,7 +270,7 @@ const OrderHistoryPage: React.FC = () => {
                           <Skeleton className='h-16 w-full rounded-md' />{' '}
                           {/* For expanded items placeholder */}
                         </CardContent>
-                        <CardFooter className='p-5 md:p-6 border-t dark:border-slate-700/60 bg-slate-50/30 dark:bg-slate-800/20'>
+                        <CardFooter className='p-5 md:p-6 border-t border-border bg-muted/20'>
                           <Skeleton className='h-9 w-28' />
                           <Skeleton className='h-9 w-24 ml-auto' />
                         </CardFooter>
@@ -272,17 +280,17 @@ const OrderHistoryPage: React.FC = () => {
                 ) : ordersError ? (
                   <Alert variant='destructive' className='mt-4'>
                     <Icons.alertTriangle className='h-5 w-5' />
-                    <AlertTitle>Error Loading Orders</AlertTitle>
+                    <AlertTitle>Không tải được đơn hàng</AlertTitle>
                     <AlertDescription>
-                      We couldn't fetch your order history.{' '}
-                      {ordersError.message || 'Please try again later.'}
+                      Chúng tôi chưa lấy được lịch sử đơn hàng của bạn.{' '}
+                      {ordersError.message || 'Bạn thử lại sau nhé.'}
                       <Button
                         variant='link'
                         size='sm'
                         onClick={() => refetchOrders()}
                         className='p-0 h-auto ml-1 text-destructive hover:underline'
                       >
-                        Retry
+                        Thử lại
                       </Button>
                     </AlertDescription>
                   </Alert>
@@ -327,6 +335,9 @@ const OrderHistoryPage: React.FC = () => {
       {/* Invoice View Dialog - Lazy Loaded */}
       <Suspense
         fallback={
+          /* Ngoại lệ hợp lệ: đây là LỚP PHỦ NỀN của hộp thoại hóa đơn đang tải.
+             Lớp phủ luôn tối cố định ở cả chế độ sáng và tối, nên `bg-black/50`
+             và chữ trắng trên lớp phủ được giữ nguyên có chủ đích. */
           <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100]'>
             <Icons.spinner className='h-10 w-10 animate-spin text-white' />
           </div>
@@ -349,20 +360,20 @@ const EmptyOrderState: React.FC<{ status?: OrderStatus | 'all' }> = ({
   status,
 }) => {
   const navigate = useNavigate();
-  let title = 'You have no orders yet.';
-  let description = 'Once you purchase a course, your orders will appear here.';
+  let title = 'Bạn chưa có đơn hàng nào.';
+  let description = 'Khi bạn mua một khóa học, đơn hàng sẽ hiện ở đây.';
 
   if (status && status !== 'all') {
-    const statusText = status.toLowerCase().replace('_', ' ');
-    title = `No ${statusText} orders.`;
-    description = `You currently don't have any orders with the status: ${statusText}.`;
+    const statusText = ORDER_STATUS_LABELS[status] ?? 'không xác định';
+    title = `Không có đơn hàng ở trạng thái ${statusText}.`;
+    description = `Hiện bạn chưa có đơn hàng nào ở trạng thái ${statusText}.`;
   }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className='bg-card dark:bg-slate-800/30 rounded-xl p-8 md:p-12 text-center shadow-lg border-2 border-dashed border-border dark:border-slate-700/60 min-h-[400px] flex flex-col justify-center items-center'
+      className='bg-card rounded-xl p-8 md:p-12 text-center border border-dashed border-border min-h-[400px] flex flex-col justify-center items-center'
     >
       <Icons.shoppingCart className='w-16 h-16 md:w-20 md:w-20 text-muted-foreground mx-auto mb-6 opacity-60' />
       <h3 className='text-xl md:text-2xl font-semibold text-foreground mb-3'>
@@ -376,7 +387,7 @@ const EmptyOrderState: React.FC<{ status?: OrderStatus | 'all' }> = ({
         size='lg'
         className='h-11 px-6 text-base'
       >
-        <Icons.search className='mr-2 h-5 w-5' /> Explore Courses
+        <Icons.search className='mr-2 h-5 w-5' /> Khám phá khóa học
       </Button>
     </motion.div>
   );

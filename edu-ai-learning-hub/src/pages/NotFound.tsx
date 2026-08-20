@@ -17,7 +17,7 @@ const NotFoundIllustration = () => (
   >
     {/* Sử dụng một icon lớn từ Lucide hoặc SVG tùy chỉnh */}
     <Icons.alertTriangle
-      className="w-32 h-32 md:w-40 md:h-40 mx-auto text-primary/30 dark:text-primary/25"
+      className="mx-auto h-32 w-32 text-primary/30 md:h-40 md:w-40"
       strokeWidth={1}
     />
     {/* <img src="/path/to/your/404-illustration.svg" alt="Page not found illustration" className="w-64 h-64 mx-auto mb-8" /> */}
@@ -54,34 +54,34 @@ const NotFoundPage = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 via-background to-sky-100 dark:from-slate-900 dark:via-slate-800 dark:to-sky-900 p-4 sm:p-6 text-center transition-colors duration-500"
+      className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center sm:p-6"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
-        className="bg-background dark:bg-slate-800/70 p-8 sm:p-10 md:p-14 rounded-2xl shadow-2xl max-w-xl w-full border dark:border-slate-700/50 backdrop-blur-sm"
+        className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 sm:p-10 md:p-14"
       >
         <NotFoundIllustration />
 
         <motion.h1
           variants={contentVariants}
           custom={0}
-          className="mt-6 text-6xl sm:text-7xl md:text-8xl font-extrabold text-primary dark:text-primary/90 mb-3 tracking-tighter"
+          className="mb-3 mt-6 text-6xl font-semibold tracking-tight text-primary sm:text-7xl"
         >
           404
         </motion.h1>
         <motion.p
           variants={contentVariants}
           custom={1}
-          className="text-2xl sm:text-3xl font-semibold text-foreground dark:text-slate-100 mb-4"
+          className="mb-4 text-2xl font-semibold text-foreground sm:text-3xl"
         >
           Oops! Page Not Found.
         </motion.p>
         <motion.p
           variants={contentVariants}
           custom={2}
-          className="text-muted-foreground dark:text-slate-400 mb-8 text-base sm:text-lg leading-relaxed max-w-md mx-auto"
+          className="mx-auto mb-8 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg"
         >
           It seems you've ventured into uncharted territory or the link you
           followed might be broken. Don't worry, we'll help you find your way
@@ -92,7 +92,7 @@ const NotFoundPage = () => {
           <Button
             asChild
             size="lg"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 text-base font-semibold shadow-lg hover:shadow-primary/30 transition-all duration-300 transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+            className="h-12 px-8 text-base font-semibold"
           >
             <span
               onClick={() => (window.location.href = '/')}
@@ -106,7 +106,7 @@ const NotFoundPage = () => {
         <motion.div
           variants={contentVariants}
           custom={4}
-          className="mt-12 text-xs text-slate-400 dark:text-slate-500"
+          className="mt-12 text-xs text-muted-foreground"
         >
           <p>
             If you believe this is an error, please{' '}
@@ -117,7 +117,7 @@ const NotFoundPage = () => {
           </p>
           <p className="mt-1">
             Attempted path:{' '}
-            <code className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs font-mono">
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
               {location.pathname}
             </code>
           </p>

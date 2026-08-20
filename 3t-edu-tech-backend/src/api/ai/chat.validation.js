@@ -21,6 +21,12 @@ const getOrCreateSession = {
     scope: scope.required(),
     courseId: Joi.number().integer().allow(null),
     lessonId: Joi.number().integer().allow(null),
+    /* [THÊM 20/08/2026] Bắt buộc tạo phiên MỚI thay vì dùng lại phiên đang mở.
+       Phục vụ nút "Hội thoại mới" ở trang AI Master — trước đây nút đó chỉ tạo
+       một mục trong localStorage còn phía máy chủ vẫn là phiên cũ, nên mô hình
+       tiếp tục nhận lịch sử của cuộc trò chuyện trước trong một khung chat
+       trông như hoàn toàn trống. */
+    forceNew: Joi.boolean().optional(),
   }),
 };
 

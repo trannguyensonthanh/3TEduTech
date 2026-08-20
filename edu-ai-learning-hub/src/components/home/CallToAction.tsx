@@ -52,34 +52,21 @@ const CallToActionSection = () => {
       initial='hidden'
       whileInView='visible'
       viewport={{ once: true, amount: 0.3 }}
-      className='cta-gradient text-white py-16 md:py-24 lg:py-32 relative overflow-hidden'
+      className='border-y border-border bg-muted py-16 md:py-24 lg:py-32'
     >
-      {/* Floating decorative elements */}
-      <div className='absolute top-10 left-10 w-32 h-32 bg-white/3 rounded-full blur-3xl animate-float pointer-events-none' />
-      <div className='absolute bottom-10 right-10 w-40 h-40 bg-white/2 rounded-full blur-3xl animate-float-delayed pointer-events-none' />
-      <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none' />
-      
-      {/* Sparkle accents */}
-      <svg viewBox="0 0 24 24" className="absolute top-16 right-[15%] w-5 h-5 text-white/20 animate-sparkle pointer-events-none" fill="currentColor">
-        <path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4L12 0Z" />
-      </svg>
-      <svg viewBox="0 0 24 24" className="absolute bottom-20 left-[10%] w-4 h-4 text-white/15 animate-sparkle pointer-events-none" style={{ animationDelay: '1.5s' }} fill="currentColor">
-        <path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4L12 0Z" />
-      </svg>
-
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='max-w-3xl mx-auto text-center'>
           <motion.h2
             custom={0.2}
             variants={textItemVariants}
-            className='text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight'
+            className='mb-6 text-3xl font-bold leading-tight text-foreground md:text-4xl'
           >
             {t('cta.title', 'Ready to Start Your Learning Journey?')}
           </motion.h2>
           <motion.p
             custom={0.3}
             variants={textItemVariants}
-            className='text-lg md:text-xl mb-10 opacity-85 leading-relaxed text-blue-100'
+            className='mb-10 text-lg leading-relaxed text-muted-foreground'
           >
             {t(
               'cta.description',
@@ -95,7 +82,7 @@ const CallToActionSection = () => {
               <Button
                 size='default'
                 onClick={() => navigate('/register')}
-                className='bg-white text-blue-700 hover:bg-blue-50 font-semibold px-10 py-4 text-base sm:text-lg shadow-xl shadow-black/20 hover:shadow-2xl transform transition-all duration-300 hover:scale-[1.03] w-full sm:w-auto'
+                className='w-full px-10 py-4 text-base font-semibold sm:w-auto'
               >
                 {t('cta.getStarted', 'Get Started For Free')}
                 <Icons.arrowRight className='ml-2 h-5 w-5' />
@@ -106,7 +93,7 @@ const CallToActionSection = () => {
                 size='default'
                 variant='outline'
                 onClick={() => navigate('/courses')}
-                className='bg-transparent border-white/50 text-white hover:bg-white hover:text-blue-700 dark:hover:text-blue-900 font-semibold px-10 py-4 text-base sm:text-lg shadow-md transform transition-all duration-300 hover:scale-[1.03] w-full sm:w-auto backdrop-blur-sm'
+                className='w-full border-border px-10 py-4 text-base font-semibold sm:w-auto'
               >
                 {t('cta.browseCourses', 'Browse Courses')}
               </Button>
@@ -116,7 +103,7 @@ const CallToActionSection = () => {
           <motion.p
             custom={0.8}
             variants={textItemVariants}
-            className='mt-8 text-sm opacity-60'
+            className='mt-8 text-sm text-muted-foreground'
           >
             {t(
               'cta.noCreditCard',

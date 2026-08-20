@@ -127,17 +127,17 @@ const InstructorProfilePage = () => {
     return (
       <Layout>
         <div className='container mx-auto px-4 py-10'>
-          <div className='text-center py-20 bg-destructive/10 p-8 rounded-lg'>
-            <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6 text-destructive' />
-            <h3 className='text-2xl font-semibold mb-3 text-destructive-foreground'>
-              Instructor Not Found
+          <div className='text-center py-20 rounded-xl border border-border bg-danger-soft p-8'>
+            <Icons.alertTriangle className='h-16 w-16 mx-auto mb-6 text-danger' />
+            <h3 className='text-2xl font-semibold mb-3 text-danger'>
+              Không tìm thấy giảng viên
             </h3>
             <p className='text-muted-foreground mb-6'>
-              The instructor you're looking for (ID/Slug: {idOrSlug}) doesn't
-              exist or has been removed.
+              Giảng viên bạn đang tìm (mã/đường dẫn: {idOrSlug}) không tồn tại
+              hoặc đã bị gỡ.
             </p>
             <Button variant='outline' asChild>
-              <Link to='/instructors'>Browse All Instructors</Link>
+              <Link to='/instructors'>Xem tất cả giảng viên</Link>
             </Button>
           </div>
         </div>
@@ -161,30 +161,34 @@ const InstructorProfilePage = () => {
         {/* Instructor Header Section */}
         <motion.div
           variants={itemVariants}
-          className='relative min-h-[300px] md:min-h-[400px] bg-slate-700 '
+          className='relative min-h-[300px] md:min-h-[400px] bg-muted'
         >
+          {/* `dark:` bên dưới chỉnh độ mờ của ẢNH, không phải màu — token không
+              diễn tả được nên giữ theo mục 5 của DESIGN-SYSTEM.md. */}
           <img
             src={coverImage}
-            alt={`${instructor.fullName} cover`}
+            alt={`Ảnh bìa của ${instructor.fullName}`}
             className='absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20'
           />
-          <div className='absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent'></div>
+          {/* Lớp phủ giúp chữ trên ảnh bìa đọc được; dùng token nền thay cho
+              dải chuyển sắc trang trí trước đây. */}
+          <div className='absolute inset-0 bg-background/60'></div>
 
           <div className='container mx-auto px-4 relative flex flex-col items-center justify-end h-full pb-8 md:pb-12 text-center'>
-            <Avatar className=' !z-50 w-32 h-32 md:w-40 md:h-40 mb-5 border-4 border-background shadow-xl -mt-12 md:-mt-10'>
+            <Avatar className=' !z-50 w-32 h-32 md:w-40 md:h-40 mb-5 border-4 border-background -mt-12 md:-mt-10'>
               <AvatarImage
                 src={instructor.avatarUrl || undefined}
                 alt={instructor.fullName}
               />
-              <AvatarFallback className='text-4xl md:text-5xl font-semibold bg-slate-200 dark:bg-slate-700'>
+              <AvatarFallback className='text-4xl md:text-5xl font-semibold bg-muted'>
                 {instructorInitials}
               </AvatarFallback>
             </Avatar>
-            <h1 className='text-3xl md:text-4xl font-extrabold text-foreground mb-1.5 tracking-tight'>
+            <h1 className='text-foreground mb-1.5'>
               {instructor.fullName}
             </h1>
-            <p className='text-lg text-primary dark:text-primary/90 font-medium mb-2'>
-              {instructor.professionalTitle || 'Expert Educator'}
+            <p className='text-lg text-primary font-medium mb-2'>
+              {instructor.professionalTitle || 'Chuyên gia giảng dạy'}
             </p>
             {instructor.headline && (
               <p className='text-md text-muted-foreground max-w-2xl mb-4'>
@@ -196,11 +200,11 @@ const InstructorProfilePage = () => {
               {instructor.averageRating != null &&
                 instructor.averageRating > 0 && (
                   <div className='flex items-center'>
-                    <Icons.star className='w-4 h-4 text-yellow-400 fill-yellow-400 mr-1.5' />
+                    <Icons.star className='w-4 h-4 fill-warning text-warning mr-1.5' aria-hidden='true' />
                     <span className='font-semibold text-foreground'>
                       {instructor.averageRating.toFixed(1)}
                     </span>
-                    Rating
+                    <span className='ml-1'>điểm đánh giá</span>
                   </div>
                 )}
               {instructor.totalStudents != null && (
@@ -210,7 +214,7 @@ const InstructorProfilePage = () => {
                     {instructor.totalStudents.toLocaleString()}
                   </span>
                   <span className='mx-1'>·</span>
-                  Students
+                  học viên
                 </div>
               )}
               {instructor.totalCourses != null && (
@@ -220,7 +224,7 @@ const InstructorProfilePage = () => {
                     {instructor.totalCourses}
                   </span>
                   <span className='mx-1'>·</span>
-                  Courses
+                  khóa học
                 </div>
               )}
             </div>
@@ -259,24 +263,24 @@ const InstructorProfilePage = () => {
               onValueChange={setActiveTab}
               className='w-full '
             >
-              <TabsList className='grid w-full grid-cols-3 md:w-[400px] mx-auto mb-8 shadow-sm bg-muted text-muted-foreground p-1 rounded-md !h-16'>
+              <TabsList className='grid w-full grid-cols-3 md:w-[400px] mx-auto mb-8 bg-muted text-muted-foreground p-1 rounded-md !h-16'>
                 <TabsTrigger
                   value='about'
                   className='py-2.5 text-sm sm:text-base rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground '
                 >
-                  About Me
+                  Giới thiệu
                 </TabsTrigger>
                 <TabsTrigger
                   value='courses'
                   className='py-2.5 text-sm sm:text-base rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
                 >
-                  My Courses ({instructor.totalCourses || 0})
+                  Khóa học ({instructor.totalCourses || 0})
                 </TabsTrigger>
                 <TabsTrigger
                   value='reviews'
                   className='py-2.5 text-sm sm:text-base rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
                 >
-                  Reviews ({reviewsData?.total || 0})
+                  Đánh giá ({reviewsData?.total || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -289,26 +293,26 @@ const InstructorProfilePage = () => {
                   transition={{ duration: 0.3 }}
                 >
                   <TabsContent value='about' forceMount={activeTab === 'about' || undefined}>
-                    <Card className='p-6 md:p-8 dark:bg-slate-800/30'>
+                    <Card className='rounded-xl border border-border bg-card p-6 md:p-8 shadow-none'>
                       {instructor.bio && (
                         <h3 className='text-2xl font-semibold text-foreground mb-4'>
-                          Biography
+                          Tiểu sử
                         </h3>
                       )}
-                      <div className='prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed'>
+                      <div className='prose dark:prose-invert max-w-none text-foreground leading-relaxed'>
                         {/* Nếu bio là HTML, dùng dangerouslySetInnerHTML. Nếu là plain text, dùng <p> */}
                         {instructor.bio ? (
                           <p>{instructor.bio}</p> // Giả sử bio là plain text
                         ) : (
                           // <div dangerouslySetInnerHTML={{ __html: instructor.bio }} /> // Nếu bio là HTML
-                          <p>No biography provided yet.</p>
+                          <p>Giảng viên chưa cập nhật tiểu sử.</p>
                         )}
                       </div>
 
                       {instructor.skills && instructor.skills.length > 0 && (
                         <>
                           <h3 className='text-2xl font-semibold text-foreground mt-8 mb-4'>
-                            Skills & Expertise
+                            Kỹ năng và chuyên môn
                           </h3>
                           <div className='flex flex-wrap gap-2'>
                             {instructor.skills.map((skill) => (
@@ -357,7 +361,7 @@ const InstructorProfilePage = () => {
                     ) : (
                       <div className='text-center py-12 text-muted-foreground'>
                         <Icons.packageOpen className='h-16 w-16 mx-auto mb-4 opacity-50' />
-                        This instructor has not published any courses yet.
+                        Giảng viên này chưa phát hành khóa học nào.
                       </div>
                     )}
                   </TabsContent>
@@ -395,7 +399,7 @@ const InstructorProfilePage = () => {
                     ) : (
                       <div className='text-center py-12 text-muted-foreground'>
                         <Icons.packageOpen className='h-16 w-16 mx-auto mb-4 opacity-50' />
-                        No reviews available for this instructor yet.
+                        Chưa có đánh giá nào cho giảng viên này.
                       </div>
                     )}
                   </TabsContent>

@@ -54,7 +54,7 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
 
   return (
     <div className={cn('h-full flex flex-col', className)}>
-      <Card className='h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-primary/50 bg-card'>
+      <Card className='flex h-full flex-col overflow-hidden rounded-xl border-border bg-card shadow-none transition-colors hover:border-primary/50'>
         {/* Phần ảnh và thông tin trên ảnh */}
         <Link
           to={`/courses/${course.slug}`}
@@ -73,16 +73,16 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
               <div className='absolute top-2 left-2 z-10'>
                 <span
                   className={cn(
-                    'px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider shadow backdrop-blur-md transition-all inline-block',
+                    'inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider',
                     course.statusId === 'PUBLISHED'
-                      ? 'bg-emerald-600/90 text-white border border-emerald-400/30'
+                      ? 'bg-success text-success-foreground'
                       : course.statusId === 'DRAFT'
-                        ? 'bg-slate-700/90 text-slate-100 border border-slate-500/40'
+                        ? 'bg-muted text-muted-foreground'
                         : course.statusId === 'PENDING' || course.statusId === 'PENDING_APPROVAL'
-                          ? 'bg-amber-500/90 text-white border border-amber-300/30'
+                          ? 'bg-warning text-warning-foreground'
                           : course.statusId === 'REJECTED'
-                            ? 'bg-rose-600/90 text-white border border-rose-400/30'
-                            : 'bg-primary/90 text-white'
+                            ? 'bg-danger text-danger-foreground'
+                            : 'bg-primary text-primary-foreground'
                   )}
                 >
                   {course.statusId.replace(/_/g, ' ')}
@@ -90,7 +90,7 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
               </div>
             )}
             {discountPercentage > 0 && originalPrice > 0 && (
-              <div className='absolute top-2 right-2 bg-red-600 text-white rounded-md px-1.5 py-0.5 text-xs font-semibold shadow'>
+              <div className='absolute right-2 top-2 rounded-md bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground'>
                 -{discountPercentage}%
               </div>
             )}
@@ -111,7 +111,7 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
               {typeof course.averageRating === 'number' &&
                 course.averageRating > 0 && (
                   <div className='flex items-center text-xs'>
-                    <Icons.star className='h-3.5 w-3.5 text-yellow-400 mr-0.5' />
+                    <Icons.star className='mr-0.5 h-3.5 w-3.5 text-warning' />
                     <span className='font-semibold'>
                       {course.averageRating.toFixed(1)}
                     </span>
@@ -161,7 +161,7 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
               )}
             </div>
             {course.hasCertificate && (
-              <div className='mt-2 flex items-center text-green-700 dark:text-green-400 text-xs'>
+              <div className='mt-2 flex items-center text-xs text-success'>
                 <Award size={14} className='mr-1' /> Certificate of Completion
               </div>
             )}
@@ -170,7 +170,7 @@ const CourseCardv2: React.FC<CourseCardProps> = ({
           <CardFooter className='p-0 pt-3 border-t mt-auto flex-col items-start gap-3'>
             <div className='flex justify-between items-center w-full'>
               {displayPrice === 0 ? (
-                <span className='text-xl font-bold text-green-600'>FREE</span>
+                <span className='text-xl font-bold text-success'>FREE</span>
               ) : (
                 <div className='flex items-baseline gap-1.5'>
                   <span className='text-xl font-bold'>

@@ -13,9 +13,19 @@ const cache = (ttlSeconds = 1800) => {
       return next();
     }
 
-    // Tạo khóa duy nhất dựa trên URL + query params + tiền tệ (X-Currency)
+    /* Tạo khóa duy nhất dựa trên URL + query params + tiền tệ + DANH TÍNH.
+
+       [SỬA 19/08/2026] Bổ sung chiều danh tính vào khóa. Trước đây khóa chỉ
+       gồm URL và tiền tệ, trong khi các tuyến được gắn cache lại trả dữ liệu
+       phụ thuộc người gọi: nội dung bài học đầy đủ hay bị che, cờ đã ghi danh,
+       tiến độ học, và với giảng viên là cả khóa học chưa xuất bản. Hệ quả:
+       phản hồi của một học viên đã mua bị phục vụ lại cho khách vãng lai
+       trong suốt thời gian còn hiệu lực của bộ đệm. */
     const currency = (req.header('X-Currency') || 'VND').trim().toUpperCase();
-    const key = `cache:${req.originalUrl}:curr:${currency}`;
+    const identity = req.user
+      ? `u${req.user.id}:${req.user.role}`
+      : 'anon';
+    const key = `cache:${identity}:${req.originalUrl}:curr:${currency}`;
 
     try {
       const cachedData = await redisClient.get(key);

@@ -25,11 +25,23 @@
 #    Máy này không có GPU; nếu để `auto` hay `qwen`, AI Service sẽ gọi vLLM ở
 #    127.0.0.1:8000 (tức gọi vào chính nó) rồi chờ hết timeout ở MỖI câu hỏi
 #    trước khi rơi về Gemini. Người dùng chỉ thấy "chatbot rất chậm".
-LLM_PROVIDER=gemini
+# [SỬA 19/08/2026] auto = Gemini trước, Qwen dự phòng khi Gemini hết hạn mức
+# hoặc khi không cấu hình khóa Gemini nào. Xem src/core/llm_provider.py.
+#   gemini     = chỉ Gemini      |  qwen = chỉ Qwen
+#   qwen-first = Qwen trước      |  (đây là hành vi CŨ của "auto")
+LLM_PROVIDER=auto
+
+# Sau khi Gemini báo hết hạn mức thì ngưng gọi nó bao lâu (giây).
+LLM_GEMINI_COOLDOWN_SECONDS=900
 
 # Ba dòng dưới không dùng tới ở giai đoạn 1, giữ để sang giai đoạn 2 khỏi phải
 # nhớ lại tên biến.
+# ⚠️ TRÊN GPU EC2 #2 PHẢI ĐỔI thành IP NỘI BỘ của GPU EC2 #1.
+# Để 127.0.0.1 nghĩa là AI Service tự gọi vào chính nó, không bao giờ tới được
+# vLLM — và vì đã có Gemini nên MỌI THỨ VẪN CHẠY, không ai phát hiện ra rằng
+# GPU đắt tiền kia chưa từng phục vụ một câu hỏi nào.
 VLLM_BASE_URL=http://127.0.0.1:8000/v1
+VLLM_TIMEOUT_SECONDS=180
 VLLM_MODEL_NAME=Qwen/Qwen3.6-27B-AWQ
 VLLM_API_KEY=not-needed
 
@@ -108,9 +120,10 @@ AI_SERVICE_WORKERS=1
 #
 #   VLLM_BASE_URL=http://<ip-noi-bo-cua-may-vllm>:8000/v1
 #
-#   WHISPER_MODEL_SIZE=medium
+#   WHISPER_MODEL_SIZE=large-v3
 #   WHISPER_DEVICE=cuda
 #   WHISPER_COMPUTE_TYPE=float16
+#   (large-v3 float16 ~3.1GB VRAM, thừa sức với T4 16GB của g4dn.xlarge)
 #       Ba dòng này KHÔNG có tác dụng gì trên ảnh bản CPU (không kèm
 #       faster-whisper). Chỉ thêm khi ảnh được build với
 #       --build-arg INSTALL_EXTRAS="whisper,gpu".

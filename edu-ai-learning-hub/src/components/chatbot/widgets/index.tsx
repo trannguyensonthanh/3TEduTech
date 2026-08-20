@@ -1,8 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+// src/components/chatbot/widgets/index.tsx
+//
+/* [VIẾT LẠI GIAO DIỆN 20/08/2026 — theo src/DESIGN-SYSTEM.md]
+   Các thẻ widget trước đây mỗi cái một hệ màu riêng (xanh dương chuyển tím cho
+   thẻ khóa học, ngọc chuyển lam cho thẻ thanh toán, lục cho thẻ thành công) và
+   đều tự tô nền chuyển sắc. Nằm trong khung chat thì thành ba sản phẩm khác
+   nhau chồng lên nhau. Nay tất cả dùng token bề mặt: viền `border-border`, nền
+   `bg-card`, hành động chính `bg-primary`.
+
+   Hành vi giữ nguyên tuyệt đối: cùng bộ hook thanh toán, cùng thứ tự gọi, cùng
+   các nhánh điều hướng. */
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Star, CreditCard, Wallet, QrCode, Lock, ArrowRight, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle,
+  FileText,
+  Loader2,
+  Lock,
+  Star,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import apiHelper from '@/services/apiHelper';
 import { useMyEnrollments } from '@/hooks/queries/enrollment.queries';
 import { useToast } from '@/hooks/use-toast';
 import { useCourses } from '@/hooks/queries/course.queries';
@@ -15,7 +43,7 @@ import {
 } from '@/hooks/queries/payment.queries';
 import { useCreateMomoUrl } from '@/services/payment.service';
 
-// --- COURSE CAROUSEL WIDGET (PREMIUM STACKED DECK) ---
+// --- THẺ ĐỀ XUẤT KHÓA HỌC ---
 interface CourseCarouselWidgetProps {
   data: {
     courses: {
@@ -52,16 +80,16 @@ export const CourseCarouselWidget: React.FC<CourseCarouselWidgetProps> = ({ data
 
   if (courses.length === 0) return null;
 
-  // Format currency display song song VNĐ / USD (Tỷ giá tạm tính ~24,500)
+  // Hiển thị song song VNĐ / USD (tỷ giá tạm tính ~24.500)
   const formatDualPrice = (price?: number) => {
-    if (!price || price <= 0) return '🎁 Học liệu đề xuất';
+    if (!price || price <= 0) return 'Học liệu đề xuất';
     const priceVND = price.toLocaleString('vi-VN') + ' VNĐ';
-    const priceUSD = '($' + (price / 24500).toFixed(2) + ')';
-    return `🏷️ ${priceVND} ~ ${priceUSD}`;
+    const priceUSD = '(' + (price / 24500).toFixed(2) + ' USD)';
+    return `${priceVND} ~ ${priceUSD}`;
   };
 
   return (
-    <div className="w-full max-w-full space-y-3 mt-3.5 min-w-0 overflow-hidden">
+    <div className="mt-3 w-full min-w-0 max-w-full space-y-3 overflow-hidden">
       {courses.map((course, idx) => {
         const isEnrolled = course.isEnrolled ||
           (course.courseId && enrolledIds.has(course.courseId)) ||
@@ -69,98 +97,96 @@ export const CourseCarouselWidget: React.FC<CourseCarouselWidgetProps> = ({ data
           (course.courseName && enrolledNames.has(course.courseName.toLowerCase()));
 
         return (
-          <Card 
-            key={idx} 
-            className="w-full border-blue-500/30 dark:border-blue-400/30 bg-gradient-to-br from-white/95 via-blue-50/20 to-slate-50 dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900/90 shadow-md hover:shadow-blue-500/10 hover:border-blue-500 transition-all duration-200 rounded-xl overflow-hidden flex flex-col min-w-0"
+          <div
+            key={idx}
+            className="flex w-full min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-card p-4 text-card-foreground"
           >
-            <div className="p-3.5 sm:p-4 flex flex-col gap-2.5">
-              {/* Header & Number Badge */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 max-w-[80%]">
-                  <span className="flex items-center justify-center min-w-[28px] h-7 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-black rounded-lg shadow-sm">
-                    #{idx + 1}
-                  </span>
-                  <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-2 leading-snug">
-                    {course.courseName}
-                  </h4>
-                </div>
-                {isEnrolled ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30 shrink-0">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Đã Đăng Ký</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 shrink-0">
-                    <Star className="w-3 h-3 fill-current text-amber-500 animate-pulse" />
-                    <span>98% Phù hợp</span>
-                  </span>
-                )}
+            {/* Tiêu đề và số thứ tự */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-md bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-foreground">
+                  {idx + 1}
+                </span>
+                <h4 className="line-clamp-2 text-sm font-semibold leading-snug">
+                  {course.courseName}
+                </h4>
               </div>
+              {isEnrolled ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+                  <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Đã đăng ký</span>
+                </span>
+              ) : (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  <Star className="h-3 w-3" aria-hidden="true" />
+                  <span>Phù hợp</span>
+                </span>
+              )}
+            </div>
 
-              {/* Price tag */}
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 w-fit px-2.5 py-1 rounded-md border border-emerald-500/20">
-                {formatDualPrice(course.price)}
-              </div>
+            {/* Giá */}
+            <div className="w-fit rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+              {formatDualPrice(course.price)}
+            </div>
 
-              {/* Description */}
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                {course.description || 'Khóa học được AI chọn lọc kỹ lưỡng, cung cấp kiến thức thực chiến và chuyên sâu cho lộ trình học của bạn.'}
-              </p>
+            {/* Mô tả */}
+            <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+              {course.description || 'Khóa học được trợ lý chọn lọc theo mục tiêu học tập của bạn.'}
+            </p>
 
-              {/* Actions */}
-              <div className="pt-1 flex items-center justify-end gap-2 mt-1 border-t border-slate-100 dark:border-slate-800/80">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-xs h-8 px-3 rounded-lg border-slate-300 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600 transition-colors"
+            {/* Hành động */}
+            <div className="mt-1 flex items-center justify-end gap-2 border-t border-border pt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => {
+                  if (course.slug) {
+                    navigate(`/courses/${course.slug}`);
+                  } else if (course.courseId) {
+                    navigate(`/courses/${course.courseId}`);
+                  } else {
+                    navigate(`/courses?search=${encodeURIComponent(course.courseName)}`);
+                  }
+                }}
+              >
+                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" /> Xem chi tiết
+              </Button>
+
+              {isEnrolled ? (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
                   onClick={() => {
                     if (course.slug) {
                       navigate(`/courses/${course.slug}`);
                     } else if (course.courseId) {
                       navigate(`/courses/${course.courseId}`);
                     } else {
+                      navigate('/my-courses');
+                    }
+                  }}
+                >
+                  <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Vào học ngay</span>
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    if (onSelectCourse) {
+                      onSelectCourse(`Tôi muốn mua khóa học số ${idx + 1}: ${course.courseName}`);
+                    } else {
                       navigate(`/courses?search=${encodeURIComponent(course.courseName)}`);
                     }
-                  }} 
+                  }}
                 >
-                  <BookOpen className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Xem chi tiết
+                  Mua khóa {idx + 1}
                 </Button>
-
-                {isEnrolled ? (
-                  <Button 
-                    size="sm" 
-                    className="text-xs h-8 px-3.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm transition-transform active:scale-95 font-bold flex items-center gap-1.5"
-                    onClick={() => {
-                      if (course.slug) {
-                        navigate(`/courses/${course.slug}`);
-                      } else if (course.courseId) {
-                        navigate(`/courses/${course.courseId}`);
-                      } else {
-                        navigate('/my-courses');
-                      }
-                    }}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5 text-white animate-pulse" />
-                    <span>🎓 Đã sở hữu • Vào học ngay</span>
-                  </Button>
-                ) : (
-                  <Button 
-                    size="sm" 
-                    className="text-xs h-8 px-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm transition-transform active:scale-95 font-medium"
-                    onClick={() => {
-                      if (onSelectCourse) {
-                        onSelectCourse(`Tôi muốn mua khóa học số ${idx + 1}: ${course.courseName}`);
-                      } else {
-                        navigate(`/courses?search=${encodeURIComponent(course.courseName)}`);
-                      }
-                    }}
-                  >
-                    💳 Mua khóa #{idx + 1}
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>
@@ -187,7 +213,34 @@ const useInstantAiCheckout = () => {
       setIsProcessing(true);
       const method = (paymentMethod || 'VNPAY').toUpperCase();
       
-      // 1. Tìm chính xác thông tin khóa học trong hệ thống để đưa giá tiền thật (ví dụ 499k) vào giỏ hàng
+      /* ====================================================================
+         [SỬA 20/08/2026] HAI LỖI NGHIÊM TRỌNG VỀ TIỀN ĐÃ ĐƯỢC BỊT Ở ĐÂY
+
+         LỖI 1 — TỰ CHỌN ĐẠI MỘT KHÓA HỌC KHI KHÔNG KHỚP
+         Bản cũ kết thúc phép tìm bằng `|| courses[0]`, kèm chú thích "fallback
+         nếu không khớp tuyệt đối, đảm bảo không bao giờ bị 0đ". Nhưng khi
+         không khớp thì `courses[0]` là KHÓA HỌC ĐẦU TIÊN TRONG DANH MỤC, chẳng
+         liên quan gì tới thứ người dùng đang xem. Nó được thêm vào giỏ, tạo
+         đơn, rồi chuyển thẳng sang cổng thanh toán — không một bước xác nhận
+         nào ở giữa. Người dùng trả tiền cho một khóa họ chưa từng chọn.
+
+         Đường đi tới trạng thái đó có thật và không hiếm: `_resolve_course_
+         reference` phía AI Service ánh xạ "khóa số 1" bằng cách bốc chuỗi in
+         đậm thứ N trong câu trả lời trước, mà thứ tự chữ in đậm do mô hình tự
+         viết ra, không liên quan tới thứ tự thẻ trong danh sách. Chỉ cần mô
+         hình in đậm một cụm bất kỳ là tên khóa học "đã chọn" sai ngay.
+
+         Nay: không khớp thì KHÔNG tạo đơn. Báo cho người dùng và đưa họ về
+         trang danh sách khóa học kèm từ khóa để tự chọn.
+
+         LỖI 2 — THANH TOÁN CẢ GIỎ HÀNG CHỨ KHÔNG PHẢI KHÓA ĐANG CHỌN
+         `createOrder(null)` tạo đơn từ TOÀN BỘ giỏ hàng. Nếu người dùng đã bỏ
+         sẵn ba khóa khác vào giỏ từ hôm trước, bấm "Đặt hàng và thanh toán"
+         trong khung chat sẽ tính tiền cả bốn khóa, trong khi giao diện chỉ nói
+         về đúng một khóa. Nay khi giỏ có nhiều hơn khóa đang chọn, hệ thống
+         chuyển sang trang thanh toán chuẩn để người dùng nhìn thấy đầy đủ
+         những gì mình sắp trả tiền.
+         ==================================================================== */
       const courses = coursesResponse?.courses || [];
       const target = courses.find((c: any) => {
         if (!c) return false;
@@ -195,36 +248,70 @@ const useInstantAiCheckout = () => {
         if (typeof courseNameOrId === 'string' && courseNameOrId) {
           const cleanInput = courseNameOrId.toLowerCase().replace(/khóa học[:\s]*/i, '').trim();
           const cleanCourseName = (c.courseName || '').toLowerCase().trim();
+          if (!cleanInput || !cleanCourseName) return false;
           return cleanCourseName === cleanInput || cleanCourseName.includes(cleanInput) || cleanInput.includes(cleanCourseName);
         }
         return false;
-      }) || courses[0]; // fallback nếu không khớp tuyệt đối, đảm bảo không bao giờ bị 0đ
+      });
 
-      if (target && target.courseId) {
+      if (!target || !target.courseId) {
         toast({
-          title: '⚡ Đang chuẩn bị cổng thanh toán...',
-          description: `Đang đồng bộ khóa học "${target.courseName}"...`,
+          title: 'Chưa xác định được khóa học',
+          description:
+            'Trợ lý không tìm ra khóa học khớp với lựa chọn của bạn trong danh mục. Để tránh đặt nhầm, bạn hãy chọn trực tiếp trong danh sách nhé.',
+          variant: 'destructive',
         });
+        const keyword =
+          typeof courseNameOrId === 'string' && courseNameOrId
+            ? `?q=${encodeURIComponent(courseNameOrId)}`
+            : '';
+        navigate(`/courses${keyword}`);
+        setIsProcessing(false);
+        return;
+      }
 
-        // Kiểm tra xem khóa học đã có trong giỏ hàng chưa
-        const alreadyInCart = cartData?.items?.some((i: any) => i.courseId === target.courseId);
-        if (!alreadyInCart) {
-          try {
-            await addCourseToCart(target.courseId);
-          } catch (err: any) {
-            console.log('Notice when adding to cart from AI:', err?.message);
-          }
+      toast({
+        title: '⚡ Đang chuẩn bị cổng thanh toán...',
+        description: `Đang đồng bộ khóa học "${target.courseName}"...`,
+      });
+
+      // Kiểm tra xem khóa học đã có trong giỏ hàng chưa
+      const cartItems = cartData?.items || [];
+      const alreadyInCart = cartItems.some((i: any) => i.courseId === target.courseId);
+      if (!alreadyInCart) {
+        try {
+          await addCourseToCart(target.courseId);
+        } catch (err: any) {
+          console.log('Notice when adding to cart from AI:', err?.message);
         }
-      } else {
+      }
+
+      /* Giỏ hàng đang chứa thứ khác ngoài khóa học này => KHÔNG tự tạo đơn.
+         Đưa người dùng sang trang thanh toán chuẩn, nơi họ nhìn thấy đầy đủ
+         danh sách và tổng tiền trước khi trả. */
+      const hasOtherItems = cartItems.some(
+        (i: any) => i.courseId !== target.courseId
+      );
+      if (hasOtherItems) {
         toast({
-          title: 'Chuyển hướng thanh toán...',
-          description: `Đang mở cổng ${method}...`,
+          title: 'Giỏ hàng đang có nhiều khóa học',
+          description:
+            'Bạn hãy xác nhận danh sách và tổng tiền ở trang thanh toán trước khi trả nhé.',
         });
+        navigate('/checkout', {
+          state: {
+            preferredMethod: method,
+            courseName: target.courseName,
+            courseId: target.courseId,
+          },
+        });
+        setIsProcessing(false);
+        return;
       }
 
       // 2. Nếu là PayPal, điều hướng sang /checkout (lúc này giỏ hàng ĐÃ CÓ GIÁ TIỀN THẬT, không còn 0đ!)
       if (method === 'PAYPAL') {
-        navigate('/checkout', { state: { preferredMethod: method, courseName: target?.courseName || courseNameOrId, courseId: target?.courseId } });
+        navigate('/checkout', { state: { preferredMethod: method, courseName: target.courseName, courseId: target.courseId } });
         setIsProcessing(false);
         return;
       }
@@ -244,7 +331,10 @@ const useInstantAiCheckout = () => {
         description: `Đang chuyển hướng thẳng vào cổng thanh toán bảo mật ${method}...`,
       });
 
-      if (method === 'VNPAY') {
+      if (method === 'MOCK_TEST') {
+        setIsProcessing(false);
+        return order.orderId;
+      } else if (method === 'VNPAY') {
         await createVnpayUrl({ orderId: order.orderId });
       } else if (method === 'MOMO') {
         await createMomoUrl({ orderId: order.orderId });
@@ -258,7 +348,7 @@ const useInstantAiCheckout = () => {
         sessionStorage.setItem('cryptoPaymentInfo', JSON.stringify(invoiceInfo));
         navigate('/payment/crypto');
       } else {
-        navigate('/checkout', { state: { preferredMethod: method, courseId: target?.courseId } });
+        navigate('/checkout', { state: { preferredMethod: method, courseId: target.courseId } });
       }
     } catch (error: any) {
       console.error('Instant AI checkout error:', error);
@@ -275,7 +365,7 @@ const useInstantAiCheckout = () => {
   return { executeCheckout, isProcessing };
 };
 
-// --- PAYMENT SELECTOR WIDGET (PREMIUM MINI-CHECKOUT) ---
+// --- THẺ CHỌN CỔNG THANH TOÁN ---
 interface ChatPaymentSelectorWidgetProps {
   data: {
     courseName: string;
@@ -287,42 +377,47 @@ interface ChatPaymentSelectorWidgetProps {
 export const ChatPaymentSelectorWidget: React.FC<ChatPaymentSelectorWidgetProps> = ({ data, onSelectPayment }) => {
   const [selectedMethod, setSelectedMethod] = useState<string>('VNPAY');
   const { executeCheckout, isProcessing } = useInstantAiCheckout();
+  const [isMockPaymentDialogOpen, setIsMockPaymentDialogOpen] = useState(false);
+  const [mockOrderId, setMockOrderId] = useState<number | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const methods = [
-    { id: 'VNPAY', name: 'VNPAY Gateway (VNĐ)', icon: '🇻🇳', desc: 'Thẻ ATM / Visa / QR' },
-    { id: 'MOMO', name: 'Ví MoMo E-Wallet', icon: '📱', desc: 'Thanh toán siêu tốc' },
-    { id: 'STRIPE', name: 'Stripe (Quốc Tế)', icon: '💳', desc: 'Thẻ Visa / Mastercard' },
-    { id: 'PAYPAL', name: 'PayPal Protect', icon: '💙', desc: 'Tài khoản PayPal' },
-    { id: 'CRYPTO', name: 'Web3 Crypto (USDT/BTC)', icon: '🪙', desc: 'Thanh toán TRC20/ERC20' },
+    { id: 'VNPAY', name: 'VNPAY', desc: 'Thẻ ATM / Visa / QR' },
+    { id: 'MOMO', name: 'Ví MoMo', desc: 'Thanh toán qua ví điện tử' },
+    { id: 'STRIPE', name: 'Stripe (quốc tế)', desc: 'Thẻ Visa / Mastercard' },
+    { id: 'PAYPAL', name: 'PayPal', desc: 'Tài khoản PayPal' },
+    { id: 'CRYPTO', name: 'Tiền mã hóa (USDT/BTC)', desc: 'Mạng TRC20 / ERC20' },
+    { id: 'MOCK_TEST', name: 'Mô phỏng thanh toán', desc: 'Mock Test' },
   ];
 
   return (
-    <Card className="mt-3.5 border-emerald-500/40 dark:border-emerald-500/30 bg-gradient-to-br from-white via-emerald-50/10 to-slate-50 dark:from-slate-900 dark:via-emerald-950/20 dark:to-slate-900 shadow-xl rounded-2xl overflow-hidden w-full max-w-full min-w-0">
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-3 flex items-center justify-between text-white shadow-sm">
-        <div className="flex items-center gap-2">
-          <Lock className="w-4 h-4 text-emerald-200 animate-pulse" />
-          <h4 className="text-sm font-bold tracking-wide uppercase">AI Mini-Checkout</h4>
-        </div>
-        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-md">
+    <div className="mt-3 w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <Lock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          Thanh toán nhanh
+        </span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           Bảo mật SSL 256-bit
         </span>
       </div>
-      
-      <CardContent className="p-4 space-y-3.5">
-        <div className="bg-slate-100 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-          <span className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1">
-            Khóa học đăng ký:
+
+      <div className="space-y-3.5 p-4">
+        <div className="rounded-lg border border-border p-3">
+          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Khóa học đăng ký
           </span>
-          <p className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-            {data.courseName || 'Khóa học được AI Đề Ký'}
+          <p className="line-clamp-2 text-sm font-medium leading-snug">
+            {data.courseName || 'Khóa học do trợ lý đề xuất'}
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 mb-1">
-            <span>Chọn 1 trong 5 cổng thanh toán:</span>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <span className="mb-1 block text-xs font-medium text-foreground">
+            Chọn một trong năm cổng thanh toán:
+          </span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {methods.map((m) => {
               const isActive = selectedMethod === m.id;
               return (
@@ -331,23 +426,22 @@ export const ChatPaymentSelectorWidget: React.FC<ChatPaymentSelectorWidgetProps>
                   type="button"
                   disabled={isProcessing}
                   onClick={() => setSelectedMethod(m.id)}
-                  className={`text-left p-2.5 rounded-xl border transition-all duration-200 flex items-center gap-2.5 relative ${
-                    isActive 
-                      ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 shadow-sm ring-1 ring-emerald-500' 
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-800'
+                  className={`relative flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-colors disabled:opacity-60 ${
+                    isActive
+                      ? 'border-primary bg-accent text-accent-foreground'
+                      : 'border-border bg-card hover:bg-muted'
                   }`}
                 >
-                  <span className="text-xl shrink-0">{m.icon}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                    <div className="truncate text-xs font-semibold leading-tight">
                       {m.name}
                     </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="truncate text-xs text-muted-foreground">
                       {m.desc}
                     </div>
                   </div>
                   {isActive && (
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 ml-auto mr-0.5 shadow-sm animate-ping" />
+                    <CheckCircle className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                   )}
                 </button>
               );
@@ -355,38 +449,87 @@ export const ChatPaymentSelectorWidget: React.FC<ChatPaymentSelectorWidgetProps>
           </div>
         </div>
 
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-          <Button 
+        <div className="border-t border-border pt-3">
+          <Button
             disabled={isProcessing}
-            className="w-full h-11 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white font-extrabold text-sm rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-            onClick={() => {
+            className="h-10 w-full"
+            onClick={async () => {
               if (onSelectPayment) onSelectPayment(selectedMethod);
-              executeCheckout(data.courseName, selectedMethod);
+              const returnedOrderId = await executeCheckout(data.courseName, selectedMethod);
+              if (selectedMethod === 'MOCK_TEST' && returnedOrderId) {
+                setMockOrderId(returnedOrderId as number);
+                setIsMockPaymentDialogOpen(true);
+              }
             }}
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>⏳ Đang kết nối Webhook {selectedMethod}...</span>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>Đang kết nối {selectedMethod}...</span>
               </>
             ) : (
               <>
-                <Lock className="w-4 h-4" />
-                <span>Place Order & Pay ({selectedMethod})</span>
+                <Lock className="h-4 w-4" aria-hidden="true" />
+                <span>Đặt hàng và thanh toán ({selectedMethod})</span>
               </>
             )}
           </Button>
-          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2">
-            ⚡ Chuyển thẳng tới cổng thanh toán Webhook Gateway không cần qua trang Checkout!
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Bạn sẽ được chuyển thẳng tới cổng thanh toán, không cần qua trang giỏ hàng.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <Dialog open={isMockPaymentDialogOpen} onOpenChange={setIsMockPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mô phỏng thanh toán (Mock Test)</DialogTitle>
+            <DialogDescription>
+              Bạn muốn đơn hàng này thanh toán thành công hay thất bại? Việc này sẽ cập nhật trực tiếp vào hệ thống (giả lập webhook từ cổng thanh toán).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end mt-4">
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                try {
+                  setIsMockPaymentDialogOpen(false);
+                  toast({ title: 'Đang xử lý...', description: 'Vui lòng đợi' });
+                  await apiHelper.post(`/orders/${mockOrderId}/mock-payment`, { status: 'failed' });
+                  toast({ title: 'Đã hủy đơn hàng', variant: 'default' });
+                  navigate('/my-courses');
+                } catch (e: any) {
+                  toast({ title: 'Lỗi', description: e.message || 'Lỗi xử lý', variant: 'destructive' });
+                }
+              }}
+            >
+              Thất bại (Hủy đơn)
+            </Button>
+            <Button
+              variant="default"
+              onClick={async () => {
+                try {
+                  setIsMockPaymentDialogOpen(false);
+                  toast({ title: 'Đang xử lý...', description: 'Vui lòng đợi' });
+                  await apiHelper.post(`/orders/${mockOrderId}/mock-payment`, { status: 'success' });
+                  toast({ title: 'Thanh toán thành công!', variant: 'default' });
+                  navigate('/my-courses');
+                } catch (e: any) {
+                  toast({ title: 'Lỗi', description: e.message || 'Lỗi xử lý', variant: 'destructive' });
+                }
+              }}
+            >
+              Thành công (Kích hoạt)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
 
-// --- CHECKOUT REDIRECT WIDGET ---
+// --- THẺ CHUYỂN SANG CỔNG THANH TOÁN ---
 interface CheckoutRedirectWidgetProps {
   data: {
     courseName?: string;
@@ -397,59 +540,61 @@ interface CheckoutRedirectWidgetProps {
 export const CheckoutRedirectWidget: React.FC<CheckoutRedirectWidgetProps> = ({ data }) => {
   const method = (data.paymentMethod || 'VNPAY').toUpperCase();
   const { executeCheckout, isProcessing } = useInstantAiCheckout();
-  
-  const getMethodBadge = () => {
+
+  const getMethodName = () => {
     switch (method) {
-      case 'MOMO': return { icon: '📱', name: 'Ví MoMo', color: 'from-pink-500 to-rose-600' };
-      case 'STRIPE': return { icon: '💳', name: 'Stripe', color: 'from-purple-600 to-indigo-600' };
-      case 'PAYPAL': return { icon: '💙', name: 'PayPal', color: 'from-blue-600 to-cyan-600' };
-      case 'CRYPTO': return { icon: '🪙', name: 'Web3 Crypto', color: 'from-amber-500 to-yellow-600' };
-      default: return { icon: '🇻🇳', name: 'VNPAY Gateway', color: 'from-blue-600 to-emerald-600' };
+      case 'MOMO': return 'Ví MoMo';
+      case 'STRIPE': return 'Stripe';
+      case 'PAYPAL': return 'PayPal';
+      case 'CRYPTO': return 'Tiền mã hóa';
+      default: return 'VNPAY';
     }
   };
 
-  const badge = getMethodBadge();
+  const methodName = getMethodName();
 
   return (
-    <Card className="mt-3.5 border-teal-500/30 dark:border-teal-500/20 shadow-xl overflow-hidden w-full max-w-full bg-gradient-to-br from-white via-teal-50/10 to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/20 rounded-2xl">
-      <CardContent className="p-5 flex flex-col items-center text-center space-y-3.5">
-        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${badge.color} flex items-center justify-center text-2xl text-white shadow-lg shadow-teal-500/20 animate-bounce`}>
-          {badge.icon}
-        </div>
+    <div className="mt-3 w-full max-w-full overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
+      <div className="flex flex-col items-center space-y-3 p-5 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <Lock className="h-5 w-5" aria-hidden="true" />
+        </span>
         <div>
-          <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded-full mb-1">
-            Sẵn sàng chuyển giao Webhook
-          </span>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Xác nhận thanh toán qua {badge.name}</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-300 line-clamp-2 mt-1 px-2">
-            Khóa học: <strong className="text-slate-800 dark:text-white">{data.courseName || 'Khóa học đã chọn'}</strong>
+          <h3 className="text-sm font-semibold">
+            Xác nhận thanh toán qua {methodName}
+          </h3>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+            Khóa học:{' '}
+            <span className="font-medium text-foreground">
+              {data.courseName || 'Khóa học đã chọn'}
+            </span>
           </p>
         </div>
-        
-        <Button 
+
+        <Button
           disabled={isProcessing}
-          className={`w-full h-11 bg-gradient-to-r ${badge.color} hover:opacity-95 text-white font-extrabold text-sm rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2`}
+          className="h-10 w-full"
           onClick={() => executeCheckout(data.courseName, method)}
         >
           {isProcessing ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>⏳ Đang kết nối {badge.name}...</span>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Đang kết nối {methodName}...</span>
             </>
           ) : (
             <>
-              <Lock className="w-4 h-4" />
-              <span>🚀 Mở Cổng Thanh Toán {badge.name} Ngay</span>
+              <Lock className="h-4 w-4" aria-hidden="true" />
+              <span>Mở cổng thanh toán {methodName}</span>
             </>
           )}
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
 
-// --- ENROLLMENT SUCCESS WIDGET ---
+// --- THẺ BÁO ĐĂNG KÝ THÀNH CÔNG ---
 interface EnrollmentSuccessWidgetProps {
   data: {
     courseName?: string;
@@ -460,69 +605,36 @@ export const EnrollmentSuccessWidget: React.FC<EnrollmentSuccessWidgetProps> = (
   const navigate = useNavigate();
 
   return (
-    <Card className="mt-3 border-green-500/30 shadow-xl overflow-hidden w-full max-w-[340px] bg-gradient-to-b from-green-50/50 to-card dark:from-green-950/20 dark:to-card relative">
-      <style>{`
-        @keyframes confetti {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100px) rotate(360deg); opacity: 0; }
-        }
-        .confetti-piece {
-          position: absolute;
-          width: 8px;
-          height: 8px;
-          background: #22c55e;
-          animation: confetti 2s ease-out forwards;
-        }
-      `}</style>
-      
-      {/* CSS Confetti */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(12)].map((_, i) => (
-          <div 
-            key={i} 
-            className="confetti-piece rounded-sm"
-            style={{ 
-              left: `${Math.random() * 100}%`, 
-              top: '-10px',
-              animationDelay: `${Math.random() * 0.5}s`,
-              backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899'][Math.floor(Math.random() * 4)]
-            }} 
-          />
-        ))}
-      </div>
+    <div className="mt-3 w-full max-w-[340px] overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
+      <div className="flex flex-col items-center p-5 text-center">
+        <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+          <CheckCircle className="h-8 w-8" aria-hidden="true" />
+        </span>
 
-      <CardContent className="p-5 flex flex-col items-center text-center relative z-10">
-        <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 shadow-inner">
-          <CheckCircle className="w-10 h-10 text-green-500 animate-[bounce_1s_ease-in-out_infinite]" />
-        </div>
-        
-        <h3 className="text-base font-bold text-green-600 dark:text-green-400 mb-1">
-          🎉 THANH TOÁN THÀNH CÔNG!
+        <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-success">
+          Thanh toán thành công
         </h3>
-        
-        <p className="text-xs text-muted-foreground mb-5 font-medium line-clamp-2">
+
+        <p className="mb-5 line-clamp-2 text-xs text-muted-foreground">
           {data.courseName || 'Khóa học của bạn'}
         </p>
-        
+
         <div className="w-full space-y-2">
-          <Button 
-            className="w-full bg-green-500 hover:bg-green-600 text-white shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
-            onClick={() => navigate('/my-courses')}
-          >
-            <ArrowRight className="w-4 h-4 mr-2" />
-            🚀 Vào Lớp Học Ngay
+          <Button className="w-full" onClick={() => navigate('/my-courses')}>
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            Vào lớp học ngay
           </Button>
-          
-          <Button 
+
+          <Button
             variant="outline"
-            className="w-full border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full"
             onClick={() => navigate('/orders')}
           >
-            <FileText className="w-4 h-4 mr-2" />
-            📜 Xem Đơn Hàng
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Xem đơn hàng
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

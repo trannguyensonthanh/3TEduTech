@@ -18,6 +18,13 @@ import {
 } from '@/components/ui/card';
 import { MonthlyRevenue } from '@/services/admin.service';
 import { useSettings } from '@/contexts/SettingsContext';
+import {
+  axisProps,
+  barRadius,
+  gridProps,
+  seriesColor,
+  tooltipProps,
+} from '@/lib/chart-theme';
 
 interface RevenueChartProps {
   data: MonthlyRevenue[];
@@ -37,36 +44,22 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ data }) => {
       <CardContent className='pl-2'>
         <ResponsiveContainer width='100%' height={350}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray='3 3' vertical={false} />
-            <XAxis
-              dataKey='month'
-              stroke='#888888'
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
+            {/* Trục, lưới và hộp chú giải lấy từ chart-theme: trước đây trục
+                dùng mã xám cứng nên chữ trục biến mất ở chế độ tối. */}
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey='month' {...axisProps} />
             <YAxis
-              stroke='#888888'
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
+              {...axisProps}
               tickFormatter={(value) =>
                 formatPrice(Number(value) / 1000000) + 'M'
               }
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-              }}
-              labelStyle={{ color: 'hsl(var(--card-foreground))' }}
+              {...tooltipProps}
               formatter={(value) => [formatPrice(Number(value)), 'Revenue']}
             />
-            <Bar
-              dataKey='revenue'
-              fill='hsl(var(--primary))'
-              radius={[4, 4, 0, 0]}
-            />
+            {/* Một chuỗi duy nhất -> khe màu thứ nhất, không cần chú giải. */}
+            <Bar dataKey='revenue' fill={seriesColor(0)} radius={barRadius} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

@@ -187,6 +187,10 @@ async def ingest_course_content(
     course_description: str,
     lessons: list[dict],
     collection_name: str | None = None,
+    course_id: int | None = None,
+    slug: str | None = None,
+    price: float | None = None,
+    version_number: int | None = None,
 ) -> int:
     """
     Ingest course content (description + lessons) for course-specific AI.
@@ -205,6 +209,23 @@ async def ingest_course_content(
 
     total_chunks = 0
 
+    # [THÊM 20/08/2026] Siêu dữ liệu định danh, gắn vào MỌI đoạn của khóa học.
+    #
+    # ChromaDB chỉ nhận giá trị vô hướng trong metadata, nên phải loại bỏ các
+    # trường None thay vì gửi lên rồi để thư viện ném lỗi giữa chừng và làm hỏng
+    # cả lượt nạp. Bỏ hẳn một trường an toàn hơn: nơi đọc đều dùng `.get()` kèm
+    # giá trị mặc định.
+    identity = {
+        k: v
+        for k, v in {
+            "course_id": course_id,
+            "slug": slug,
+            "price": price,
+            "version_number": version_number,
+        }.items()
+        if v is not None
+    }
+
     # Ingest course overview
     if course_description:
         overview = f"Course: {course_name}\n\n{course_description}"
@@ -212,7 +233,7 @@ async def ingest_course_content(
             overview,
             f"course_overview_{course_name}",
             target_collection,
-            {"type": "course_overview", "course_name": course_name},
+            {"type": "course_overview", "course_name": course_name, **identity},
         )
         total_chunks += count
 
@@ -232,6 +253,7 @@ async def ingest_course_content(
                 "type": "lesson",
                 "course_name": course_name,
                 "lesson_name": lesson_name,
+                **identity,
             },
         )
         total_chunks += count

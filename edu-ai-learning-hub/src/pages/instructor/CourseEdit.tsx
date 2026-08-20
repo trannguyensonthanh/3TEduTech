@@ -147,8 +147,8 @@ const CourseEdit: React.FC = () => {
           try {
             const eventData = JSON.parse(event.data);
             if (Number(eventData.courseId) === Number(course.courseId)) {
-              toast.success('Your course has been reviewed by an admin!', {
-                description: `Status changed to ${eventData.newStatus}. Please review any feedback.`,
+              toast.success('Khóa học của bạn đã được quản trị viên duyệt.', {
+                description: `Trạng thái chuyển sang ${eventData.newStatus}. Bạn xem lại phản hồi nhé.`,
                 duration: 10000,
               });
 
@@ -181,7 +181,7 @@ const CourseEdit: React.FC = () => {
 
             setLiveNotification({
               isOpen: true,
-              title: 'New Notification',
+              title: 'Thông báo mới',
               message: notification,
               actionText: 'Chuyển hướng về danh sách khóa học',
               onActionClick: () => navigate('/instructor/courses'),
@@ -276,7 +276,7 @@ const CourseEdit: React.FC = () => {
                 onError: (err: any) => {
                   toast.error(
                     err?.message ||
-                      'An error occurred while updating the course.'
+                      'Đã xảy ra lỗi khi cập nhật khóa học.'
                   );
                 },
               }
@@ -291,7 +291,7 @@ const CourseEdit: React.FC = () => {
             });
           }
 
-          resolve('All changes saved successfully!');
+          resolve('Đã lưu toàn bộ thay đổi.');
         } catch (err) {
           reject(err);
         }
@@ -299,13 +299,13 @@ const CourseEdit: React.FC = () => {
     });
 
     toast.promise(promise, {
-      loading: 'Saving changes...',
+      loading: 'Đang lưu thay đổi…',
       success: (message) => {
         setThumbnailFile(null); // Reset file sau khi thành công
         refetch(); // Fetch lại dữ liệu mới nhất để reset form state và isDirty
         return message as string;
       },
-      error: (err: any) => err.message || 'An error occurred while saving.',
+      error: (err: any) => err.message || 'Đã xảy ra lỗi khi lưu.',
     });
   };
   const handleEditPublishedCourse = () => {
@@ -317,7 +317,7 @@ const CourseEdit: React.FC = () => {
         },
         onError: (err) =>
           toast.error(
-            (err as Error).message || 'Could not create update session.'
+            (err as Error).message || 'Không tạo được phiên cập nhật.'
           ),
       });
     }
@@ -330,12 +330,12 @@ const CourseEdit: React.FC = () => {
       { courseId: course.courseId },
       {
         onSuccess: () => {
-          toast.success('Course submitted for approval successfully!');
+          toast.success('Đã gửi khóa học đi duyệt.');
           refetch();
           setIsSubmitConfirmOpen(false);
         },
         onError: (err) =>
-          toast.error((err as Error).message || 'Submission failed.'),
+          toast.error((err as Error).message || 'Gửi duyệt không thành công.'),
       }
     );
   };
@@ -344,11 +344,11 @@ const CourseEdit: React.FC = () => {
     if (!course) return;
     deleteCourse(course.courseId, {
       onSuccess: () => {
-        toast.success(`Course "${course.courseName}" has been deleted.`);
+        toast.success(`Đã xóa khóa học "${course.courseName}".`);
         navigate('/instructor/courses');
       },
       onError: (err) =>
-        toast.error((err as Error).message || 'Could not delete course.'),
+        toast.error((err as Error).message || 'Không xóa được khóa học.'),
     });
   };
   const confirmArchive = () => {
@@ -364,7 +364,7 @@ const CourseEdit: React.FC = () => {
           }
         },
         onError: (err) =>
-          toast.error(err.message || 'Could not archive course.'),
+          toast.error(err.message || 'Không lưu trữ được khóa học.'),
       }
     );
   };
@@ -377,7 +377,7 @@ const CourseEdit: React.FC = () => {
           setIsCancelConfirmOpen(false);
         },
         onError: (err) =>
-          toast.error((err as Error).message || 'Could not cancel update.'),
+          toast.error((err as Error).message || 'Không hủy được bản cập nhật.'),
       });
     }
   };
@@ -388,7 +388,7 @@ const CourseEdit: React.FC = () => {
   if (isLoadingPage && !course) {
     return (
       <InstructorLayout>
-        <FullScreenLoader text='Loading Course Editor...' />
+        <FullScreenLoader text='Đang mở trình soạn khóa học…' />
       </InstructorLayout>
     );
   }
@@ -396,7 +396,7 @@ const CourseEdit: React.FC = () => {
     return (
       <InstructorLayout>
         <div className='p-8 text-center text-destructive'>
-          Error: {error.message}
+          Lỗi: {error.message}
         </div>
       </InstructorLayout>
     );
@@ -404,7 +404,7 @@ const CourseEdit: React.FC = () => {
   if (!course) {
     return (
       <InstructorLayout>
-        <div className='p-8 text-center'>Course not found.</div>
+        <div className='p-8 text-center'>Không tìm thấy khóa học.</div>
       </InstructorLayout>
     );
   }
@@ -440,29 +440,28 @@ const CourseEdit: React.FC = () => {
           {hasUnsavedChanges && (
             <Alert
               variant='default'
-              className='bg-yellow-50 border-yellow-200 text-yellow-800'
+              className='rounded-xl border-border bg-warning-soft text-warning'
             >
-              <Icons.alertCircle className='h-4 w-4 !text-yellow-600' />
-              <AlertTitle>You have unsaved changes!</AlertTitle>
+              <Icons.alertCircle className='h-4 w-4 !text-warning' />
+              <AlertTitle>Bạn có thay đổi chưa lưu</AlertTitle>
               <AlertDescription>
-                Don't forget to save your work before submitting for approval or
-                leaving the page.
+                Nhớ lưu công việc trước khi gửi duyệt hoặc rời khỏi trang.
               </AlertDescription>
             </Alert>
           )}
           {course.statusId === 'PUBLISHED' && (
             <Alert>
               <Icons.lock className='h-4 w-4' />
-              <AlertTitle>This course is live!</AlertTitle>
+              <AlertTitle>Khóa học đang phát hành</AlertTitle>
               <AlertDescription className='flex justify-between items-center'>
-                To prevent disruption for enrolled students, you need to create
-                a new version to make major changes.
+                Để không làm gián đoạn học viên đang học, bạn cần tạo một phiên
+                bản mới nếu muốn sửa đổi lớn.
                 <Button
                   onClick={handleEditPublishedCourse}
                   disabled={isCreatingUpdate}
                 >
-                  {isCreatingUpdate ? <Icons.spinner /> : <Icons.edit />} Create
-                  New Version to Edit
+                  {isCreatingUpdate ? <Icons.spinner /> : <Icons.edit />} Tạo
+                  phiên bản mới để sửa
                 </Button>
               </AlertDescription>
             </Alert>
@@ -474,11 +473,11 @@ const CourseEdit: React.FC = () => {
           >
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className='grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5'>
-                <TabsTrigger value='basic'>Basic Info</TabsTrigger>
-                <TabsTrigger value='details'>Details</TabsTrigger>
-                <TabsTrigger value='media'>Media</TabsTrigger>
-                <TabsTrigger value='curriculum'>Curriculum</TabsTrigger>
-                <TabsTrigger value='pricing'>Pricing</TabsTrigger>
+                <TabsTrigger value='basic'>Thông tin cơ bản</TabsTrigger>
+                <TabsTrigger value='details'>Chi tiết</TabsTrigger>
+                <TabsTrigger value='media'>Hình ảnh, video</TabsTrigger>
+                <TabsTrigger value='curriculum'>Chương trình học</TabsTrigger>
+                <TabsTrigger value='pricing'>Giá bán</TabsTrigger>
               </TabsList>
               <div className='mt-6'>
                 {/* Các TabsContent không cần thay đổi, chúng chỉ tương tác với form context */}
@@ -545,19 +544,19 @@ const CourseEdit: React.FC = () => {
               variant='destructive'
               onClick={() => setIsDeleteConfirmOpen(true)}
               disabled={isDeleting || (course.statusId === 'PUBLISHED' && (course.studentCount || 0) > 0)}
-              title={course.statusId === 'PUBLISHED' && (course.studentCount || 0) > 0 ? 'Cannot delete published course with active students' : 'Delete course permanently'}
+              title={course.statusId === 'PUBLISHED' && (course.studentCount || 0) > 0 ? 'Không thể xóa khóa học đang phát hành khi vẫn còn học viên' : 'Xóa vĩnh viễn khóa học'}
             >
-              {isDeleting ? <Icons.spinner /> : <Icons.trash className='mr-2 h-4 w-4' />} Delete Course
+              {isDeleting ? <Icons.spinner /> : <Icons.trash className='mr-2 h-4 w-4' />} Xóa khóa học
             </Button>
             {course.statusId === 'PUBLISHED' && (
               <Button
                 type='button'
                 variant='outline'
-                className='border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20'
+                className='border-warning text-warning hover:bg-warning-soft'
                 onClick={() => setIsArchiveConfirmOpen(true)}
                 disabled={isArchiving || isDeleting}
               >
-                {isArchiving ? <Icons.spinner /> : <Icons.archive className='mr-2 h-4 w-4' />} Unpublish / Archive Course
+                {isArchiving ? <Icons.spinner /> : <Icons.archive className='mr-2 h-4 w-4' />} Gỡ phát hành / Lưu trữ khóa học
               </Button>
             )}
           </div>
@@ -570,18 +569,18 @@ const CourseEdit: React.FC = () => {
         onOpenChange={setIsSubmitConfirmOpen}
         onConfirm={confirmSubmit}
         isConfirming={isSubmitting}
-        title='Submit Course for Approval?'
-        description='Please ensure your course is complete and meets all quality standards. You will not be able to edit the course while it is under review.'
-        confirmText='Yes, Submit for Approval'
+        title='Gửi khóa học đi duyệt?'
+        description='Hãy chắc chắn khóa học đã hoàn chỉnh và đạt các tiêu chuẩn chất lượng. Bạn sẽ không sửa được khóa học trong lúc chờ duyệt.'
+        confirmText='Gửi duyệt'
       />
       <ConfirmationDialog
         open={isDeleteConfirmOpen}
         onOpenChange={setIsDeleteConfirmOpen}
         onConfirm={confirmDelete}
         isConfirming={isDeleting}
-        title='Delete This Course Permanently?'
-        description={`This will permanently delete "${course.courseName}" and all of its content, including enrollments and data. This action cannot be undone.`}
-        confirmText='Yes, Delete This Course'
+        title='Xóa vĩnh viễn khóa học này?'
+        description={`Thao tác này xóa vĩnh viễn "${course.courseName}" cùng toàn bộ nội dung, gồm cả lượt ghi danh và dữ liệu. Không thể hoàn tác.`}
+        confirmText='Xóa khóa học'
         confirmVariant='destructive'
       />
       <ConfirmationDialog
@@ -589,20 +588,20 @@ const CourseEdit: React.FC = () => {
         onOpenChange={setIsCancelConfirmOpen}
         onConfirm={confirmCancelUpdate}
         isConfirming={isCancellingUpdate}
-        title='Cancel Update?'
-        description='All changes in this update session will be discarded. The live version of your course will remain unchanged.'
-        confirmText='Yes, Cancel'
+        title='Hủy bản cập nhật?'
+        description='Mọi thay đổi trong phiên cập nhật này sẽ bị bỏ. Bản đang phát hành của khóa học giữ nguyên.'
+        confirmText='Hủy cập nhật'
       />
       <ConfirmationDialog
         open={isArchiveConfirmOpen}
         onOpenChange={setIsArchiveConfirmOpen}
         onConfirm={confirmArchive}
         isConfirming={isArchiving}
-        title={(course.studentCount || 0) === 0 ? 'Unpublish This Course?' : 'Submit Unpublish (Archive) Request?'}
+        title={(course.studentCount || 0) === 0 ? 'Gỡ phát hành khóa học này?' : 'Gửi yêu cầu gỡ phát hành (lưu trữ)?'}
         description={(course.studentCount || 0) === 0 
-          ? `Since there are currently no students enrolled in "${course.courseName}", this course will be immediately unpublished and taken off the marketplace.`
-          : `Because "${course.courseName}" currently has ${course.studentCount} enrolled student(s), an unpublish request will be sent to System Administrators for approval to ensure active marketing campaigns and student access are properly transitioned.`}
-        confirmText={(course.studentCount || 0) === 0 ? 'Yes, Unpublish Now' : 'Submit Archive Request'}
+          ? `Hiện chưa có học viên nào ghi danh "${course.courseName}", nên khóa học sẽ được gỡ phát hành ngay và rời khỏi gian hàng.`
+          : `Vì "${course.courseName}" đang có ${course.studentCount} học viên ghi danh, yêu cầu gỡ phát hành sẽ được gửi tới quản trị viên hệ thống để duyệt, nhằm bảo đảm các chiến dịch quảng bá đang chạy và quyền truy cập của học viên được chuyển tiếp đúng cách.`}
+        confirmText={(course.studentCount || 0) === 0 ? 'Gỡ phát hành ngay' : 'Gửi yêu cầu lưu trữ'}
       />
       <LiveNotification
         isOpen={liveNotification.isOpen}

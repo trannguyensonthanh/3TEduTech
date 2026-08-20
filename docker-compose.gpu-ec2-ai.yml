@@ -48,9 +48,31 @@ services:
     env_file:
       - ./ai-service/.env.production
     environment:
-      # Trên máy này mới có GPU, nên mới bật Qwen. `auto` = ưu tiên Qwen, tự rơi
-      # về Gemini khi GPU EC2 #1 (vLLM) tắt để tiết kiệm chi phí.
+      # [SỬA 19/08/2026] Ngữ nghĩa của `auto` ĐÃ ĐỔI, chú thích cũ ở đây sai.
+      #
+      #   auto = GEMINI TRƯỚC, chuyển Qwen khi Gemini hết hạn mức hoặc khi
+      #          không có khóa Gemini nào. (Trước đây: ưu tiên Qwen.)
+      #
+      # Vì sao Gemini đi trước: GPU EC2 #1 (g6.xlarge) tính tiền theo giờ và là
+      # máy đắt nhất trong ba máy; Gemini có hạn mức miễn phí hằng ngày. Tiêu
+      # phần miễn phí trước rồi mới nhờ GPU là rẻ hơn hẳn.
+      # Muốn quay lại hành vi cũ: đặt LLM_PROVIDER=qwen-first.
       - LLM_PROVIDER=${LLM_PROVIDER:-auto}
+
+      # Địa chỉ vLLM nằm trên MÁY KHÁC (GPU EC2 #1). Giá trị mặc định trong
+      # config.py là 127.0.0.1 — đúng cho máy dev, SAI cho máy này. Bắt buộc
+      # đặt IP NỘI BỘ của GPU EC2 #1 trong .env.production; dòng dưới chỉ là
+      # lưới an toàn để container không im lặng gọi vào chính nó.
+      - "VLLM_BASE_URL=${VLLM_BASE_URL:?Chua dat VLLM_BASE_URL: phai tro toi IP noi bo cua GPU EC2 so 1}"
+
+      # --- Whisper trên card T4 16GB -----------------------------------
+      # large-v3 ở float16 chiếm khoảng 3.1GB VRAM. Máy này không chạy mô hình
+      # thị giác nào nên không phải chia VRAM với ai — dùng bản lớn nhất là
+      # lựa chọn đúng, chênh lệch chất lượng với tiếng Việt rất rõ.
+      - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-large-v3}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cuda}
+      - WHISPER_COMPUTE_TYPE=${WHISPER_COMPUTE_TYPE:-float16}
+
       - AI_SERVICE_WORKERS=1
       - LOG_LEVEL=WARNING
     restart: always

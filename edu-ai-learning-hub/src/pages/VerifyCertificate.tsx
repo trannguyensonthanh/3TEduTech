@@ -51,30 +51,30 @@ const STATUS_UI: Record<
   VALID: {
     icon: ShieldCheck,
     title: 'Chứng chỉ hợp lệ',
-    ring: 'border-emerald-500/40',
-    text: 'text-emerald-500',
-    bg: 'bg-emerald-500/10',
+    ring: 'border-success/40',
+    text: 'text-success',
+    bg: 'bg-success-soft',
   },
   REVOKED: {
     icon: ShieldAlert,
     title: 'Chứng chỉ đã bị thu hồi',
-    ring: 'border-amber-500/40',
-    text: 'text-amber-500',
-    bg: 'bg-amber-500/10',
+    ring: 'border-warning/40',
+    text: 'text-warning',
+    bg: 'bg-warning-soft',
   },
   TAMPERED: {
     icon: ShieldX,
     title: 'Chứng chỉ không toàn vẹn',
-    ring: 'border-red-500/40',
-    text: 'text-red-500',
-    bg: 'bg-red-500/10',
+    ring: 'border-danger/40',
+    text: 'text-danger',
+    bg: 'bg-danger-soft',
   },
   NOT_FOUND: {
     icon: Search,
     title: 'Không tìm thấy chứng chỉ',
-    ring: 'border-slate-500/40',
-    text: 'text-slate-500',
-    bg: 'bg-slate-500/10',
+    ring: 'border-border',
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
   },
 };
 
@@ -144,8 +144,8 @@ const VerifyCertificatePage: React.FC = () => {
       <div className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
         {/* Tiêu đề */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600">
-            <ShieldCheck className="h-7 w-7 text-white" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
+            <ShieldCheck className="h-7 w-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold md:text-3xl">
             Xác minh chứng chỉ 3TEduTech
@@ -186,9 +186,9 @@ const VerifyCertificatePage: React.FC = () => {
 
         {/* Lỗi mạng — KHÁC hẳn với "chứng chỉ không hợp lệ" */}
         {!loading && networkError && (
-          <Card className="mx-auto max-w-xl border-slate-500/40">
+          <Card className="mx-auto max-w-xl border-border">
             <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-              <WifiOff className="h-9 w-9 text-slate-500" />
+              <WifiOff className="h-9 w-9 text-muted-foreground" />
               <p className="font-semibold">Không kết nối được tới máy chủ</p>
               <p className="max-w-sm text-sm text-muted-foreground">
                 Đây là sự cố kết nối, chưa kết luận được gì về chứng chỉ. Vui
@@ -222,7 +222,7 @@ const VerifyCertificatePage: React.FC = () => {
                   </p>
 
                   {result.status === 'REVOKED' && (
-                    <div className="mt-3 rounded-md bg-amber-500/10 p-3 text-sm">
+                    <div className="mt-3 rounded-md bg-warning-soft p-3 text-sm">
                       <p>
                         <span className="text-muted-foreground">
                           Thời điểm thu hồi:{' '}

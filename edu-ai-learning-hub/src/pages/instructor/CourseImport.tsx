@@ -24,7 +24,26 @@ import { toast } from 'sonner';
 import InstructorLayout from '@/components/layout/InstructorLayout';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Icons } from '@/components/common/Icons';
+import PageHeader from '@/components/common/PageHeader';
+import SectionCard from '@/components/common/SectionCard';
+import {
+  AlertTriangle,
+  Archive,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Lightbulb,
+  ListChecks,
+  Loader2,
+  Upload,
+  Video,
+  Wand,
+  X,
+  XCircle,
+} from 'lucide-react';
 import ImportReviewPanel from './components/ImportReviewPanel';
 import VideoAttachPanel from './components/VideoAttachPanel';
 import ZipGuidePanel from './components/ZipGuidePanel';
@@ -63,17 +82,17 @@ type Step = 'upload' | 'processing' | 'review' | 'attach-video' | 'media';
 
 /* ───────────────────────────── Thanh 3 bước ───────────────────────────── */
 
-/* Lưu thẳng COMPONENT chứ không lưu tên khóa của `Icons`.
-   Nếu lưu tên khóa rồi tra `Icons[key]`, TypeScript phải suy ra kiểu là HỢP của
+/* Lưu thẳng COMPONENT chứ không lưu tên khóa rồi tra bảng.
+   Nếu lưu tên khóa rồi tra `Bang[key]`, TypeScript phải suy ra kiểu là HỢP của
    toàn bộ icon trong bộ — chỉ cần một icon trong đó có props khác biệt là cả
    chỗ này báo lỗi biên dịch, dù ta không hề dùng tới nó. */
 type IconComponent = React.ComponentType<{ className?: string }>;
 
 const STEPS: Array<{ key: Step; label: string; Icon: IconComponent }> = [
-  { key: 'upload', label: 'Tải tệp ZIP', Icon: Icons.upload },
-  { key: 'processing', label: 'Hệ thống phân tích', Icon: Icons.wand },
-  { key: 'review', label: 'Bạn duyệt & tạo', Icon: Icons.listChecks },
-  { key: 'attach-video', label: 'Gắn video', Icon: Icons.video },
+  { key: 'upload', label: 'Tải tệp ZIP', Icon: Upload },
+  { key: 'processing', label: 'Hệ thống phân tích', Icon: Wand },
+  { key: 'review', label: 'Bạn duyệt & tạo', Icon: ListChecks },
+  { key: 'attach-video', label: 'Gắn video', Icon: Video },
 ];
 
 const StepBar: React.FC<{ current: Step }> = ({ current }) => {
@@ -96,24 +115,22 @@ const StepBar: React.FC<{ current: Step }> = ({ current }) => {
             <div className='flex flex-col items-center gap-2 text-center'>
               <div
                 className={[
-                  'flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-300',
+                  'flex h-11 w-11 items-center justify-center rounded-xl border transition-colors',
                   isActive
-                    ? 'border-indigo-400/50 bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-purple-500/30 scale-110'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : isDone
-                      ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-400'
-                      : 'border-border/60 bg-muted/40 text-muted-foreground',
+                      ? 'border-border bg-muted text-success'
+                      : 'border-border bg-muted text-muted-foreground',
                 ].join(' ')}
               >
                 {isDone ? (
-                  <Icons.check className='h-5 w-5 stroke-[3]' />
+                  <Check className='h-5 w-5' aria-hidden='true' />
                 ) : (
-                  <Icon
-                    className={`h-5 w-5 ${isActive ? 'animate-pulse' : ''}`}
-                  />
+                  <Icon className='h-5 w-5' />
                 )}
               </div>
               <span
-                className={`text-[11px] font-semibold sm:text-xs ${
+                className={`text-[11px] font-medium sm:text-xs ${
                   isActive ? 'text-foreground' : 'text-muted-foreground'
                 }`}
               >
@@ -124,7 +141,7 @@ const StepBar: React.FC<{ current: Step }> = ({ current }) => {
             {index < STEPS.length - 1 && (
               <div
                 className={`mb-6 h-0.5 w-8 rounded-full sm:w-16 ${
-                  index < currentIndex ? 'bg-emerald-400/60' : 'bg-border/60'
+                  index < currentIndex ? 'bg-primary' : 'bg-border'
                 }`}
               />
             )}
@@ -141,32 +158,34 @@ const StructureGuide: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className='rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm'>
+    <div className='rounded-xl border border-border bg-card'>
       <button
         type='button'
         onClick={() => setOpen((v) => !v)}
         className='flex w-full items-center justify-between gap-3 px-5 py-4 text-left'
       >
         <span className='flex items-center gap-2.5 text-sm font-semibold'>
-          <Icons.lightbulb className='h-4 w-4 text-amber-400' />
+          <Lightbulb className='h-4 w-4 text-muted-foreground' aria-hidden='true' />
           Nên sắp xếp tệp ZIP như thế nào?
         </span>
         {open ? (
-          <Icons.chevronUp className='h-4 w-4 text-muted-foreground' />
+          <ChevronUp className='h-4 w-4 text-muted-foreground' aria-hidden='true' />
         ) : (
-          <Icons.chevronDown className='h-4 w-4 text-muted-foreground' />
+          <ChevronDown className='h-4 w-4 text-muted-foreground' aria-hidden='true' />
         )}
       </button>
 
       {open && (
-        <div className='space-y-4 border-t border-border/50 px-5 py-4 text-sm'>
+        <div className='space-y-4 border-t border-border px-5 py-4 text-sm'>
           <p className='text-muted-foreground'>
             Hệ thống đoán cấu trúc từ <strong>tên thư mục và tên tệp</strong> —
             hoàn toàn không tốn token AI. Đặt tên càng gọn gàng thì bản nháp
             càng chính xác:
           </p>
 
-          <pre className='overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-300'>
+          {/* Khối cây thư mục dùng nền `bg-muted` chứ không tự đặt nền tối:
+              một trang không được tự bật chế độ tối cục bộ. */}
+          <pre className='overflow-x-auto rounded-lg border border-border bg-muted p-4 text-xs leading-relaxed text-muted-foreground'>
             {`Khóa học Python cơ bản/
 ├── _khoa-hoc.md          ← mô tả khóa học (không bắt buộc)
 ├── 01. Nhập môn/
@@ -221,27 +240,27 @@ const MediaUploadPanel: React.FC<{
      sẽ làm giảng viên hiểu sai mức độ nghiêm trọng. */
   const tone =
     status === 'DONE'
-      ? { icon: Icons.checkCircle2, color: 'from-emerald-500 to-teal-600', title: 'Hoàn tất!' }
+      ? { icon: CheckCircle2, color: 'text-success', title: 'Hoàn tất' }
       : status === 'PARTIAL'
-        ? { icon: Icons.alertTriangle, color: 'from-amber-500 to-orange-600', title: 'Xong, nhưng có vài video lỗi' }
+        ? { icon: AlertTriangle, color: 'text-warning', title: 'Xong, nhưng có vài video lỗi' }
         : status === 'SKIPPED'
-          ? { icon: Icons.info, color: 'from-sky-500 to-cyan-600', title: 'Đã bỏ qua bước tải video' }
+          ? { icon: Info, color: 'text-muted-foreground', title: 'Đã bỏ qua bước tải video' }
           : status === 'FAILED'
-            ? { icon: Icons.xCircle, color: 'from-rose-500 to-red-600', title: 'Tải video thất bại' }
-            : { icon: Icons.video, color: 'from-indigo-500 via-purple-600 to-fuchsia-600', title: 'Đang tải video lên' };
+            ? { icon: XCircle, color: 'text-danger', title: 'Tải video thất bại' }
+            : { icon: Video, color: 'text-muted-foreground', title: 'Đang tải video lên' };
 
   const ToneIcon = tone.icon;
 
   return (
-    <div className='space-y-6 rounded-3xl border border-border/60 bg-card/60 p-8 text-center backdrop-blur-sm sm:p-12'>
-      <div
-        className={`mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br ${tone.color} shadow-xl shadow-purple-500/25`}
-      >
-        <ToneIcon className={`h-9 w-9 text-white ${running ? 'animate-pulse' : ''}`} />
+    <SectionCard bodyClassName='space-y-6 p-8 text-center sm:p-12'>
+      {/* Bốn kết cục chỉ khác nhau ở BIỂU TƯỢNG và nhãn chữ; màu trạng thái đi
+          kèm chứ không đứng một mình gánh ý nghĩa. */}
+      <div className='mx-auto flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted'>
+        <ToneIcon className={`h-8 w-8 ${tone.color}`} aria-hidden='true' />
       </div>
 
       <div className='space-y-2'>
-        <h2 className='text-xl font-bold'>{tone.title}</h2>
+        <h2 className='text-lg font-semibold'>{tone.title}</h2>
         <p className='mx-auto max-w-lg text-sm text-muted-foreground'>
           {job?.mediaMessage || 'Đang chuẩn bị...'}
         </p>
@@ -254,7 +273,7 @@ const MediaUploadPanel: React.FC<{
             <span>
               {done}/{total} video
               {failed > 0 && (
-                <span className='ml-2 text-amber-400'>({failed} lỗi)</span>
+                <span className='ml-2 text-warning'>({failed} lỗi)</span>
               )}
             </span>
             <span>{percent}%</span>
@@ -270,28 +289,20 @@ const MediaUploadPanel: React.FC<{
         </p>
       )}
 
-      <Button
-        onClick={onDone}
-        variant={running ? 'outline' : 'default'}
-        className={
-          running
-            ? 'rounded-xl'
-            : 'h-11 rounded-xl border border-white/20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 font-extrabold text-white shadow-xl shadow-purple-500/30 hover:-translate-y-0.5'
-        }
-      >
+      <Button onClick={onDone} variant={running ? 'outline' : 'default'}>
         {running ? (
           <>
-            <Icons.arrowRight className='mr-2 h-4 w-4' />
+            <ArrowRight className='mr-2 h-4 w-4' aria-hidden='true' />
             Để chạy nền, về danh sách khóa học
           </>
         ) : (
           <>
-            <Icons.arrowRight className='mr-2 h-4 w-4' />
+            <ArrowRight className='mr-2 h-4 w-4' aria-hidden='true' />
             Về danh sách khóa học
           </>
         )}
       </Button>
-    </div>
+    </SectionCard>
   );
 };
 
@@ -610,41 +621,18 @@ const CourseImport: React.FC = () => {
   /* ───────────────────────────── Giao diện ───────────────────────────── */
 
   return (
-    <InstructorLayout>
-      <div className='mx-auto max-w-6xl space-y-7 p-4 md:p-6 lg:p-8'>
-        {/* BANNER */}
-        <header className='relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 p-6 shadow-2xl sm:p-8'>
-          <div className='pointer-events-none absolute -bottom-14 -right-10 h-72 w-72 animate-pulse rounded-full bg-fuchsia-500/20 blur-3xl' />
-          <div className='pointer-events-none absolute -top-14 left-10 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl' />
+    <InstructorLayout pageTitle='Nhập khóa học từ tệp ZIP'>
+      <PageHeader
+        title='Nhập khóa học từ tệp ZIP'
+        description='Tải lên tệp ZIP chứa tài liệu và phụ đề. Hệ thống dựng cấu trúc chương–bài từ cây thư mục, đọc nội dung tài liệu, ghép phụ đề rồi đưa bản nháp cho bạn duyệt. Video được gắn ở bước cuối. Không có gì vào cơ sở dữ liệu trước khi bạn bấm đồng ý.'
+      />
 
-          <div className='relative z-10 space-y-2.5'>
-            <div className='inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/20 px-3.5 py-1 text-xs font-bold text-indigo-300 shadow-inner backdrop-blur-md'>
-              <Icons.packageOpen className='h-3.5 w-3.5 animate-pulse text-pink-400' />
-              <span className='uppercase tracking-wider'>Course Import</span>
-            </div>
-
-            <h1 className='font-outfit text-3xl font-extrabold tracking-tight text-white md:text-4xl'>
-              Nhập khóa học từ{' '}
-              <span className='bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-300 bg-clip-text font-black text-transparent'>
-                tệp ZIP
-              </span>
-            </h1>
-
-            <p className='max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base'>
-              Tải lên một tệp ZIP chứa tài liệu và phụ đề của khóa học. Hệ
-              thống tự dựng cấu trúc chương–bài từ cây thư mục, đọc nội dung tài
-              liệu, ghép phụ đề — rồi đưa bản nháp cho bạn duyệt. Video được gắn
-              ở bước cuối, tải thẳng từ máy bạn hoặc dán link YouTube. Không có
-              gì vào cơ sở dữ liệu trước khi bạn bấm đồng ý.
-            </p>
-          </div>
-        </header>
-
+      <div className='space-y-6'>
         <StepBar current={step} />
 
         {loadError && (
-          <div className='flex items-start gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300'>
-            <Icons.alertTriangle className='mt-0.5 h-4 w-4 shrink-0' />
+          <div className='flex items-start gap-3 rounded-xl border border-border bg-danger-soft p-4 text-sm text-danger'>
+            <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0' aria-hidden='true' />
             <span>{loadError}</span>
           </div>
         )}
@@ -665,10 +653,10 @@ const CourseImport: React.FC = () => {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={[
-                'group cursor-pointer rounded-3xl border-2 border-dashed p-10 text-center transition-all duration-300 sm:p-14',
+                'cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-colors sm:p-14',
                 isDragging
-                  ? 'scale-[1.01] border-indigo-400 bg-indigo-500/10'
-                  : 'border-border/70 bg-card/50 hover:border-indigo-400/60 hover:bg-indigo-500/5',
+                  ? 'border-primary bg-accent'
+                  : 'border-border bg-card hover:border-primary hover:bg-accent',
               ].join(' ')}
             >
               <input
@@ -679,20 +667,20 @@ const CourseImport: React.FC = () => {
                 onChange={(e) => pickFile(e.target.files?.[0])}
               />
 
-              <div className='mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 shadow-xl shadow-purple-500/30 transition-transform duration-300 group-hover:scale-105'>
-                <Icons.archive className='h-9 w-9 text-white' />
+              <div className='mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground'>
+                <Archive className='h-8 w-8' aria-hidden='true' />
               </div>
 
               {file ? (
                 <>
-                  <p className='text-lg font-bold'>{file.name}</p>
+                  <p className='text-base font-medium'>{file.name}</p>
                   <p className='mt-1 text-sm text-muted-foreground'>
                     {formatBytes(file.size)} — bấm để chọn tệp khác
                   </p>
                 </>
               ) : (
                 <>
-                  <p className='text-lg font-bold'>
+                  <p className='text-base font-medium'>
                     Kéo thả tệp .zip vào đây
                   </p>
                   <p className='mt-1 text-sm text-muted-foreground'>
@@ -703,10 +691,10 @@ const CourseImport: React.FC = () => {
             </div>
 
             {isUploading && (
-              <div className='space-y-2 rounded-2xl border border-border/60 bg-card/60 p-5'>
+              <div className='space-y-2 rounded-xl border border-border bg-card p-5'>
                 <div className='flex items-center justify-between text-sm font-medium'>
                   <span className='flex items-center gap-2'>
-                    <Icons.loader2 className='h-4 w-4 animate-spin text-indigo-400' />
+                    <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' aria-hidden='true' />
                     Đang tải lên...
                   </span>
                   <span className='tabular-nums'>{uploadPercent}%</span>
@@ -716,13 +704,8 @@ const CourseImport: React.FC = () => {
             )}
 
             <div className='flex justify-end'>
-              <Button
-                size='lg'
-                disabled={!file || isUploading}
-                onClick={handleUpload}
-                className='h-12 rounded-2xl border border-white/20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-7 font-extrabold text-white shadow-xl shadow-purple-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 disabled:translate-y-0 disabled:opacity-50'
-              >
-                <Icons.upload className='mr-2 h-5 w-5 stroke-[3]' />
+              <Button disabled={!file || isUploading} onClick={handleUpload}>
+                <Upload className='mr-2 h-4 w-4' aria-hidden='true' />
                 Tải lên & phân tích
               </Button>
             </div>
@@ -733,13 +716,13 @@ const CourseImport: React.FC = () => {
 
         {/* ── BƯỚC 2: XỬ LÝ ── */}
         {step === 'processing' && (
-          <div className='space-y-6 rounded-3xl border border-border/60 bg-card/60 p-8 text-center backdrop-blur-sm sm:p-12'>
-            <div className='mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 shadow-xl shadow-purple-500/30'>
-              <Icons.wand className='h-9 w-9 animate-pulse text-white' />
+          <SectionCard bodyClassName='space-y-6 p-8 text-center sm:p-12'>
+            <div className='mx-auto flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground'>
+              <Wand className='h-8 w-8' aria-hidden='true' />
             </div>
 
             <div className='space-y-2'>
-              <h2 className='text-xl font-bold'>Đang phân tích tệp của bạn</h2>
+              <h2 className='text-lg font-semibold'>Đang phân tích tệp của bạn</h2>
               <p className='text-sm text-muted-foreground'>
                 {job?.statusMessage || 'Đang chuẩn bị...'}
               </p>
@@ -757,15 +740,11 @@ const CourseImport: React.FC = () => {
               được khôi phục khi bạn quay lại.
             </p>
 
-            <Button
-              variant='outline'
-              onClick={handleCancel}
-              className='rounded-xl'
-            >
-              <Icons.x className='mr-2 h-4 w-4' />
+            <Button variant='outline' onClick={handleCancel}>
+              <X className='mr-2 h-4 w-4' aria-hidden='true' />
               Hủy phiên nhập
             </Button>
-          </div>
+          </SectionCard>
         )}
 
         {/* ── BƯỚC 3: DUYỆT ── */}

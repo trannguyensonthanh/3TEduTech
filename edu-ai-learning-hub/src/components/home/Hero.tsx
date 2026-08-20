@@ -10,6 +10,18 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import WebGLErrorBoundary from '@/components/common/WebGLErrorBoundary';
 
+/**
+ * KHỐI MỞ ĐẦU TRANG CHỦ — MIỄN TRỪ KHỎI HỆ TOKEN, CỐ Ý.
+ *
+ * Đây là dải trình diễn tối, dùng WebGL (hệ hạt three.js) chồng lên nền mạch
+ * sáng CSS. Màu ở đây là màu vật liệu và màu ánh sáng của cảnh 3D, KHÔNG phải
+ * token giao diện — cùng nhóm miễn trừ với cảnh 3D trang giới thiệu và mặt
+ * tấm chứng chỉ. Đừng rút về token màu, sẽ mất hiệu ứng.
+ *
+ * Lớp phụ thuộc: HeroVeins + các lớp CSS trong src/App.css
+ * (.hero-gradient-enhanced, .hero-vein, .gradient-orb, .animate-float,
+ * .animate-sparkle, .scroll-indicator-dot, .animate-pulse-slow).
+ */
 const Hero = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();

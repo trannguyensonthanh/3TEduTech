@@ -1,8 +1,11 @@
-const axios = require('axios');
 const repository = require('./learningReport.repository');
+/* [SỬA 19/08/2026] Dùng aiClient thay cho axios trần: aiClient tự gắn khóa nội
+   bộ và luôn có thời gian chờ. Gọi axios trần vừa bị AI Service trả 401 kể từ
+   khi bật khóa nội bộ, vừa không có timeout nên nếu AI Service treo thì yêu
+   cầu báo cáo học tập treo theo vô hạn. */
+const aiClient = require('../../services/aiClient');
 const logger = require('../../utils/logger');
 const { toCamelCaseObject } = require('../../utils/caseConverter');
-const { getAiServiceUrl } = require('../../services/aiSync.service');
 
 const getLearningReport = async (accountId, fullName) => {
   const [
@@ -19,8 +22,29 @@ const getLearningReport = async (accountId, fullName) => {
     repository.getLearningStreak(accountId)
   ]);
 
+  /* [SỬA 19/08/2026] Ánh xạ tên trường một cách TƯỜNG MINH thay vì dựa vào phép
+     đổi sang kiểu lạc đà tự động.
+
+     Truy vấn trả về TotalEnrolledCourses / TotalLearningTimeMinutes /
+     AvgCompletionPercentage, đổi tự động sẽ ra totalEnrolledCourses /
+     totalLearningTimeMinutes / avgCompletionPercentage — trong khi hợp đồng phía
+     giao diện khai báo totalCourses / totalLearningMinutes /
+     averageCompletionPercentage. Ba trong bốn chỉ số vì vậy hiện ra undefined.
+
+     Viết tay phép ánh xạ ở đây để lệch tên bị phát hiện ngay tại chỗ, thay vì
+     lặng lẽ trở thành undefined ở đầu bên kia. */
+  const overviewCamel = toCamelCaseObject(overviewStats);
   const reportData = {
-    overview: toCamelCaseObject(overviewStats),
+    overview: {
+      totalCourses: Number(overviewCamel.totalEnrolledCourses ?? 0),
+      totalCompletedLessons: Number(overviewCamel.totalCompletedLessons ?? 0),
+      totalLearningMinutes: Math.round(
+        Number(overviewCamel.totalLearningTimeMinutes ?? 0)
+      ),
+      averageCompletionPercentage: Math.round(
+        Number(overviewCamel.avgCompletionPercentage ?? 0)
+      ),
+    },
     courseProgress: courseProgress.map(c => toCamelCaseObject(c)),
     quizPerformance: toCamelCaseObject(quizPerformance),
     weeklyActivity: weeklyActivity.map(w => toCamelCaseObject(w)),
@@ -29,7 +53,7 @@ const getLearningReport = async (accountId, fullName) => {
 
   let aiAnalysis = null;
   try {
-    const aiServiceUrl = `${getAiServiceUrl()}/api/chat/query`;
+    const AI_TIMEOUT_MS = 20000;
     
     const prompt = `Dưới đây là dữ liệu học tập của học viên ${fullName}:
 - Tổng số khóa học đã đăng ký: ${overviewStats.TotalEnrolledCourses}
@@ -48,11 +72,11 @@ Hãy phân tích dữ liệu trên và trả về kết quả dưới định d�
   "motivationScore": Điểm động lực (số từ 0-100)
 }`;
 
-    const aiResponse = await axios.post(aiServiceUrl, {
-      query: prompt,
-      chat_history: [],
-      top_k: 1
-    });
+    const aiResponse = await aiClient.post(
+      '/api/chat/query',
+      { query: prompt, chat_history: [], top_k: 1 },
+      AI_TIMEOUT_MS
+    );
 
     if (aiResponse.data && aiResponse.data.answer) {
       const answer = aiResponse.data.answer;
