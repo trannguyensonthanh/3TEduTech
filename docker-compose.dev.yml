@@ -19,13 +19,40 @@ services:
     networks:
       - edutech-net-dev
 
+  # Tạo cơ sở dữ liệu ThreeTEduTechLMS trước khi chạy migration
+  database-create:
+    image: mcr.microsoft.com/mssql-tools:latest
+    container_name: edutech-database-create
+    depends_on:
+      - database
+    environment:
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "echo 'Waiting for SQL Server to start...';
+      until /opt/mssql-tools/bin/sqlcmd -S database -U sa -P '${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}' -Q 'SELECT 1' &>/dev/null; do
+        sleep 2;
+      done;
+      echo 'SQL Server is up. Creating database ThreeTEduTechLMS if it does not exist...';
+      /opt/mssql-tools/bin/sqlcmd -S database -U sa -P '${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}' -Q \"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ThreeTEduTechLMS') BEGIN CREATE DATABASE [ThreeTEduTechLMS]; END;\";
+      echo 'Database check/creation complete.'"
+    networks:
+      - edutech-net-dev
+
   # Dùng Flyway để quản lý Migration chuẩn Enterprise
   database-init:
     image: flyway/flyway:9-alpine
     container_name: edutech-database-init
     depends_on:
-      - database
+      database-create:
+        condition: service_completed_successfully
     volumes:
+      # ★ [SỬA 24/08/2026] Flyway quét ĐỆ QUY thư mục này.
+      #
+      # Thư mục `db-init/` chỉ được chứa migration. Kho lưu trữ (V1..V10 cũ,
+      # bản xuất SSMS) nằm ở `db-archive/` — NGOÀI thư mục này. Đặt tên thư mục
+      # con bắt đầu bằng dấu gạch dưới KHÔNG khiến Flyway bỏ qua nó; nó sẽ báo
+      # "Found more than one migration with version 1" và dừng.
       - ./db-init:/flyway/sql
     # -------------------------------------------------------------------
     # ★ [SỬA 18/08/2026] Thêm `repair` trước `migrate`.
@@ -49,11 +76,11 @@ services:
     # -------------------------------------------------------------------
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "flyway -url='jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true'
+      "flyway -url='jdbc:sqlserver://database:1433;databaseName=ThreeTEduTechLMS;encrypt=true;trustServerCertificate=true'
       -user=sa -password='${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}'
       -connectRetries=20 -placeholderReplacement=false repair
       || echo '[Flyway] repair bo qua (chua co lich su migration)';
-      flyway -url='jdbc:sqlserver://database:1433;encrypt=true;trustServerCertificate=true'
+      flyway -url='jdbc:sqlserver://database:1433;databaseName=ThreeTEduTechLMS;encrypt=true;trustServerCertificate=true'
       -user=sa -password='${MSSQL_SA_PASSWORD:-EduTech_Dev_2026!}'
       -mixed=true -connectRetries=20 -placeholderReplacement=false migrate"
 
@@ -163,9 +190,9 @@ services:
       # ---------------------------------------------------------------
       # ★ [SỬA 18/08/2026] Trước đây gọi `/v1/faqs`.
       #
-      # Bảng `FAQs` KHÔNG TỒN TẠI trong bất kỳ migration nào (V1..V8 tạo 44
-      # bảng, không có bảng nào tên FAQs). Nên trên một CSDL mới tinh, endpoint
-      # đó LUÔN LUÔN trả 500 "Invalid object name 'FAQs'".
+      # Bảng `FAQs` KHÔNG TỒN TẠI trong lược đồ (V1__baseline tạo 47 bảng,
+      # không có bảng nào tên FAQs — V10 cũ đã xóa hẳn ba bảng FAQ). Nên trên
+      # một CSDL mới tinh, endpoint đó LUÔN LUÔN trả 500 "Invalid object name".
       #
       # Hậu quả: container backend vĩnh viễn bị đánh dấu unhealthy, và cứ mỗi
       # 30 giây lại đẻ ra một stack trace vào log — nhấn chìm mọi thông báo lỗi

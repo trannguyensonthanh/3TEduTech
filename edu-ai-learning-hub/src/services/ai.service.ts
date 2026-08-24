@@ -217,6 +217,28 @@ export const streamChatMessage = async (
   },
   signal?: AbortSignal
 ): Promise<void> => {
+  /* [THÊM 20/08/2026] Cờ chốt luồng.
+     Nơi gọi (useChatbot, AiMasterChat) đều chạy một bộ đếm nhả chữ và chỉ
+     dừng nó khi nhận được `onDone` hoặc `onError`. Nhưng vòng lặp đọc dưới
+     đây có thể kết thúc êm ở `if (done) break;` mà KHÔNG có sự kiện nào —
+     xảy ra khi máy chủ đóng luồng giữa chừng: nginx hết thời gian chờ, tiến
+     trình AI Service bị dừng, hoặc backend ném lỗi SAU khi đã gửi header SSE
+     (lúc đó không đổi được mã HTTP nữa, xem chat.controller.js).
+     Khi ấy `isStreaming` kẹt ở true vĩnh viễn: ô nhập và nút Gửi bị khóa,
+     con trỏ nhấp nháy chạy mãi, bộ đếm 16ms quay không ngừng.
+     Cờ này bảo đảm mọi đường thoát đều gọi đúng một lần onDone hoặc onError. */
+  let settled = false;
+  const settleDone = (data: { suggested_questions: string[] }) => {
+    if (settled) return;
+    settled = true;
+    callbacks.onDone?.(data);
+  };
+  const settleError = (message: string) => {
+    if (settled) return;
+    settled = true;
+    callbacks.onError?.(message);
+  };
+
   try {
     const token = TokenService.getLocalAccessToken();
     // Dùng ĐÚNG biến môi trường mà apiHelper.ts đang dùng (VITE_API_URL).
@@ -260,31 +282,7 @@ export const streamChatMessage = async (
     let buffer = '';
     let currentEvent = 'message';
 
-    /* [THÊM 20/08/2026] Cờ chốt luồng.
 
-       Nơi gọi (useChatbot, AiMasterChat) đều chạy một bộ đếm nhả chữ và chỉ
-       dừng nó khi nhận được `onDone` hoặc `onError`. Nhưng vòng lặp đọc dưới
-       đây có thể kết thúc êm ở `if (done) break;` mà KHÔNG có sự kiện nào —
-       xảy ra khi máy chủ đóng luồng giữa chừng: nginx hết thời gian chờ, tiến
-       trình AI Service bị dừng, hoặc backend ném lỗi SAU khi đã gửi header SSE
-       (lúc đó không đổi được mã HTTP nữa, xem chat.controller.js).
-
-       Khi ấy `isStreaming` kẹt ở true vĩnh viễn: ô nhập và nút Gửi bị khóa,
-       con trỏ nhấp nháy chạy mãi, bộ đếm 16ms quay không ngừng. Người dùng
-       bắt buộc phải tải lại trang.
-
-       Cờ này bảo đảm mọi đường thoát đều gọi đúng một lần onDone hoặc onError. */
-    let settled = false;
-    const settleDone = (data: { suggested_questions: string[] }) => {
-      if (settled) return;
-      settled = true;
-      callbacks.onDone?.(data);
-    };
-    const settleError = (message: string) => {
-      if (settled) return;
-      settled = true;
-      callbacks.onError?.(message);
-    };
 
     // eslint-disable-next-line no-constant-condition
     while (true) {

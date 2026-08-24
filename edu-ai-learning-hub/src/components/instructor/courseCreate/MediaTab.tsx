@@ -34,8 +34,9 @@ const MediaTab: React.FC<MediaTabProps> = ({
   onThumbnailChange,
   initialThumbnail,
   initialIntroVideo,
+  onIntroVideoChange,
 }) => {
-  const { control, watch } = useFormContext();
+  const { control, watch, setValue } = useFormContext();
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
     initialThumbnail
   );
@@ -59,7 +60,7 @@ const MediaTab: React.FC<MediaTabProps> = ({
       onIntroVideoChange?.(file);
       setIntroVideoPreview(URL.createObjectURL(file));
       // Xóa URL youtube nếu có
-      form.setValue('introVideoUrl', '', { shouldDirty: true });
+      setValue('introVideoUrl', '', { shouldDirty: true });
     }
   };
 

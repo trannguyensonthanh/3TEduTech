@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMyCart } from '@/hooks/queries/cart.queries';
 import { useCreateOrderFromCart, useMyOrderDetail } from '@/hooks/queries/order.queries';
 import { useValidatePromotionCode } from '@/hooks/queries/promotion.queries';
-import { ValidatedPromotionInfo } from '@/types/cart.types';
+
 import { ChevronLeft, CreditCard, Loader2, XCircle } from 'lucide-react';
 
 import {
@@ -33,7 +34,7 @@ import {
   useCreateStripeSession,
   useCreateVnpayUrl,
 } from '@/hooks/queries/payment.queries';
-import { CartDetails } from '@/services/cart.service';
+import { CartDetails, CartItem, ValidatedPromotionInfo } from '@/services/cart.service';
 import apiHelper from '@/services/apiHelper';
 
 import { Icons } from '@/components/common/Icons';
@@ -141,7 +142,7 @@ const CheckoutPage: React.FC = () => {
             currency: item.pricing?.display?.currency ?? currency
           }
         }
-      };
+      } as unknown as CartItem;
     });
   }, [orderData, currency]);
 

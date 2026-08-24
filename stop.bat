@@ -2,7 +2,10 @@
 REM ============================================================================
 REM  stop.bat - Dung toan bo dich vu, GIU NGUYEN du lieu.
 REM
-REM  Muon xoa sach du lieu (chay lai migration tu dau) thi dung:
+REM  Muon dung lai rieng co so du lieu (sau khi doi db-init/V1__baseline.sql):
+REM      start.bat -ResetDb    xoa volume SQL Server, giu Redis va faq-docs-dev
+REM
+REM  Muon xoa sach MOI THU (ke ca faq-docs-dev, khong khoi phuc duoc):
 REM      start.bat -Reset
 REM ============================================================================
 cd /d "%~dp0"

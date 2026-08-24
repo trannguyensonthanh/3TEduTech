@@ -38,14 +38,15 @@ PORT=5000
 # ---- Địa chỉ công khai ----
 # Giai đoạn đầu (chưa có tên miền): http://<ip-cong-cong-cua-ec2>
 # Sau khi bật HTTPS:                https://<ten-mien>.duckdns.org
-SERVER_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN
-FRONTEND_URL=https://DOI-THANH-TEN-MIEN-CUA-BAN
+SERVER_URL=https://3tedutech.id.vn
+
+FRONTEND_URL=https://3tedutech.id.vn
 
 # ⚠️ Đây là biến BẮT BUỘC (Joi .required()). Thiếu nó backend không khởi động
 #    nổi và log chỉ hiện "Config validation error" — không nói rõ thiếu cái gì
 #    nếu bạn không đọc kỹ.
 # Nhiều nguồn thì ngăn cách bằng dấu phẩy, KHÔNG có khoảng trắng thừa.
-CORS_ALLOWED_ORIGINS=https://DOI-THANH-TEN-MIEN-CUA-BAN
+CORS_ALLOWED_ORIGINS=https://3tedutech.id.vn
 
 # ---- Cơ sở dữ liệu (RDS SQL Server) ----
 # DB_HOST là ENDPOINT của RDS, không phải IP, và KHÔNG kèm cổng ở cuối.

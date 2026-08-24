@@ -7,7 +7,8 @@
     Cách dùng:
         .\start.ps1              # khởi động + kiểm tra
         .\start.ps1 -Rebuild     # build lại image (sau khi đổi Dockerfile/pyproject)
-        .\start.ps1 -Reset       # XÓA SẠCH dữ liệu rồi chạy lại migration từ đầu
+        .\start.ps1 -Reset       # XÓA SẠCH mọi volume rồi chạy lại migration từ đầu
+        .\start.ps1 -ResetDb     # chỉ xóa volume SQL Server (giữ faq-docs-dev)
         .\start.ps1 -SkipChecks  # chỉ khởi động, không kiểm tra
 
     Vì sao là PowerShell chứ không phải .bat: cần đọc JSON trả về từ
@@ -18,6 +19,13 @@
 param(
     [switch]$Rebuild,
     [switch]$Reset,
+    # [THÊM 24/08/2026] Xóa RIÊNG volume SQL Server.
+    #
+    # `-Reset` dùng `down -v`, xóa mọi volume — kể cả `faq-docs-dev` vốn giữ
+    # siêu dữ liệu tài liệu chính sách và KHÔNG khôi phục được từ Cloudinary.
+    # Sau khi gộp migration thành V1__baseline, việc phải dựng lại riêng cơ sở
+    # dữ liệu trở nên thường xuyên, nên cần một nhát dao hẹp hơn.
+    [switch]$ResetDb,
     [switch]$SkipChecks
 )
 
@@ -99,7 +107,7 @@ if ($beEnv -match '(?m)^DB_PASSWORD=(.+?)\s*$') { $dbPass = $Matches[1] } else {
 if ($rootEnv -match '(?m)^MSSQL_SA_PASSWORD=(.+?)\s*$') { $saPass = $Matches[1] } else { $saPass = 'EduTech_Dev_2026!' }
 
 Check 'Mat khau SQL Server dong bo (backend <-> Flyway)' ($dbPass -ne '' -and $dbPass -eq $saPass) `
-      'Chay setup-env.bat de dong bo. Neu van hong: .\start.bat -Reset'
+      'Chay setup-env.bat de dong bo. Neu van hong: .\start.bat -ResetDb'
 
 if ($script:Failures -gt 0) {
     Write-Host "`nCo $($script:Failures) van de o buoc cau hinh. Sua xong roi chay lai." -ForegroundColor Red
@@ -107,6 +115,28 @@ if ($script:Failures -gt 0) {
 }
 
 # ── 2. Khởi động ─────────────────────────────────────────────────────────────
+if ($ResetDb) {
+    Write-Step 'XOA RIENG volume SQL Server'
+    Write-Warn 'Du lieu SQL Server se bi xoa; Redis va faq-docs-dev duoc giu nguyen.'
+    Write-Info 'Toan bo luoc do + 745 hang du lieu nam trong db-init/V1__baseline.sql,'
+    Write-Info 'nen Flyway se dung lai y het trang thai da xuat tu SSMS.'
+    $answer = Read-Host '  Go "XOA" de xac nhan'
+    if ($answer -ne 'XOA') { Write-Info 'Da huy.'; exit 0 }
+
+    & docker @Compose down | Out-Null
+    # Tên volume có tiền tố là tên project của Compose (mặc định lấy theo tên
+    # thư mục, đã bị chuẩn hóa). Dò theo hậu tố thay vì ghi cứng `cnpm_`.
+    $vols = (& docker volume ls -q) | Where-Object { $_ -like '*mssql-data-dev' }
+    if (-not $vols) {
+        Write-Warn 'Khong tim thay volume nao ten *mssql-data-dev (co the da xoa roi).'
+    } else {
+        foreach ($v in $vols) {
+            & docker volume rm $v | Out-Null
+            Write-Ok "Da xoa volume $v"
+        }
+    }
+}
+
 if ($Reset) {
     Write-Step 'XOA SACH du lieu (down -v)'
     Write-Warn 'Toan bo du lieu SQL Server + Redis se bi xoa, migration chay lai tu dau.'
@@ -127,7 +157,8 @@ if ($SkipChecks) {
 }
 
 # ── 3. Chờ sẵn sàng ──────────────────────────────────────────────────────────
-# SQL Server mất khá lâu để khởi tạo lần đầu, và Flyway còn phải áp V1..V8.
+# SQL Server mất khá lâu để khởi tạo lần đầu, và Flyway còn phải áp V1__baseline
+# (47 bảng, 88 khóa ngoại, 745 hàng dữ liệu).
 # Chờ theo vòng lặp thay vì "sleep 60" cố định: máy nhanh thì xong sớm hơn nhiều.
 function Wait-Url ($name, $url, $timeoutSec) {
     Write-Host "  Cho $name san sang" -NoNewline
@@ -144,8 +175,85 @@ function Wait-Url ($name, $url, $timeoutSec) {
     return $false
 }
 
+# ── 3a. Migration phải xong TRƯỚC khi chờ backend ────────────────────────────
+#
+# ★ [THÊM 24/08/2026] VÌ SAO CÓ BƯỚC NÀY
+#
+# `backend` chỉ `depends_on: [database, redis]`, KHÔNG phụ thuộc `database-init`.
+# Nghĩa là khi Flyway hỏng, container backend vẫn khởi động bình thường và
+# script cũ ngồi chờ `/v1/` trong đúng 300 giây rồi báo "QUA HAN" — không một
+# chữ nào nhắc tới migration. Nguyên nhân thật nằm trong log của một container
+# đã thoát, mà không ai nghĩ tới việc đi xem.
+#
+# Flyway là thứ chạy một lần rồi thoát, nên chỉ cần đọc mã thoát của nó.
+Write-Step 'Cho migration (Flyway) chay xong'
+
+$initName = 'edutech-database-init'
+$maTraVe  = $null
+$hanChot  = (Get-Date).AddSeconds(300)
+
+Write-Host '  Cho Flyway' -NoNewline
+while ((Get-Date) -lt $hanChot) {
+    $tt = (& docker inspect --format '{{.State.Status}}' $initName 2>$null)
+    if ($LASTEXITCODE -ne 0) { Write-Host ''; Write-Warn "Khong thay container $initName."; break }
+    if ($tt -eq 'exited') {
+        $maTraVe = [int](& docker inspect --format '{{.State.ExitCode}}' $initName)
+        Write-Host ''
+        break
+    }
+    Write-Host '.' -NoNewline
+    Start-Sleep -Seconds 3
+}
+
+if ($null -eq $maTraVe) {
+    Write-Host ''
+    Write-Warn 'Flyway chua thoat sau 300 giay. Xem log:  docker logs edutech-database-init'
+} elseif ($maTraVe -ne 0) {
+    Write-Fail "Flyway that bai (ma thoat $maTraVe). MIGRATION CHUA CHAY."
+    Write-Host ''
+    Write-Host '--- 40 dong cuoi log Flyway ---' -ForegroundColor DarkGray
+    & docker logs --tail 40 $initName 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+    Write-Host '-------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
+
+    $log = (& docker logs --tail 200 $initName 2>&1) -join "`n"
+
+    if ($log -match 'more than one migration with version') {
+        Write-Warn 'Nguyen nhan: co hai tep migration cung so phien ban.'
+        Write-Info 'Flyway quet DE QUY. Kiem tra khong con .sql nao trong thu muc con:'
+        Write-Info '    Get-ChildItem db-init -Recurse -Filter *.sql'
+        Write-Info 'Chi duoc co dung db-init\V1__baseline.sql. Kho luu tru nam o db-archive\.'
+    }
+    elseif ($log -match 'not resolved locally|checksum mismatch|Validate failed') {
+        Write-Warn 'Nguyen nhan: lich su migration trong CSDL khong khop voi thu muc db-init.'
+        Write-Info 'CSDL dev nay con ghi nhan V1..V10 cu, trong khi db-init gio chi con'
+        Write-Info 'V1__baseline.sql — mot tep gop toan bo lich su do lai.'
+        Write-Info ''
+        Write-Info 'Cach sua: dung lai CSDL dev tu dau. KHONG mat gi, vi 745 hang du lieu'
+        Write-Info 'trong V1__baseline.sql chinh la ban xuat tu CSDL dev nay.'
+        Write-Info ''
+        Write-Info '    .\start.bat -ResetDb'
+    }
+    elseif ($log -match 'Login failed|Cannot open database') {
+        Write-Warn 'Nguyen nhan: sai mat khau hoac chua co CSDL ThreeTEduTechLMS.'
+        Write-Info 'MSSQL_SA_PASSWORD phai TRUNG voi DB_PASSWORD trong backend/.env.'
+        Write-Info 'Chay setup-env.bat de dong bo.'
+    }
+    else {
+        Write-Info 'Doc ky log ben tren. Neu la loi cu phap SQL thi sua nguon roi sinh lai:'
+        Write-Info '    python scripts\13-chuan-hoa-baseline.py db-archive\nguon\all_database_new.sql db-init\V1__baseline.sql'
+    }
+
+    Write-Host ''
+    Write-Fail 'Dung lai. Chua can cho backend — no se khong co bang nao de doc.'
+    exit 1
+} else {
+    Write-Ok 'Flyway chay xong (ma thoat 0)'
+}
+
+# ── 3b. Chờ dịch vụ sẵn sàng ────────────────────────────────────────────────
 Write-Step 'Cho cac dich vu san sang'
-Write-Info 'Lan dau co the mat 2-5 phut (SQL Server khoi tao + Flyway chay V1..V8).'
+Write-Info 'Lan dau co the mat 2-5 phut (SQL Server khoi tao + Flyway ap V1__baseline).'
 
 $beUp = Wait-Url 'Backend'    'http://localhost:5000/v1/'   300
 $aiUp = Wait-Url 'AI Service' 'http://localhost:12111/health' 120
@@ -240,7 +348,7 @@ if (-not $fwOk) {
         Write-Info ''
         Write-Info 'NGUYEN NHAN: mot migration DA CHAY tren CSDL nhung tep .sql da bi xoa'
         Write-Info '(dung la truong hop cua V9__faq_knowledge_base.sql - da go bo co y).'
-        Write-Info 'Cach sua: .\start.bat -Reset   (xoa volume, chay lai tu V1)'
+        Write-Info 'Cach sua: .\start.bat -ResetDb  (xoa volume SQL Server, chay lai V1__baseline)'
         Write-Info 'Hoac chay repair thu cong:'
         Write-Info '  docker compose -f docker-compose.dev.yml run --rm database-init repair'
     }
@@ -248,14 +356,14 @@ if (-not $fwOk) {
         Write-Info ''
         Write-Info 'NGUYEN NHAN: mot tep migration DA CHAY roi bi SUA noi dung.'
         Write-Info 'Flyway chan lai vi khong con biet chac luoc do dang o trang thai nao.'
-        Write-Info 'Cach sua o DEV: .\start.bat -Reset'
+        Write-Info 'Cach sua o DEV: .\start.bat -ResetDb'
     }
     if ($fwLog -match 'Login failed for user') {
         Write-Info ''
         Write-Fail 'Flyway LOGIN FAILED - mat khau khong khop voi SQL Server.'
         Write-Info 'Volume CSDL cu giu mat khau tu LAN KHOI TAO DAU TIEN; doi bien'
         Write-Info 'moi truong sau do KHONG doi mat khau cua CSDL da ton tai.'
-        Write-Info 'Cach sua: .\start.bat -Reset  (xoa volume, tao lai tu dau)'
+        Write-Info 'Cach sua: .\start.bat -ResetDb (xoa volume SQL Server, tao lai tu dau)'
     }
 }
 

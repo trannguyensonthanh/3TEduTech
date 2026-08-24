@@ -97,7 +97,7 @@ const CourseLearningPage: React.FC = () => {
 
   // --- Logic Cập nhật thời gian học chung (Time Tracker) ---
   const isTimeTrackerEnabled = !!user && !!course && (course.isEnrolled || user.role === 'SA' || (course.pricing.display.originalPrice === 0 && course.pricing.display.discountedPrice === 0));
-  useLessonTimeTracker(activeLessonId, isTimeTrackerEnabled);
+  useLessonTimeTracker(Number(activeLessonId), isTimeTrackerEnabled);
 
   // --- Logic Cập nhật thời gian xem Video ---
   const { mutate: updatePositionMutate } = useUpdateLastWatchedPosition();
