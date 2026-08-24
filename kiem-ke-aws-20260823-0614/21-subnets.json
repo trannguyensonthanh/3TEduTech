@@ -1,0 +1,178 @@
+{
+    "Subnets": [
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-017bfed81ff3a89ac",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-017bfed81ff3a89ac",
+            "State": "available",
+            "VpcId": "vpc-0c1dc8f95719e0032",
+            "CidrBlock": "172.31.32.0/20",
+            "AvailableIpAddressCount": 4091,
+            "AvailabilityZone": "ap-northeast-1a",
+            "DefaultForAz": true,
+            "MapPublicIpOnLaunch": true
+        },
+        {
+            "AvailabilityZoneId": "apne1-az1",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-062b6d93cf2f8fddf",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-062b6d93cf2f8fddf",
+            "State": "available",
+            "VpcId": "vpc-0c1dc8f95719e0032",
+            "CidrBlock": "172.31.0.0/20",
+            "AvailableIpAddressCount": 4091,
+            "AvailabilityZone": "ap-northeast-1c",
+            "DefaultForAz": true,
+            "MapPublicIpOnLaunch": true
+        },
+        {
+            "AvailabilityZoneId": "apne1-az2",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-0e0d9105ba7bf64e2",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-0e0d9105ba7bf64e2",
+            "State": "available",
+            "VpcId": "vpc-0c1dc8f95719e0032",
+            "CidrBlock": "172.31.16.0/20",
+            "AvailableIpAddressCount": 4091,
+            "AvailabilityZone": "ap-northeast-1d",
+            "DefaultForAz": true,
+            "MapPublicIpOnLaunch": true
+        },
+        {
+            "AvailabilityZoneId": "apne1-az1",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "3t-edutech-private-subnet-2"
+                }
+            ],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-00f2756290e2c5174",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-00f2756290e2c5174",
+            "State": "available",
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "CidrBlock": "10.0.20.0/24",
+            "AvailableIpAddressCount": 250,
+            "AvailabilityZone": "ap-northeast-1c",
+            "DefaultForAz": false,
+            "MapPublicIpOnLaunch": false
+        },
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "3t-edutech-public-subnet-1"
+                }
+            ],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-0f9de968a59545f67",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-0f9de968a59545f67",
+            "State": "available",
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "CidrBlock": "10.0.1.0/24",
+            "AvailableIpAddressCount": 248,
+            "AvailabilityZone": "ap-northeast-1a",
+            "DefaultForAz": false,
+            "MapPublicIpOnLaunch": true
+        },
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "MapCustomerOwnedIpOnLaunch": false,
+            "OwnerId": "552357225071",
+            "AssignIpv6AddressOnCreation": false,
+            "Ipv6CidrBlockAssociationSet": [],
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "3t-edutech-private-subnet-1"
+                }
+            ],
+            "SubnetArn": "arn:aws:ec2:ap-northeast-1:552357225071:subnet/subnet-0b1250f300b4e8716",
+            "EnableDns64": false,
+            "Ipv6Native": false,
+            "PrivateDnsNameOptionsOnLaunch": {
+                "HostnameType": "ip-name",
+                "EnableResourceNameDnsARecord": false,
+                "EnableResourceNameDnsAAAARecord": false
+            },
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "SubnetId": "subnet-0b1250f300b4e8716",
+            "State": "available",
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "CidrBlock": "10.0.10.0/24",
+            "AvailableIpAddressCount": 251,
+            "AvailabilityZone": "ap-northeast-1a",
+            "DefaultForAz": false,
+            "MapPublicIpOnLaunch": false
+        }
+    ]
+}

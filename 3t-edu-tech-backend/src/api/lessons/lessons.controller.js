@@ -123,6 +123,17 @@ const confirmVideoUpload = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(lesson);
 });
 
+const generateLessonQuiz = catchAsync(async (req, res) => {
+  const { questionsPerLesson, difficulty } = req.body;
+  const result = await lessonService.generateLessonQuiz(
+    req.params.lessonId,
+    questionsPerLesson,
+    difficulty,
+    req.user
+  );
+  res.status(httpStatus.OK).send(result);
+});
+
 module.exports = {
   createLesson,
   getLessons,
@@ -136,4 +147,5 @@ module.exports = {
   addLessonAttachment,
   deleteLessonAttachment,
   getLessonVideoUrl,
+  generateLessonQuiz,
 };

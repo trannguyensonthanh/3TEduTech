@@ -717,6 +717,7 @@ const CheckoutPage: React.FC = () => {
             selectedPaymentMethodId={selectedPaymentMethodId}
             setCreatedOrder={setCreatedOrder}
             createdOrder={createdOrder}
+            existingOrderId={numericOrderId}
           />
         </div>
       </div>

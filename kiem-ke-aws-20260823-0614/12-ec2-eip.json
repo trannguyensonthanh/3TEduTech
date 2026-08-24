@@ -1,0 +1,22 @@
+{
+    "Addresses": [
+        {
+            "AllocationId": "eipalloc-0ae8404ed9d9b238d",
+            "AssociationId": "eipassoc-053c9a88287f88559",
+            "Domain": "vpc",
+            "NetworkInterfaceId": "eni-0660b6776d86c3fcf",
+            "NetworkInterfaceOwnerId": "552357225071",
+            "PrivateIpAddress": "10.0.1.9",
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "3T-EduTech-CPU-EIP"
+                }
+            ],
+            "PublicIpv4Pool": "amazon",
+            "NetworkBorderGroup": "ap-northeast-1",
+            "InstanceId": "i-01f5c3c164c11042e",
+            "PublicIp": "18.178.30.57"
+        }
+    ]
+}

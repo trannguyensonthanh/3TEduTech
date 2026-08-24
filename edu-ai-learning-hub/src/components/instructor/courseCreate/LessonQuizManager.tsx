@@ -5,6 +5,7 @@ import { Icons } from '@/components/common/Icons';
 import { toast } from 'sonner';
 import QuizQuestionDialog from './QuizQuestionDialog';
 import ConfirmationDialog from './ConfirmationDialog';
+import QuizGeneratorDialog from './QuizGeneratorDialog';
 import {
   useLessonQuizQuestions,
   useDeleteQuizQuestion,
@@ -27,6 +28,7 @@ export const LessonQuizManager: React.FC<LessonQuizManagerProps> = ({
     useDeleteQuizQuestion();
 
   const [isQuizDialogOpen, setQuizDialogOpen] = useState(false);
+  const [isAiGeneratorOpen, setAiGeneratorOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(
     null
   );
@@ -95,14 +97,25 @@ export const LessonQuizManager: React.FC<LessonQuizManagerProps> = ({
           <Icons.help className='h-5 w-5 mr-2 text-primary' />
           Quiz Questions
         </h3>
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={handleAddQuestion}
-        >
-          <Icons.plus className='mr-2 h-4 w-4' /> Add Question
-        </Button>
+        <div className='flex items-center gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={() => setAiGeneratorOpen(true)}
+            className='text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700'
+          >
+            <Icons.sparkles className='mr-2 h-4 w-4' /> Tạo bằng AI
+          </Button>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={handleAddQuestion}
+          >
+            <Icons.plus className='mr-2 h-4 w-4' /> Thêm câu hỏi
+          </Button>
+        </div>
       </div>
       <div className='space-y-3'>
         {questions.length > 0 ? (
@@ -182,6 +195,14 @@ export const LessonQuizManager: React.FC<LessonQuizManagerProps> = ({
           isEditing={!!editingQuestion}
           lessonId={lessonId}
           courseId={courseId}
+        />
+      )}
+      
+      {isAiGeneratorOpen && (
+        <QuizGeneratorDialog
+          open={isAiGeneratorOpen}
+          onClose={() => setAiGeneratorOpen(false)}
+          lessonId={lessonId}
         />
       )}
       <ConfirmationDialog

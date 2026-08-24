@@ -290,11 +290,44 @@ const requestPasswordReset = async (email) => {
     logger.warn(`Password reset requested for non-existent email: ${email}`);
     return;
   }
+  
+  if (account.Status === AccountStatus.PENDING_VERIFICATION) {
+    // Nếu tài khoản chưa xác thực, gửi lại email xác thực
+    const verificationToken = generateRandomToken();
+    const verificationExpires = calculateTokenExpiration(
+      jwtConfig.emailVerificationTokenExpiresMinutes
+    );
+    await authRepository.updateAccountById(account.AccountID, {
+      EmailVerificationToken: verificationToken,
+      EmailVerificationExpires: verificationExpires,
+    });
+    try {
+      const userProfile = await userRepository.findUserProfileById(account.AccountID);
+      await emailSender.sendVerificationEmail(
+        email,
+        userProfile?.FullName || 'bạn',
+        verificationToken
+      );
+      logger.info(`Verification email resent for pending account requesting password reset: ${email}`);
+    } catch (emailError) {
+      logger.error(`Failed to resend verification email to ${email}:`, emailError);
+    }
+    
+    // Ném lỗi 403 để FE biết tài khoản chưa xác thực và thông báo người dùng
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Tài khoản của bạn chưa được xác thực. Chúng tôi đã gửi lại email xác thực, vui lòng kiểm tra hộp thư của bạn.'
+    );
+  }
+
   if (account.Status !== AccountStatus.ACTIVE) {
     logger.warn(
       `Password reset requested for inactive/banned account: ${email} (${account.Status})`
     );
-    return;
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Tài khoản của bạn đã bị khóa hoặc không hoạt động.'
+    );
   }
   const resetToken = generateRandomToken();
   const resetExpires = calculateTokenExpiration(

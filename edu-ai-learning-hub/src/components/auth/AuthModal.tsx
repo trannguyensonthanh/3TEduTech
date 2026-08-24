@@ -129,10 +129,6 @@ const AuthModal: React.FC<AuthModalProps> = ({
                         >
                           <SignupForm
                             onSuccess={() => {
-                              toast({
-                                title: t('authModal.toast.successTitle'),
-                                description: t('authModal.toast.successDesc'),
-                              });
                               setActiveTab('login');
                             }}
                           />

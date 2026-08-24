@@ -93,9 +93,15 @@ const createImportJob = async (user, file) => {
 
   const jobId = crypto.randomBytes(8).toString('hex');
 
+  /* [SỬA] Giải mã originalname từ latin1 sang utf-8. 
+     Multer (hoặc busboy) theo mặc định đọc filename trong multipart/form-data 
+     bằng chuẩn latin1, làm cho các ký tự tiếng Việt bị lỗi phông. */
+  const rawName = file.originalname || 'khoa-hoc.zip';
+  const decodedName = Buffer.from(rawName, 'latin1').toString('utf8');
+  
   /* Chuẩn hóa NFC cho tên tệp gốc — cùng lý do như tên entry trong ZIP.
      Trình duyệt trên macOS gửi lên tên dạng NFD. */
-  const originalName = String(file.originalname || 'khoa-hoc.zip').normalize('NFC');
+  const originalName = String(decodedName).normalize('NFC');
 
   const job = {
     jobId,
@@ -190,8 +196,21 @@ const sanitizeProposalForClient = (proposal) => {
   if (!proposal) return proposal;
   const asText = (value) => (typeof value === 'string' ? value : null);
 
+  /* [THÊM 20/08/2026] Ảnh bìa cũng phải che đường dẫn tuyệt đối.
+     `proposal.coverImage` có dạng `{ relativePath, absolutePath }`, và trước
+     đây nó được spread thẳng ra client qua `...proposal` — lộ đường dẫn thật
+     trên đĩa máy chủ, đúng thứ mà việc gỡ `absolutePath` khỏi từng bài học
+     sinh ra để tránh. */
+  const coverImage = proposal.coverImage
+    ? {
+        relativePath: proposal.coverImage.relativePath,
+        source: proposal.coverImage.source || 'zip',
+      }
+    : null;
+
   return {
     ...proposal,
+    coverImage,
     sections: (proposal.sections || []).map((section) => ({
       ...section,
       description: asText(section.description),
@@ -386,6 +405,31 @@ const enrichProposal = async (user, jobId) => {
   }
   proposal.courseShortDescription = shortDescription || null;
 
+  /* [THÊM 20/08/2026] Yêu cầu đầu vào và kết quả đạt được.
+
+     Trước đây AI không sinh hai trường này, nên mọi khóa học nhập từ ZIP đều
+     có cột Requirements và LearningOutcomes rỗng — trong khi "Bạn sẽ học được
+     gì" là khối thuyết phục người mua mạnh nhất trên trang chi tiết khóa học.
+
+     Chỉ ghi đè khi AI thật sự trả về nội dung: giảng viên có thể đã tự viết ở
+     màn hình duyệt rồi mới bấm nhờ AI, và xóa mất công của họ vì AI trả chuỗi
+     rỗng là kiểu mất dữ liệu khó chịu nhất. */
+  const requirements =
+    typeof data.requirements === 'string' ? data.requirements.trim() : '';
+  const learningOutcomes =
+    typeof data.learning_outcomes === 'string'
+      ? data.learning_outcomes.trim()
+      : '';
+
+  if (requirements) {
+    proposal.courseRequirements = requirements;
+    proposal.courseRequirementsSource = 'ai';
+  }
+  if (learningOutcomes) {
+    proposal.courseLearningOutcomes = learningOutcomes;
+    proposal.courseLearningOutcomesSource = 'ai';
+  }
+
   /* Lưu lại vào Redis. Nếu không lưu, giảng viên tải lại trang là mất sạch và
      phải tiêu token lần nữa — điều đáng tiếc nhất với hạn mức miễn phí. */
   await importStore.patch(jobId, { proposed: proposal });
@@ -435,7 +479,12 @@ const QUIZ_MIN_CONTENT_CHARS = 200;
  * chỉ khi bấm "Tạo khóa học" với tùy chọn `includeQuiz` thì mới thành dữ liệu
  * thật.
  */
-const generateQuiz = async (user, jobId, questionsPerLesson = 3) => {
+const generateQuiz = async (
+  user,
+  jobId,
+  questionsPerLesson = 3,
+  difficulty = 'mixed'
+) => {
   const job = await getOwnedJob(user, jobId);
 
   if (job.status !== importStore.ImportStatus.READY) {
@@ -489,6 +538,13 @@ const generateQuiz = async (user, jobId, questionsPerLesson = 3) => {
         course_name: proposal.courseName || 'Khóa học',
         lessons: payloadLessons,
         questions_per_lesson: Math.max(1, Math.min(5, questionsPerLesson)),
+        /* [THÊM 20/08/2026] Độ khó do giảng viên chọn.
+           Kẹp lại ở đây thay vì tin thẳng giá trị đi qua: Joi đã kiểm rồi,
+           nhưng hàm này còn được gọi từ nơi khác trong tương lai, và một chuỗi
+           lạ lọt vào prompt là một đường tiêm chỉ dẫn cho mô hình. */
+        difficulty: ['easy', 'medium', 'hard', 'mixed'].includes(difficulty)
+          ? difficulty
+          : 'mixed',
       },
       180000
     );
@@ -646,14 +702,25 @@ const buildCourseData = ({ proposal, body, instructorId, level, categoryId }) =>
     OriginalPrice: body.originalPrice ?? 0,
     DiscountedPrice: body.discountedPrice ?? null,
 
+    /* [THÊM 20/08/2026] Video giới thiệu.
+       Luồng thủ công có ô này (MediaTab), luồng nhập ZIP thì không — nên mọi
+       khóa học nhập từ ZIP đều thiếu video giới thiệu, tức thiếu đúng thứ
+       thuyết phục người mua nhất trên trang bán hàng. Đây là đường dẫn YouTube
+       do giảng viên dán vào, không phải tệp trong ZIP. */
+    IntroVideoUrl: body.introVideoUrl || null,
+
     // --- 🔧 HỆ THỐNG — không nhận từ đâu khác ---
     Slug: uniqueSlug,
     InstructorID: instructorId,
     StatusID: CourseStatus.DRAFT, // LUÔN LUÔN là DRAFT
     PublishedAt: null,
     IsFeatured: 0,
-    ThumbnailUrl: null, // Cloudinary điền sau khi upload
-    IntroVideoUrl: null,
+    /* Ảnh bìa: nếu bản nháp có ảnh bìa (lấy từ chính tệp ZIP hoặc do giảng
+       viên tải lên ở màn hình duyệt) thì hàng đợi media-upload sẽ đẩy lên
+       Cloudinary rồi điền vào cột này sau khi transaction commit. Để null ở
+       đây là đúng: gọi Cloudinary bên trong một transaction CSDL nghĩa là giữ
+       khóa hàng suốt thời gian chờ mạng. */
+    ThumbnailUrl: null,
   };
 };
 
@@ -731,6 +798,10 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
   let createdSections = 0;
   let createdLessons = 0;
   let createdQuestions = 0;
+  /* Số BÀI KIỂM TRA được tạo — mỗi chương có câu hỏi thì sinh đúng một bài.
+     Đếm riêng với `createdLessons` để thông báo cho giảng viên nói rõ "3 chương,
+     12 bài học, 3 bài kiểm tra" thay vì gộp thành 15 bài trông khó hiểu. */
+  let createdQuizLessons = 0;
   /* Có tạo kèm trắc nghiệm không — do giảng viên tick ở màn hình duyệt.
      Mặc định KHÔNG: câu hỏi do AI soạn phải được chọn một cách chủ động, chứ
      không phải cứ bấm tạo khóa học là tự có. */
@@ -843,43 +914,28 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
           transaction
         );
 
-        /* [GIAI ĐOẠN D] Tạo câu hỏi trắc nghiệm ngay trong CÙNG transaction.
-           Nếu tách ra làm sau commit, một lần lỗi sẽ để lại khóa học có bài
-           thì có đề, bài thì không — trạng thái nửa vời rất khó lần ra sau này.
-           Số lượt ghi tuy nhiều nhưng mỗi lệnh đều nhỏ. */
-        if (
-          includeQuiz &&
-          Array.isArray(lesson.quizQuestions) &&
-          lesson.quizQuestions.length > 0
-        ) {
-          let questionOrder = 0;
-          for (const q of lesson.quizQuestions) {
-            const created = await quizRepository.createQuestion(
-              {
-                LessonID: newLesson.LessonID,
-                QuestionText: truncate(q.question, 1000),
-                Explanation: q.explanation ? truncate(q.explanation, 1000) : null,
-                QuestionOrder: questionOrder,
-              },
-              transaction
-            );
+        /* [GỠ 20/08/2026] Ở ĐÂY TRƯỚC ĐÂY LÀ MỘT LỖI NGHIÊM TRỌNG.
 
-            await quizRepository.createOptionsForQuestion(
-              created.QuestionID,
-              q.options.map((text, index) => ({
-                OptionText: truncate(text, 500),
-                // Đúng MỘT đáp án đúng. `correctIndex` đã được kiểm tra nằm
-                // trong phạm vi ở cả AI Service lẫn generateQuiz.
-                IsCorrectAnswer: index === q.correctIndex ? 1 : 0,
-                OptionOrder: index,
-              })),
-              transaction
-            );
+           Bản cũ gắn câu hỏi trắc nghiệm vào CHÍNH bài học TEXT/VIDEO vừa tạo
+           (`LessonID: newLesson.LessonID`). Cơ sở dữ liệu chấp nhận, vì
+           `FK_QuizQuestions_LessonID` chỉ đòi LessonID tồn tại chứ không ràng
+           buộc LessonType. Nhưng MỌI đường đọc trong hệ thống đều đòi
+           `LessonType = 'QUIZ'`:
 
-            questionOrder += 1;
-            createdQuestions += 1;
-          }
-        }
+             • quizzes.service.getQuestionsForInstructor → 400
+             • quizzes.service.startQuizAttempt          → 400
+             • quizzes.service.createQuestionWithOptions → 400
+             • LessonContentRenderer chỉ render QuizPlayer khi lessonType QUIZ
+             • LessonDialog chỉ hiện LessonQuizManager khi lessonType QUIZ
+
+           Kết quả: câu hỏi NẰM TRONG cơ sở dữ liệu nhưng không ai nhìn thấy —
+           học viên không làm được, giảng viên không xem cũng không sửa được —
+           trong khi thông báo vẫn báo "đã tạo N câu hỏi". Và đường sửa tay
+           duy nhất (đổi bài sang loại QUIZ) lại XÓA SẠCH `TextContent` đã trích
+           từ ZIP (lessons.service.js), rồi khóa luôn không cho đổi ngược lại.
+
+           Nay câu hỏi được GOM THEO CHƯƠNG và ghi vào một bài học QUIZ riêng
+           đặt ở cuối chương — xem khối bên dưới vòng lặp bài học. */
 
         /* Ghi nhận video cần tải lên Cloudinary SAU khi transaction commit.
            Không tải ở đây vì hai lý do: transaction đang mở (giữ khóa CSDL suốt
@@ -937,6 +993,102 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
         lessonOrder += 1;
         createdLessons += 1;
       }
+
+      /* ==================================================================
+         [THÊM 20/08/2026] BÀI KIỂM TRA CUỐI CHƯƠNG
+
+         Câu hỏi do AI soạn được gom theo CHƯƠNG và đặt vào MỘT bài học riêng
+         `LessonType = 'QUIZ'` xếp cuối chương.
+
+         VÌ SAO PHẢI LÀ MỘT BÀI HỌC RIÊNG
+         Trong mô hình dữ liệu của hệ thống, "quiz" không phải một thực thể
+         riêng — nó CHÍNH LÀ bài học có LessonType = 'QUIZ', và
+         `QuizQuestions.LessonID` trỏ thẳng vào bài học đó. Mọi đường đọc (API
+         giảng viên, API làm bài, bộ render nội dung, hộp thoại sửa bài) đều
+         kiểm tra `LessonType === 'QUIZ'` trước khi làm gì. Gắn câu hỏi vào một
+         bài TEXT/VIDEO thì chúng lọt vào CSDL nhưng biến mất khỏi giao diện —
+         đúng lỗi mà bản trước mắc phải.
+
+         VÌ SAO GOM THEO CHƯƠNG chứ không tách theo từng bài
+         AI sinh câu hỏi theo từng bài, nên tách theo bài là cách dịch một-một
+         dễ nhất. Nhưng nó làm số mục trong chương trình học tăng gần gấp đôi:
+         một chương 5 bài thành 10 mục, xen kẽ học—kiểm tra—học—kiểm tra. Gom
+         theo chương giữ nhịp học tự nhiên và khớp với cách các nền tảng học
+         trực tuyến lớn tổ chức. Thứ tự câu hỏi vẫn theo thứ tự bài, nên học
+         viên vẫn thấy đề đi đúng mạch nội dung.
+
+         Bài kiểm tra được tạo TRONG CÙNG transaction với các bài học của
+         chương: tách ra làm sau commit thì một lần lỗi sẽ để lại chương có
+         bài mà không có đề, một trạng thái nửa vời rất khó lần ra sau này.
+         ================================================================== */
+      if (includeQuiz) {
+        const cauHoiCuaChuong = selectedLessons.flatMap((lesson) =>
+          Array.isArray(lesson.quizQuestions) ? lesson.quizQuestions : []
+        );
+
+        if (cauHoiCuaChuong.length > 0) {
+          const tenChuong = truncate(
+            edit?.sectionName || section.sectionName || 'Chương',
+            180
+          );
+          const baiKiemTra = await lessonRepository.createLesson(
+            {
+              SectionID: newSection.SectionID,
+              LessonName: truncate(`Bài kiểm tra — ${tenChuong}`, 255),
+              Description:
+                `Bài kiểm tra tổng hợp ${cauHoiCuaChuong.length} câu hỏi ` +
+                `cho toàn bộ nội dung chương này. Câu hỏi do AI soạn từ tài ` +
+                `liệu bạn đã tải lên; giảng viên có thể sửa lại trong trang ` +
+                `Sửa khóa học.`,
+              // Xếp cuối chương: `lessonOrder` đã được tăng sau bài cuối cùng.
+              LessonOrder: lessonOrder,
+              LessonType: LessonType.QUIZ,
+              /* Bài QUIZ không mang nội dung video hay văn bản. Ghi giá trị
+                 khác null ở đây sẽ khiến lessons.service xóa đi khi giảng viên
+                 mở ra sửa, và làm bản ghi trông như dữ liệu hỏng. */
+              VideoSourceType: null,
+              ExternalVideoID: null,
+              VideoDurationSeconds: null,
+              TextContent: null,
+              IsFreePreview: 0,
+            },
+            transaction
+          );
+          lessonOrder += 1;
+          createdLessons += 1;
+
+          let questionOrder = 0;
+          for (const q of cauHoiCuaChuong) {
+            const created = await quizRepository.createQuestion(
+              {
+                LessonID: baiKiemTra.LessonID,
+                QuestionText: truncate(q.question, 1000),
+                Explanation: q.explanation ? truncate(q.explanation, 1000) : null,
+                QuestionOrder: questionOrder,
+              },
+              transaction
+            );
+
+            await quizRepository.createOptionsForQuestion(
+              created.QuestionID,
+              q.options.map((text, index) => ({
+                OptionText: truncate(text, 500),
+                /* Đúng MỘT đáp án đúng — quy tắc này được kiểm ba lần trước
+                   khi tới đây: ở AI Service, ở generateQuiz, và ở tuyến lưu
+                   câu hỏi giảng viên đã sửa. */
+                IsCorrectAnswer: index === q.correctIndex ? 1 : 0,
+                OptionOrder: index,
+              })),
+              transaction
+            );
+
+            questionOrder += 1;
+            createdQuestions += 1;
+          }
+
+          createdQuizLessons += 1;
+        }
+      }
     }
 
     if (createdSections === 0) {
@@ -991,7 +1143,8 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
 
   logger.info(
     `[Import] Job ${jobId} → khóa học DRAFT #${courseId} ` +
-      `(${createdSections} chương, ${createdLessons} bài, ${createdQuestions} câu hỏi) ` +
+      `(${createdSections} chương, ${createdLessons} bài, ` +
+      `${createdQuizLessons} bài kiểm tra, ${createdQuestions} câu hỏi) ` +
       `cho giảng viên ${user.id}.`
   );
 
@@ -1004,13 +1157,26 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
 
      Xếp hàng thất bại KHÔNG được làm hỏng cả lần nhập — khóa học đã tạo xong
      và hoàn toàn dùng được, chỉ là video phải tải thủ công. */
-  if (pendingMedia.length > 0) {
+  /* [THÊM 20/08/2026] Ảnh bìa khóa học.
+
+     Đường dẫn lấy từ bản nháp PHÍA MÁY CHỦ, không phải từ payload client — cùng
+     nguyên tắc với đường dẫn video. Giảng viên chỉ gửi lên cờ `useCoverImage`
+     (mặc định bật) để chọn có dùng ảnh tìm được trong tệp ZIP hay không. */
+  const coverImagePath =
+    body.useCoverImage !== false && proposal.coverImage?.absolutePath
+      ? proposal.coverImage.absolutePath
+      : null;
+
+  /* Có ảnh bìa nhưng không có video nào thì VẪN phải xếp hàng: nếu không, ảnh
+     bìa không bao giờ được tải lên và khóa học hiện ô trống ở trang danh sách. */
+  if (pendingMedia.length > 0 || coverImagePath) {
     try {
       await addMediaUploadJob({
         jobId,
         courseId,
         accountId: user.id,
         items: pendingMedia,
+        coverImagePath,
       });
     } catch (error) {
       logger.error(`[Import] Không xếp được hàng đợi tải video cho job ${jobId}:`, error);
@@ -1034,16 +1200,230 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
     totalSections: createdSections,
     totalLessons: createdLessons,
     totalQuestions: createdQuestions,
+    totalQuizLessons: createdQuizLessons,
     /* Số video THỰC SỰ được xếp hàng, không phải tổng số video trong tệp ZIP.
        Trước đây trả `proposal.stats.videoCount` — sai khi giảng viên bỏ tick
        bớt: giao diện báo "đang tải 12 video" trong khi chỉ có 3 cái được chọn,
        và thanh tiến độ không bao giờ chạy hết. */
     videosPendingUpload: pendingMedia.filter((m) => m.videoPath).length,
+    /* Có đặt ảnh bìa hay không — giao diện dùng để nói rõ "ảnh bìa đang được
+       tải lên" thay vì để giảng viên tưởng khóa học sẽ mãi không có ảnh. */
+    hasCoverImage: Boolean(coverImagePath),
     /* [THÊM 18/08/2026] Danh sách bài chờ gắn video — đầu vào cho bước 4 của
        giao diện. Rỗng nghĩa là khóa học không có bài video nào, hoặc video đã
        nằm sẵn trên máy chủ (bản nháp cũ). */
     lessonsNeedingVideo,
   };
+};
+
+/* ============================================================================
+ * [THÊM 20/08/2026] LƯU CÂU HỎI GIẢNG VIÊN ĐÃ SỬA
+ *
+ * Ghi bản đã sửa vào chính bản nháp trên Redis. Nguyên tắc "nội dung câu hỏi
+ * KHÔNG nhận từ payload chấp nhận" vẫn giữ nguyên: `acceptProposal` tiếp tục
+ * đọc `job.proposed` phía máy chủ. Khác biệt là bản nháp ấy nay phản ánh đúng
+ * thứ giảng viên nhìn thấy trên màn hình, thay vì đóng băng ở bản AI vừa sinh.
+ *
+ * Đối chiếu theo `sourcePath` — cùng khóa mà `acceptProposal` dùng. Bài học nào
+ * client gửi lên mà không có trong bản nháp thì BỎ QUA, không tạo mới: nếu chấp
+ * nhận khóa lạ, client tự thêm được câu hỏi cho những bài không tồn tại và
+ * `acceptProposal` sẽ đọc phải rác.
+ *
+ * @param {object} user
+ * @param {string} jobId
+ * @param {object} body - { lessons: [{ sourcePath, questions: [...] }] }
+ */
+const saveQuizEdits = async (user, jobId, body) => {
+  const job = await getOwnedJob(user, jobId);
+
+  if (job.status !== importStore.ImportStatus.READY) {
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      `Bản nháp không ở trạng thái sửa được (hiện tại: ${job.status}).`
+    );
+  }
+
+  const proposal = job.proposed;
+  if (!proposal || !Array.isArray(proposal.sections)) {
+    throw new ApiError(httpStatus.CONFLICT, 'Bản nháp không hợp lệ.');
+  }
+
+  // Lập chỉ mục bài học theo sourcePath để tra một lượt thay vì lồng hai vòng.
+  const lessonByPath = new Map();
+  proposal.sections.forEach((section) => {
+    (section.lessons || []).forEach((lesson) => {
+      if (lesson.sourcePath) lessonByPath.set(lesson.sourcePath, lesson);
+    });
+  });
+
+  let totalQuestions = 0;
+  let lessonsWithQuiz = 0;
+  let boQua = 0;
+
+  for (const item of body.lessons || []) {
+    const lesson = lessonByPath.get(item.sourcePath);
+    if (!lesson) {
+      boQua += 1;
+      continue;
+    }
+
+    const questions = Array.isArray(item.questions) ? item.questions : [];
+    if (questions.length === 0) {
+      /* Mảng rỗng = giảng viên đã xóa hết câu hỏi của bài này. Đó là một lựa
+         chọn hợp lệ, nên phải XÓA thật chứ không bỏ qua — bỏ qua thì đề cũ
+         vẫn nằm nguyên trong bản nháp và quay lại lúc tạo khóa học. */
+      delete lesson.quizQuestions;
+      continue;
+    }
+
+    lesson.quizQuestions = questions.map((q) => ({
+      question: String(q.question).trim(),
+      options: q.options.map((o) => String(o).trim()),
+      correctIndex: q.correctIndex,
+      explanation: typeof q.explanation === 'string' ? q.explanation.trim() : '',
+    }));
+
+    totalQuestions += questions.length;
+    lessonsWithQuiz += 1;
+  }
+
+  if (boQua > 0) {
+    logger.warn(
+      `[Import] Bỏ qua ${boQua} bài học không có trong bản nháp khi lưu câu hỏi (job ${jobId}).`
+    );
+  }
+
+  await importStore.patch(jobId, { proposed: proposal });
+
+  logger.info(
+    `[Import] Giảng viên lưu ${totalQuestions} câu hỏi cho ${lessonsWithQuiz} bài (job ${jobId}).`
+  );
+
+  return {
+    proposal: sanitizeProposalForClient(proposal),
+    totalQuestions,
+    lessonsWithQuiz,
+  };
+};
+
+/* ============================================================================
+ * [THÊM 20/08/2026] XEM TRƯỚC TỆP TRONG BẢN NHÁP
+ *
+ * Giảng viên cần XEM video trước khi bấm tạo khóa học. Trước đây không có
+ * đường nào: video đã nằm trên đĩa máy chủ sau khi giải nén, nhưng chưa lên
+ * Cloudinary nên không có URL công khai, và bản nháp cố ý giấu `absolutePath`.
+ * Kết quả là giảng viên duyệt một khóa học mà chưa từng nhìn thấy nội dung của
+ * nó — đúng thứ bước duyệt sinh ra để tránh.
+ *
+ * ── BA HÀNG RÀO, VÌ ĐÂY LÀ TUYẾN ĐỌC TỆP TỪ ĐĨA MÁY CHỦ ──────────────────
+ *
+ * 1. QUYỀN SỞ HỮU — `getOwnedJob` đã chặn người khác đọc job không phải của
+ *    mình (trả 404 chứ không phải 403, để không xác nhận job có tồn tại).
+ *
+ * 2. CHỈ TRA TRONG BẢN NHÁP — đường dẫn tuyệt đối KHÔNG lấy từ tham số client
+ *    gửi lên. Client gửi `sourcePath`, máy chủ tra ngược trong `job.proposed`
+ *    để lấy `absolutePath`. Client không có cách nào trỏ tới một tệp không nằm
+ *    trong bản nháp của chính họ.
+ *
+ * 3. KIỂM TRA CHỨA — dù đã tra qua bản nháp, vẫn xác nhận đường dẫn thật sự
+ *    nằm trong thư mục của job. Đây là lớp phòng vệ thừa một cách có chủ đích:
+ *    nếu sau này ai đó đổi cách dựng bản nháp và để lọt một đường dẫn ngoài,
+ *    hàng rào này vẫn đứng.
+ *
+ * @returns {Promise<{absolutePath: string, mimeType: string, fileName: string}>}
+ */
+const resolvePreviewFile = async (user, jobId, sourcePath) => {
+  const job = await getOwnedJob(user, jobId);
+
+  if (!job.proposed) {
+    throw new ApiError(httpStatus.CONFLICT, 'Bản nháp chưa sẵn sàng.');
+  }
+
+  const duong = String(sourcePath || '').trim();
+  if (!duong) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Thiếu đường dẫn tệp.');
+  }
+
+  let absolutePath = null;
+  let fileName = null;
+
+  // Ảnh bìa là trường hợp riêng: nó không nằm trong danh sách bài học.
+  const cover = job.proposed.coverImage;
+  if (cover && cover.relativePath === duong && cover.absolutePath) {
+    absolutePath = cover.absolutePath;
+    fileName = path.basename(cover.relativePath);
+  } else {
+    for (const section of job.proposed.sections || []) {
+      for (const lesson of section.lessons || []) {
+        if (lesson.sourcePath === duong && lesson.absolutePath) {
+          absolutePath = lesson.absolutePath;
+          fileName = path.basename(lesson.sourcePath);
+          break;
+        }
+      }
+      if (absolutePath) break;
+    }
+  }
+
+  if (!absolutePath) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Không tìm thấy tệp này trong bản nháp, hoặc tệp không được giải nén ra đĩa.'
+    );
+  }
+
+  // Hàng rào 3 — kiểm tra chứa.
+  const thuMucJob = path.resolve(jobDir(jobId));
+  const duongThat = path.resolve(absolutePath);
+  if (
+    duongThat !== thuMucJob &&
+    !duongThat.startsWith(thuMucJob + path.sep)
+  ) {
+    logger.error(
+      `[Import] CHẶN đọc tệp ngoài thư mục job ${jobId}: ${duongThat}`
+    );
+    throw new ApiError(httpStatus.FORBIDDEN, 'Đường dẫn tệp không hợp lệ.');
+  }
+
+  try {
+    await fs.access(duongThat);
+  } catch {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Tệp đã bị dọn khỏi máy chủ. Bản nháp có thể đã quá hạn.'
+    );
+  }
+
+  return {
+    absolutePath: duongThat,
+    fileName: fileName || path.basename(duongThat),
+    mimeType: doanKieuNoiDung(duongThat),
+  };
+};
+
+/** Đoán Content-Type từ phần mở rộng — chỉ cho các định dạng xem trước được. */
+const doanKieuNoiDung = (duong) => {
+  const ext = path.extname(duong).toLowerCase();
+  const bang = {
+    '.mp4': 'video/mp4',
+    '.m4v': 'video/mp4',
+    '.mov': 'video/quicktime',
+    '.webm': 'video/webm',
+    '.mkv': 'video/x-matroska',
+    '.avi': 'video/x-msvideo',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+    '.srt': 'text/plain; charset=utf-8',
+    '.vtt': 'text/vtt; charset=utf-8',
+    '.pdf': 'application/pdf',
+  };
+  /* Mặc định `application/octet-stream` để trình duyệt TẢI XUỐNG thay vì hiển
+     thị. Đoán đại một kiểu nội dung cho tệp lạ nghĩa là để trình duyệt tự diễn
+     giải nội dung do người ngoài tải lên — đường đi kinh điển của XSS lưu trữ. */
+  return bang[ext] || 'application/octet-stream';
 };
 
 module.exports = {
@@ -1055,4 +1435,6 @@ module.exports = {
   enrichProposal,
   generateQuiz,
   acceptProposal,
+  saveQuizEdits,
+  resolvePreviewFile,
 };

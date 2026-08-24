@@ -87,6 +87,7 @@ const Hero = () => {
       <div className='absolute inset-0 z-[2]'>
         <WebGLErrorBoundary>
           <Canvas
+            dpr={[1, 1.5]}
             camera={{ position: [0, 0, 5], fov: 75 }}
             gl={{ powerPreference: 'default', failIfMajorPerformanceCaveat: false }}
             onCreated={({ gl }) => {

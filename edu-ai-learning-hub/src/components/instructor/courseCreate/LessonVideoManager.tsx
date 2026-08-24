@@ -24,7 +24,7 @@ import {
   useLessonVideoUrl,
   useUploadLessonVideoDirect,
 } from '@/hooks/queries/lesson.queries';
-import { getYoutubeEmbedUrl, getVimeoEmbedUrl } from '@/utils/video.util';
+import { getYoutubeEmbedUrl, getVimeoEmbedUrl, extractYoutubeId, extractVimeoId } from '@/utils/video.util';
 import { Lesson } from '@/types/common.types';
 import { Label } from '@/components/ui/label';
 import Plyr from 'plyr-react';
@@ -127,29 +127,35 @@ export const LessonVideoManager: React.FC<LessonVideoManagerProps> = ({
       (videoSourceType === 'YOUTUBE' && lesson?.externalVideoId) ||
       externalVideoInput
     ) {
-      return {
-        type: 'video' as const,
-        sources: [
-          {
-            src: lesson.externalVideoId || externalVideoInput,
-            provider: 'youtube' as const,
-          },
-        ],
-      };
+      const srcId = lesson?.externalVideoId || extractYoutubeId(externalVideoInput);
+      if (srcId) {
+        return {
+          type: 'video' as const,
+          sources: [
+            {
+              src: srcId,
+              provider: 'youtube' as const,
+            },
+          ],
+        };
+      }
     }
     if (
       (videoSourceType === 'VIMEO' && lesson?.externalVideoId) ||
       externalVideoInput
     ) {
-      return {
-        type: 'video' as const,
-        sources: [
-          {
-            src: lesson.externalVideoId || externalVideoInput,
-            provider: 'vimeo' as const,
-          },
-        ],
-      };
+      const srcId = lesson?.externalVideoId || extractVimeoId(externalVideoInput);
+      if (srcId) {
+        return {
+          type: 'video' as const,
+          sources: [
+            {
+              src: srcId,
+              provider: 'vimeo' as const,
+            },
+          ],
+        };
+      }
     }
     return null;
   };

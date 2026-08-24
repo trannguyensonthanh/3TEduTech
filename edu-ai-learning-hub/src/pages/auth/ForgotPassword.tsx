@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/common/Icons";
 import { useToast } from "@/components/ui/use-toast";
+import { requestPasswordResetApi } from "@/services/auth.service";
 
 const ForgotPassword = () => {
   const { toast } = useToast();
@@ -27,24 +28,22 @@ const ForgotPassword = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
     try {
-      // In a real application, this would be an API call to request a password reset
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Gọi API thực tế thay vì mock
+      await requestPasswordResetApi(email);
 
       setIsSuccess(true);
 
       toast({
-        title: "Reset link sent",
+        title: "Đã gửi link khôi phục",
         description:
-          "If an account exists with this email, you'll receive a password reset link.",
+          "Nếu email của bạn tồn tại trong hệ thống, bạn sẽ nhận được một link khôi phục mật khẩu.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Reset request failed",
-        description:
-          "There was an error sending the reset link. Please try again.",
+        title: "Yêu cầu thất bại",
+        description: error.message || "Có lỗi xảy ra khi gửi link khôi phục. Vui lòng thử lại.",
       });
     } finally {
       setIsSubmitting(false);

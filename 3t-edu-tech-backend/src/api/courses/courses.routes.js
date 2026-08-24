@@ -194,4 +194,14 @@ router.post(
   courseController.cancelUpdate
 );
 
+/**
+ * Sinh mô tả khóa học bằng AI
+ */
+router.post(
+  '/:courseId/generate-description',
+  authenticate,
+  authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),
+  courseController.generateCourseDescription
+);
+
 module.exports = router;

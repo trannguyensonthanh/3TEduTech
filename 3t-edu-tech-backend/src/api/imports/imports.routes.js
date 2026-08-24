@@ -103,6 +103,66 @@ router.post(
   importController.generateQuiz
 );
 
+/* [THÊM 20/08/2026] Lưu câu hỏi giảng viên đã sửa.
+
+   Dùng `enrichLimiter` chung với hai tuyến AI ở trên? KHÔNG. Tuyến này không
+   gọi mô hình nào cả, chỉ ghi vào Redis — tính vào hạn mức AI sẽ khiến giảng
+   viên sửa vài câu hỏi rồi hết lượt nhờ AI viết mô tả. */
+router.put(
+  '/:jobId/quiz',
+  authenticate,
+  instructorOnly,
+  validate(importValidation.saveQuiz),
+  importController.saveQuiz
+);
+
+/* [THÊM 20/08/2026] Xem trước tệp trong bản nháp (video, ảnh bìa).
+
+   Khai báo TRƯỚC '/:jobId' để đoạn cố định '/preview' không bị mẫu tham số
+   nuốt mất — cùng lý do với '/limits' và '/:jobId/proposal' ở trên.
+
+   KHÔNG gắn giới hạn tần suất: thẻ <video> gửi hàng chục yêu cầu Range cho một
+   lần tua, nên bất kỳ hạn mức hợp lý nào cũng sẽ chặn nhầm việc xem bình
+   thường. Hàng rào ở đây là quyền sở hữu bản nháp, không phải số lượt gọi. */
+/* ==========================================================================
+   Thẻ <video> KHÔNG gửi được header Authorization.
+
+   Trình duyệt tự phát yêu cầu cho `<video src="...">` và cho từng lần tua theo
+   Range; không có API nào chèn header vào những yêu cầu đó. Ba đường đi khả dĩ:
+
+     (a) fetch toàn bộ tệp rồi tạo blob URL — không dùng được, video bài giảng
+         hàng trăm MB phải tải xong mới xem được khung hình đầu tiên, và mất
+         hoàn toàn khả năng tua.
+     (b) URL ký sẵn có hạn dùng ngắn — sạch nhất, nhưng phải dựng thêm cơ chế
+         ký và xác thực chữ ký cho đúng MỘT tính năng.
+     (c) nhận token qua chuỗi truy vấn, CHỈ ở tuyến này.
+
+   Chọn (c). Đánh đổi phải nói rõ: token đi vào chuỗi truy vấn sẽ nằm lại trong
+   nhật ký truy cập của nginx và trong lịch sử trình duyệt. Giảm thiểu bằng:
+   phạm vi đúng một tuyến, chỉ đọc, chỉ bản nháp của chính người gọi, và phản
+   hồi đặt `Cache-Control: private, no-store`. Nếu sau này cần chặt hơn, đường
+   nâng cấp là (b) — thay đúng middleware này, không đụng tới nơi nào khác.
+   ========================================================================== */
+const promoteQueryToken = (req, res, next) => {
+  if (!req.header('Authorization') && req.query.access_token) {
+    req.headers.authorization = `Bearer ${req.query.access_token}`;
+  }
+  /* Gỡ khỏi query TRƯỚC khi tới tầng kiểm tra: schema Joi của tuyến này chỉ
+     khai `path`, và Joi từ chối khóa lạ — để nguyên thì mọi yêu cầu xem trước
+     đều trả 400. */
+  delete req.query.access_token;
+  next();
+};
+
+router.get(
+  '/:jobId/preview',
+  promoteQueryToken,
+  authenticate,
+  instructorOnly,
+  validate(importValidation.previewFile),
+  importController.previewFile
+);
+
 router.post(
   '/:jobId/accept',
   authenticate,

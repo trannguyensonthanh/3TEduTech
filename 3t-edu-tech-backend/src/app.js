@@ -32,9 +32,7 @@ if (config.env === 'development') {
     })
   );
 }
-
-app.use(helmet());
-
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // CORS: Production đọc từ env CORS_ALLOWED_ORIGINS, dev cho phép tất cả
 const corsOptions = {
   origin: (origin, callback) => {

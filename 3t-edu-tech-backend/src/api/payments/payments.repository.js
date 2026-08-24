@@ -204,10 +204,27 @@ const findPaymentByExternalId = async (externalId, methodId) => {
   }
 };
 
+const deletePendingPaymentByOrderId = async (orderId) => {
+  try {
+    const pool = await getConnection();
+    const request = pool.request();
+    request.input('OrderID', sql.BigInt, orderId);
+    request.input('PendingStatus', sql.VarChar, PaymentStatus.PENDING);
+    await request.query(`
+      DELETE FROM CoursePayments 
+      WHERE OrderID = @OrderID AND PaymentStatusID = @PendingStatus;
+    `);
+  } catch (error) {
+    logger.error(`Error deleting pending payment for order ${orderId}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   createCoursePayment,
   findPaymentByOrderId,
   updatePaymentStatus,
   findPaymentByExternalId,
   findPendingPaymentByOrderId,
+  deletePendingPaymentByOrderId,
 };

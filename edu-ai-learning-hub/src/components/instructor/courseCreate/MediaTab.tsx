@@ -27,6 +27,7 @@ interface MediaTabProps {
   onThumbnailChange: (file: File | null) => void;
   initialThumbnail: string | null;
   initialIntroVideo: string | null;
+  onIntroVideoChange?: (file: File | null) => void;
 }
 
 const MediaTab: React.FC<MediaTabProps> = ({
@@ -44,6 +45,31 @@ const MediaTab: React.FC<MediaTabProps> = ({
   const embedUrl = introVideoUrl
     ? getYoutubeEmbedUrl(extractYoutubeId(introVideoUrl) || '')
     : null;
+
+  const [introVideoPreview, setIntroVideoPreview] = useState<string | null>(null);
+  const introVideoFileRef = useRef<HTMLInputElement>(null);
+
+  const handleVideoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024 * 1024) {
+        toast.error('Video must be less than 500MB.');
+        return;
+      }
+      onIntroVideoChange?.(file);
+      setIntroVideoPreview(URL.createObjectURL(file));
+      // Xóa URL youtube nếu có
+      form.setValue('introVideoUrl', '', { shouldDirty: true });
+    }
+  };
+
+  const handleCancelVideoChange = () => {
+    onIntroVideoChange?.(null);
+    setIntroVideoPreview(null);
+    if (introVideoFileRef.current) {
+      introVideoFileRef.current.value = '';
+    }
+  };
 
   // Cập nhật lại preview nếu dữ liệu gốc từ API thay đổi (ví dụ sau khi lưu và refetch)
   useEffect(() => {
@@ -135,10 +161,39 @@ const MediaTab: React.FC<MediaTabProps> = ({
         <CardHeader>
           <CardTitle>Promotional Video</CardTitle>
           <CardDescription>
-            Add a YouTube video link to give students a sneak peek.
+            Tải lên một video giới thiệu hoặc dán đường dẫn YouTube.
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
+          {/* Nút Upload */}
+          <input
+            type='file'
+            ref={introVideoFileRef}
+            onChange={handleVideoFileSelect}
+            accept='video/mp4, video/mov, video/mkv, video/avi'
+            className='hidden'
+          />
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              type="button"
+              variant='outline'
+              onClick={() => introVideoFileRef.current?.click()}
+            >
+              <Icons.upload className='mr-2 h-4 w-4' />
+              {introVideoPreview ? 'Đổi Video Tải Lên' : 'Tải Video Lên (Không lưu lên Cloudinary khi nháp)'}
+            </Button>
+            {introVideoPreview && (
+              <Button
+                type="button"
+                variant='ghost'
+                className='text-destructive hover:text-destructive'
+                onClick={handleCancelVideoChange}
+              >
+                <Icons.x className='mr-2 h-4 w-4' />
+                Hủy tải lên
+              </Button>
+            )}
+          </div>
           <FormField
             control={control}
             name='introVideoUrl'
@@ -150,13 +205,30 @@ const MediaTab: React.FC<MediaTabProps> = ({
                     id='intro-video-url'
                     placeholder='https://www.youtube.com/watch?v=...'
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value && introVideoPreview) {
+                        handleCancelVideoChange(); // Nếu nhập youtube thì bỏ upload
+                      }
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          {embedUrl ? (
+          {introVideoPreview ? (
+             <AspectRatio
+               ratio={16 / 9}
+               className='bg-muted rounded-md overflow-hidden'
+             >
+               <video
+                 src={introVideoPreview}
+                 controls
+                 className='w-full h-full bg-black'
+               />
+             </AspectRatio>
+          ) : embedUrl ? (
             <AspectRatio
               ratio={16 / 9}
               className='bg-muted rounded-md overflow-hidden'

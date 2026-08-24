@@ -558,3 +558,11 @@ export const getCourseVersionHistory = async (
 ): Promise<CourseVersionHistoryResponse> => {
   return apiHelper.get(`/courses/${courseId}/versions`);
 };
+
+/** AI: Sinh mô tả khóa học */
+export const generateCourseDescription = async (
+  courseId: number,
+  hints?: string
+): Promise<any> => {
+  return apiHelper.post(`/courses/${courseId}/generate-description`, { hints });
+};

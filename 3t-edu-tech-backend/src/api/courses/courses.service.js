@@ -33,6 +33,7 @@ const quizRepository = require('../quizzes/quizzes.repository');
 const subtitleRepository = require('../lessons/subtitle.repository');
 const LessonType = require('../../core/enums/LessonType');
 const aiSyncService = require('../../services/aiSync.service');
+const aiClient = require('../../services/aiClient');
 
 /**
  * Tạo khóa học mới với payload tối giản (bởi Instructor).
@@ -1866,6 +1867,75 @@ const getCourseVersionHistory = async (courseId, user) => {
   };
 };
 
+/**
+ * Sinh mô tả khóa học bằng AI cho tính năng Tạo/Sửa khóa học thủ công
+ */
+const generateCourseDescription = async (courseId, user, hints) => {
+  const course = await courseRepository.findCourseById(courseId, true);
+  if (!course) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy khóa học.');
+  }
+  
+  const isAdmin = user.role === Roles.ADMIN || user.role === Roles.SUPERADMIN;
+  const isOwnerInstructor = user.role === Roles.INSTRUCTOR && course.InstructorID === user.id;
+  
+  if (!isAdmin && !isOwnerInstructor) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'Bạn không có quyền thực hiện thao tác này.');
+  }
+
+  const sections = await sectionRepository.findSectionsByCourseId(courseId) || [];
+  
+  const payloadSections = [];
+  for (const section of sections) {
+    const lessons = await lessonRepository.findLessonsBySectionId(section.SectionID) || [];
+    
+    payloadSections.push({
+      key: `s${section.SectionID}`,
+      name: section.SectionName || 'Chương',
+      lessons: lessons.map((lesson) => {
+        return {
+          key: `l${lesson.LessonID}`,
+          name: lesson.LessonName || 'Bài học',
+          kind: lesson.LessonType === 'VIDEO' ? 'VIDEO' : 'TEXT',
+          excerpt: String(lesson.TextContent || '').slice(0, 350), // 350 chars max
+        };
+      })
+    });
+  }
+
+  let response;
+  try {
+    response = await aiClient.post(
+      '/api/generate/course-content',
+      {
+        course_name: course.CourseName || 'Khóa học',
+        sections: payloadSections,
+        existing_description: course.ShortDescription || '',
+        hints: hints || '',
+        language: 'vi',
+      },
+      180000 // Timeout 3 phút
+    );
+  } catch (error) {
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
+    if (status === 503) {
+      throw new ApiError(
+        httpStatus.SERVICE_UNAVAILABLE,
+        detail || 'AI hiện không hoạt động. Bạn vẫn có thể tự viết mô tả và tạo khóa học bình thường.'
+      );
+    }
+    if (status === 502) {
+      throw new ApiError(httpStatus.BAD_GATEWAY, detail || 'AI trả về kết quả không đọc được.');
+    }
+    logger.error('Lỗi khi gọi ai-service generateCourseDescription:', error.message);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Không thể sinh mô tả khóa học lúc này.');
+  }
+
+  return response;
+};
+
 module.exports = {
   createCourse,
   getCourses,
@@ -1891,6 +1961,7 @@ module.exports = {
 
   // --- Course Versioning (thêm 17/08/2026) ---
   getCourseVersionHistory,
+  generateCourseDescription,
 
   /* [GỠ 17/08/2026] Trước đây export `syncLiveCourseFromUpdate` cho BullMQ
      Worker. Hàm đã bị vô hiệu hóa cùng cả khối Diff-and-Patch, nên nếu giữ

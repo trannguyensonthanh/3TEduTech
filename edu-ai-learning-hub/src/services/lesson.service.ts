@@ -364,3 +364,11 @@ export const deleteQuizQuestion = async (questionId: number): Promise<void> => {
   // Endpoint này đứng riêng
   await apiHelper.delete(`/quiz-questions/${questionId}`);
 };
+
+/** AI: Sinh câu hỏi trắc nghiệm tự động */
+export const generateLessonQuiz = async (
+  lessonId: number,
+  data: { questionsPerLesson?: number; difficulty?: string }
+): Promise<any> => {
+  return apiHelper.post(`/lessons/${lessonId}/generate-quiz`, data);
+};

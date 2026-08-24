@@ -1,45 +1,95 @@
 # ===================================================
-# GPU EC2 #1 (g6.xlarge, 24GB L4) — vLLM + Qwen 3.6 27B
+# GPU EC2 #1 (g6.xlarge — L4, 24GB nhãn / 22.04 GiB thực dùng)
+# vLLM phục vụ mô hình SINH VĂN BẢN cho AI Service
 # ===================================================
-# Usage:
-#   export HF_TOKEN=your_huggingface_token (nếu model cần auth)
-#   export VLLM_API_KEY=not-needed (hoặc đặt key bảo mật)
-#   docker compose up -d
 #
-# Lần đầu chạy sẽ download model (~15-20 phút tùy mạng).
-# Model sẽ được cache trong volume 'vllm-models'.
+# [SỬA 23/08/2026] Sau sự cố OOM ngày 20/08. Đọc mục "VÌ SAO ĐỔI MÔ HÌNH"
+# bên dưới trước khi đổi lại bất cứ dòng nào.
 #
-# Test:
-#   curl http://localhost:8000/v1/models
-#   curl http://localhost:8000/v1/completions \
-#     -H "Content-Type: application/json" \
-#     -d '{"model":"Qwen/Qwen3.6-27B-AWQ","prompt":"Xin chào","max_tokens":50}'
+# Cách dùng:
+#   export HF_TOKEN=hf_xxx
+#   export VLLM_API_KEY=$(openssl rand -hex 24)   # GHI LẠI
+#   docker compose up -d && docker compose logs -f
+#
+# Kiểm tra:
+#   curl -s http://localhost:8000/v1/models -H "Authorization: Bearer $VLLM_API_KEY"
 # ===================================================
+#
+# ★★★ VÌ SAO ĐỔI MÔ HÌNH — SỰ CỐ 20/08/2026 ★★★
+#
+# Cấu hình cũ dùng một biến thể **VL (vision-language)** của Qwen. Log crash:
+#
+#     gpu_model_runner.py: Model loading took 19.77 GiB memory
+#     Encoder cache will be initialized with a budget of 16384 tokens,
+#       and profiled with 1 image items of the maximum feature size
+#     qwen3_vl.py -> embed_multimodal -> self.visual(pixel_values, ...)
+#     linear.py -> dispatch_unquantized_gemm()
+#     torch.OutOfMemoryError: GPU 0 has a total capacity of 22.04 GiB
+#       of which 145.12 MiB is free
+#
+# Ba điều đọc được từ đó:
+#
+# 1. TRỌNG SỐ CHIẾM 19.77 GiB TRÊN CARD 22.04 GiB. Còn lại 2.27 GiB cho
+#    activation + KV cache. Không có cờ nào cứu được con số này — đây không
+#    phải chuyện tinh chỉnh, mà là mô hình không vừa card.
+#
+# 2. `dispatch_unquantized_gemm` trong đường đi của `self.visual` nghĩa là
+#    THÁP THỊ GIÁC KHÔNG ĐƯỢC LƯỢNG TỬ HÓA. AWQ chỉ nén phần LLM; ViT vẫn
+#    nằm ở fp16. Đó là phần "thừa" mà không ai tính khi ước lượng "27B ở
+#    4-bit thì khoảng 16GB".
+#
+# 3. Crash xảy ra ở `profile_run`, lúc vLLM dựng một ảnh giả kích thước tối
+#    đa để đo bộ nhớ. Nghĩa là ta đang trả VRAM cho khả năng đọc ảnh — trong
+#    khi AI Service KHÔNG BAO GIỜ gửi ảnh: xem src/core/llm_provider.py,
+#    `_build_messages()` chỉ dựng message dạng text thuần.
+#
+# Kết luận: dùng mô hình VL ở đây là trả tiền VRAM cho một tính năng không
+# tồn tại trong hệ thống. Chuyển sang bản TEXT-ONLY.
+#
+# ---------------------------------------------------------------------------
+# ★ TRƯỚC KHI CHẠY: XÁC MINH TÊN REPO CÓ THẬT VÀ ĐÚNG LOẠI
+#
+# Đừng tin tên mô hình chép từ tài liệu (kể cả tệp này). Kiểm bằng:
+#
+#   curl -s https://huggingface.co/api/models/${MODEL} | python3 -m json.tool | head -40
+#   curl -s https://huggingface.co/${MODEL}/raw/main/config.json | grep -i -E 'architectures|vision|quant'
+#
+# Trong config.json:
+#   • "architectures" chứa chữ "VL" hoặc có khóa "vision_config"  → BẢN VL, đừng dùng
+#   • "quantization_config" có "quant_method": "awq"              → đúng bản AWQ
+#   • không có "quantization_config"                              → bản fp16, gấp 4 lần dung lượng
+# ---------------------------------------------------------------------------
 
 services:
   vllm:
-    # [SỬA 17/08/2026] Ghim phiên bản thay vì :latest.
-    # vLLM phát hành rất dày và thường xuyên đổi tham số dòng lệnh cũng như
-    # mức hỗ trợ quantization. Một lần `docker compose pull` vô tình có thể kéo
-    # về bản mới làm hỏng cả trạm suy luận — trong khi mô hình Qwen 27B mất
-    # 15-20 phút để tải lại. Đổi tag ở đây phải là quyết định có chủ đích.
-    # Kiểm tra tag khả dụng: https://hub.docker.com/r/vllm/vllm-openai/tags
-    image: vllm/vllm-openai:${VLLM_VERSION:-v0.6.3}
+    # Ghim phiên bản. vLLM đổi tham số dòng lệnh rất thường xuyên, và mô hình
+    # mất nhiều phút để tải lại — một lần `pull` vô ý là hỏng cả trạm.
+    # Nhưng phải ghim vào bản ĐỦ MỚI cho mô hình đang dùng: log 20/08 cho thấy
+    # engine v1 (vllm/v1/engine/core.py) nên bản đang chạy đã là bản mới, KHÔNG
+    # phải v0.6.3 như mặc định cũ ghi ở đây. Đặt VLLM_VERSION cho khớp thực tế.
+    image: vllm/vllm-openai:${VLLM_VERSION:?Hay dat VLLM_VERSION, vi du v0.11.0}
     container_name: edutech-vllm
     ports:
       - "8000:8000"
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      # Giảm phân mảnh bộ nhớ GPU. Chính thông báo lỗi của PyTorch gợi ý cờ này.
+      # Không phải thuốc chữa OOM, nhưng lấy lại được vài trăm MiB bị kẹt giữa
+      # các segment — đủ để một cấu hình sát trần chạy được thay vì chết.
+      - PYTORCH_ALLOC_CONF=expandable_segments:True
     volumes:
       - vllm-models:/root/.cache/huggingface
-    # [THÊM 17/08/2026] vLLM dùng bộ nhớ chia sẻ POSIX cho tensor parallel và
-    # KV cache. Mặc định Docker chỉ cấp /dev/shm 64MB → nạp mô hình 27B sẽ lỗi
-    # "Bus error (core dumped)". Đây là cấu hình bắt buộc, không phải tối ưu.
+    # vLLM dùng bộ nhớ chia sẻ POSIX. Docker mặc định cấp /dev/shm 64MB → nạp
+    # mô hình lớn sẽ lỗi "Bus error (core dumped)". Bắt buộc, không phải tối ưu.
     ipc: host
     command: >
-      --model Qwen/Qwen3.6-27B-AWQ
-      --max-model-len 8192
-      --gpu-memory-utilization 0.90
+      --model ${VLLM_MODEL:?Hay dat VLLM_MODEL}
+      --served-model-name ${VLLM_MODEL}
+      --max-model-len ${VLLM_MAX_LEN:-16384}
+      --gpu-memory-utilization ${VLLM_GPU_UTIL:-0.88}
+      --kv-cache-dtype fp8
+      --max-num-seqs ${VLLM_MAX_SEQS:-16}
+      --enable-chunked-prefill
       --dtype auto
       --trust-remote-code
       --port 8000
@@ -53,11 +103,11 @@ services:
               count: 1
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 300s  # Model loading có thể mất 3-5 phút
+      start_period: 600s
     logging:
       driver: json-file
       options:
@@ -66,3 +116,47 @@ services:
 
 volumes:
   vllm-models:
+
+# ===========================================================================
+# BA CẤU HÌNH — CHỌN MỘT, ĐẶT VÀO .env CẠNH TỆP NÀY
+# ===========================================================================
+#
+# --- A. KHUYẾN NGHỊ: mô hình ~9B text-only ---------------------------------
+#
+#   VLLM_VERSION=v0.11.0
+#   VLLM_MODEL=<repo AWQ/GPTQ của Qwen3.5-9B, đã xác minh bằng lệnh curl ở trên>
+#   VLLM_MAX_LEN=16384
+#   VLLM_GPU_UTIL=0.88
+#   VLLM_MAX_SEQS=16
+#
+#   Trọng số ~6 GiB / 22.04 GiB → còn ~13 GiB cho KV cache. Nạp 2-3 phút.
+#   Đủ cho cả bốn việc mà llm_provider.py giao cho Qwen: phân intent (JSON,
+#   256 token), trả lời RAG đã có sẵn ngữ cảnh, streaming, gợi ý câu hỏi.
+#
+# --- B. NẾU VẪN MUỐN 27B: bản text-only, context ngắn ----------------------
+#
+#   VLLM_VERSION=v0.11.0
+#   VLLM_MODEL=<repo AWQ của Qwen3.6-27B bản THƯỜNG, KHÔNG phải -VL>
+#   VLLM_MAX_LEN=4096
+#   VLLM_GPU_UTIL=0.92
+#   VLLM_MAX_SEQS=4
+#
+#   Trọng số ~16.5 GiB → còn ~4 GiB cho KV cache. Chạy được nhưng chật:
+#   4096 token context, ít request song song. Nếu vẫn OOM, thêm --enforce-eager
+#   vào command (bỏ CUDA graph, tiết kiệm ~1-2 GiB, đổi lại decode chậm hơn).
+#
+# --- C. KHÔNG THỂ ĐỔI KHỎI BẢN VL (chỉ dùng khi bắt buộc) ------------------
+#
+#   Thêm vào `command` ở trên:
+#       --limit-mm-per-prompt.image 0
+#       --limit-mm-per-prompt.video 0
+#       --mm-processor-cache-gb 0
+#       --enforce-eager
+#   và đặt VLLM_MAX_LEN=2048, VLLM_GPU_UTIL=0.95
+#
+#   Ba cờ đầu bảo vLLM đừng dựng ảnh giả lúc profile — tránh đúng chỗ crash
+#   ngày 20/08. NHƯNG trọng số vẫn là 19.77 GiB: tháp thị giác vẫn nằm trên
+#   card, chỉ là không chạy. Còn ~2 GiB cho KV cache, tức khoảng vài nghìn
+#   token tổng cộng cho TẤT CẢ request đồng thời. Đây là cấu hình để chứng
+#   minh nó khởi động được, không phải cấu hình để phục vụ người dùng.
+# ===========================================================================

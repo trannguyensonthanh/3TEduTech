@@ -735,6 +735,10 @@ const createPayPalOrder = async (internalOrderId, accountId) => {
     .times(rate)
     .toDP(4)
     .toString();
+
+  // Xóa giao dịch đang chờ cũ (nếu có) trước khi tạo mới để tránh lỗi Unique Key
+  await paymentRepository.deletePendingPaymentByOrderId(internalOrderId);
+
   await paymentRepository.createCoursePayment({
     OrderID: internalOrderId,
     FinalAmount: order.FinalAmount,

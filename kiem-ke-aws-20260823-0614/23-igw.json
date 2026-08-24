@@ -1,0 +1,31 @@
+{
+    "InternetGateways": [
+        {
+            "Attachments": [
+                {
+                    "State": "available",
+                    "VpcId": "vpc-0eba431f9dc3ee04b"
+                }
+            ],
+            "InternetGatewayId": "igw-01c760f0208a5af74",
+            "OwnerId": "552357225071",
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "3t-edutech-igw"
+                }
+            ]
+        },
+        {
+            "Attachments": [
+                {
+                    "State": "available",
+                    "VpcId": "vpc-0c1dc8f95719e0032"
+                }
+            ],
+            "InternetGatewayId": "igw-08c49492e2fa7d89b",
+            "OwnerId": "552357225071",
+            "Tags": []
+        }
+    ]
+}

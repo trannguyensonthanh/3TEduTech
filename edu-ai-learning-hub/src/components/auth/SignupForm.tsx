@@ -32,7 +32,7 @@ const signupSchema = z
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 interface SignupFormProps {
-  onSuccess: () => void;
+  onSuccess: (data?: any) => void;
 }
 
 const SignupForm = ({ onSuccess }: SignupFormProps) => {
@@ -62,7 +62,7 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
         title: t('signupForm.successTitle'),
         description: data.message || t('signupForm.successDesc'),
       });
-      onSuccess();
+      onSuccess(data);
     },
     onError: (error: any) => {
       toast({

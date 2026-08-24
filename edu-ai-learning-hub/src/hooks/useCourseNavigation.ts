@@ -109,10 +109,9 @@ export const useCourseNavigation = ({
           });
         }
         toast.info(`Quiz Passed! Score: ${result.attempt.score?.toFixed(0)}%`, {
-          description: 'Moving to the next lesson...',
+          description: 'You can review your answers or continue to the next lesson manually.',
           duration: 4000,
         });
-        setTimeout(() => handleNavigateToLessonDirection('next'), 4000);
       } else if (activeLesson?.lessonId === result.attempt.lessonId) {
         toast.warning(`Quiz Score: ${result.attempt.score?.toFixed(0)}%`, {
           description: 'Review your answers and try again to proceed.',

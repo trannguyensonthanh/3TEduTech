@@ -16,7 +16,11 @@ const authRepository = require('../auth/auth.repository');
 const enrollmentService = require('../enrollments/enrollments.service');
 const Roles = require('../../core/enums/Roles');
 const { youtubeApiKey } = require('../../config');
-const { toCamelCaseObject } = require('../../utils/caseConverter');
+const {
+  toCamelCaseObject,
+  toPascalCaseObject,
+} = require('../../utils/caseConverter');
+const aiClient = require('../../services/aiClient');
 const aiSyncService = require('../../services/aiSync.service');
 
 const parseISO8601Duration = (duration) => {
@@ -763,9 +767,10 @@ const addLessonAttachment = async (lessonId, file, user) => {
     uploadResult = await cloudinaryUtil.uploadStream(file.buffer, options);
   } catch (uploadError) {
     if (uploadError.http_code === 409) {
+      const decodedName = Buffer.from(file.originalname || '', 'latin1').toString('utf8');
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        `File với tên '${file.originalname}' đã tồn tại.`
+        `File với tên '${decodedName}' đã tồn tại.`
       );
     }
     throw new ApiError(
@@ -773,9 +778,10 @@ const addLessonAttachment = async (lessonId, file, user) => {
       'Upload file đính kèm thất bại.'
     );
   }
+  const decodedName = Buffer.from(file.originalname || '', 'latin1').toString('utf8');
   const attachmentData = {
     LessonID: lessonId,
-    FileName: file.originalname,
+    FileName: decodedName,
     FileURL: uploadResult.secure_url,
     FileType: file.mimetype,
     FileSize: file.size,
@@ -928,6 +934,99 @@ const getLessonVideoUrl = async (accountId, lessonId) => {
   }
 };
 
+/**
+ * Sinh câu hỏi trắc nghiệm bằng AI cho một bài học
+ */
+const generateLessonQuiz = async (lessonId, questionsPerLesson = 3, difficulty = 'mixed', user) => {
+  const lesson = await lessonRepository.findLessonById(lessonId);
+  if (!lesson) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy bài học.');
+  }
+
+  await checkCourseAccess(lesson.CourseID, user, 'tạo câu hỏi bằng AI');
+
+  // Kiểm tra textContent
+  if (!lesson.TextContent || lesson.TextContent.trim() === '') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Bài học này không có nội dung văn bản. Tính năng sinh câu hỏi AI yêu cầu nội dung văn bản để phân tích.'
+    );
+  }
+
+  const course = await courseRepository.findCourseById(lesson.CourseID);
+
+  const payloadLessons = [{
+    key: `l${lesson.LessonID}`,
+    name: lesson.LessonName || 'Bài học',
+    excerpt: lesson.TextContent.slice(0, 8000) // ai-service quiz route excerpt limit is 8000, max used is 1200
+  }];
+
+  let aiResponse;
+  try {
+    aiResponse = await aiClient.post(
+      '/api/generate/quiz',
+      {
+        course_name: course.CourseName || 'Khóa học',
+        lessons: payloadLessons,
+        questions_per_lesson: questionsPerLesson,
+        difficulty: difficulty
+      },
+      180000 // 3 phút timeout
+    );
+  } catch (error) {
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
+    if (status === 503) {
+      throw new ApiError(
+        httpStatus.SERVICE_UNAVAILABLE,
+        detail || 'AI hiện không hoạt động. Bạn vẫn có thể tự soạn câu hỏi.'
+      );
+    }
+    if (status === 422) {
+        throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, detail || 'AI không tạo được câu hỏi từ nội dung này.');
+    }
+    logger.error('Lỗi khi gọi ai-service generateLessonQuiz:', error.message);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Không thể sinh câu hỏi lúc này.');
+  }
+
+  const generatedLessons = aiResponse.data?.lessons || [];
+  if (generatedLessons.length === 0) {
+    throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'AI không thể tạo câu hỏi nào đạt yêu cầu từ nội dung bài học này.');
+  }
+
+  const questions = generatedLessons[0].questions || [];
+  if (questions.length === 0) {
+    throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'AI không thể tạo câu hỏi nào đạt yêu cầu từ nội dung bài học này.');
+  }
+
+  // Lưu các câu hỏi vào Database
+  const savedQuestions = [];
+  for (const q of questions) {
+    const newQuestion = await quizRepository.createQuestion({
+      LessonID: lessonId,
+      QuestionText: q.question,
+      Explanation: q.explanation || null
+    });
+
+    const optionsData = q.options.map((opt, idx) => ({
+      QuestionID: newQuestion.QuestionID,
+      OptionText: opt,
+      IsCorrectAnswer: idx === q.correct_index ? true : false,
+      OrderIndex: idx
+    }));
+
+    await quizRepository.createOptions(optionsData);
+    savedQuestions.push(newQuestion);
+  }
+  
+  return {
+    message: `Đã tạo thành công ${savedQuestions.length} câu hỏi.`,
+    totalQuestions: savedQuestions.length,
+    warnings: aiResponse.data?.warnings || []
+  };
+};
+
 module.exports = {
   createLesson,
   getLessonsBySection,
@@ -941,4 +1040,5 @@ module.exports = {
   addLessonAttachment,
   deleteLessonAttachment,
   getLessonVideoUrl,
+  generateLessonQuiz,
 };

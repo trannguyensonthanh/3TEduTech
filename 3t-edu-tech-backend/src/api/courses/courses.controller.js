@@ -317,6 +317,18 @@ const getCourseVersionHistory = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(history);
 });
 
+/**
+ * Sinh mô tả khóa học bằng AI
+ */
+const generateCourseDescription = catchAsync(async (req, res) => {
+  const result = await courseService.generateCourseDescription(
+    req.params.courseId,
+    req.user,
+    req.body.hints
+  );
+  res.status(httpStatus.OK).send(result);
+});
+
 module.exports = {
   createCourse,
   updateCourse,
@@ -338,4 +350,5 @@ module.exports = {
   cancelUpdate,
   archiveCourse,
   getCourseVersionHistory,
+  generateCourseDescription,
 };

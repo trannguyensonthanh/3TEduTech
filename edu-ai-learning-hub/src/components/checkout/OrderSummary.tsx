@@ -25,6 +25,7 @@ type OrderSummaryProps = {
   selectedPaymentMethodId: string | null;
   setCreatedOrder: React.Dispatch<React.SetStateAction<boolean>>;
   createdOrder: boolean;
+  existingOrderId?: number;
 };
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -43,6 +44,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   selectedPaymentMethodId,
   setCreatedOrder,
   createdOrder,
+  existingOrderId,
 }) => {
   const navigate = useNavigate();
 
@@ -170,6 +172,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
               onPaymentSuccess={handlePaymentSuccess}
               createdOrder={createdOrder}
               setCreatedOrder={setCreatedOrder}
+              existingOrderId={existingOrderId}
             />
           ) : (
             <Button

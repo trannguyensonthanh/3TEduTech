@@ -170,6 +170,13 @@ router.get(
   lessonController.getLessonVideoUrl
 );
 
+router.post(
+  '/:lessonId/generate-quiz',
+  authenticate,
+  authorize([Roles.INSTRUCTOR, Roles.ADMIN, Roles.SUPERADMIN]),
+  lessonController.generateLessonQuiz
+);
+
 module.exports = {
   lessonRouter: router,
   sectionScopedLessonRouter: sectionScopedRouter,

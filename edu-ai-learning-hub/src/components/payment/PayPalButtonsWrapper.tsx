@@ -16,6 +16,7 @@ interface PayPalButtonsWrapperProps {
   onPaymentSuccess: (details: any) => void;
   createdOrder: boolean;
   setCreatedOrder: React.Dispatch<React.SetStateAction<boolean>>;
+  existingOrderId?: number;
 }
 
 const PayPalButtonsWrapper: React.FC<PayPalButtonsWrapperProps> = ({
@@ -23,6 +24,7 @@ const PayPalButtonsWrapper: React.FC<PayPalButtonsWrapperProps> = ({
   onPaymentSuccess,
   createdOrder,
   setCreatedOrder,
+  existingOrderId,
 }) => {
   const [{ isPending: isPayPalScriptLoading }] = usePayPalScriptReducer();
   // Sử dụng state thay vì ref cho internalOrderId
@@ -37,18 +39,25 @@ const PayPalButtonsWrapper: React.FC<PayPalButtonsWrapperProps> = ({
     useCreateOrderFromCart();
   // 1. Tạo đơn hàng trên server khi PayPal Buttons sẵn sàng render
   const createOrder = async () => {
-    if (isCreatingOrder) return null;
-    const promotionCodePayload = validatedPromo?.discountCode || null;
     try {
-      const dataOrder = await createOrderMutateAsync(promotionCodePayload);
-      if (!dataOrder || !dataOrder.orderId) {
-        toast.error('Could not create internal order.');
-        return null;
+      let finalOrderId = existingOrderId;
+
+      if (!finalOrderId) {
+        if (isCreatingOrder) return null;
+        const promotionCodePayload = validatedPromo?.discountCode || null;
+        const dataOrder = await createOrderMutateAsync(promotionCodePayload);
+        if (!dataOrder || !dataOrder.orderId) {
+          toast.error('Could not create internal order.');
+          return null;
+        }
+        finalOrderId = dataOrder.orderId;
       }
-      setInternalOrderId(dataOrder.orderId); // Lưu vào state
+
+      setInternalOrderId(finalOrderId); // Lưu vào state
       const response = await createPayPalOrder({
-        orderId: dataOrder.orderId,
+        orderId: finalOrderId,
       });
+      
       if (!response || !response.orderId) {
         toast.error('Could not create PayPal order.');
         return null;
@@ -90,11 +99,12 @@ const PayPalButtonsWrapper: React.FC<PayPalButtonsWrapperProps> = ({
     );
   };
 
-  const onCancel = (data) => {
+  const onCancel = (data: any) => {
     console.log('Payment cancelled by user:', data);
-
-    setCreatedOrder(false);
-    console.log('Setting isProcessingPayment to FALSE due to onCancel');
+    if (!existingOrderId) {
+      setCreatedOrder(false);
+      console.log('Setting createdOrder to FALSE due to onCancel (new order cancelled)');
+    }
   };
 
   if (isPayPalScriptLoading) {

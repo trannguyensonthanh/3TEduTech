@@ -12,19 +12,43 @@ import {
 import TiptapEditor from '@/components/editor/TiptapEditor';
 import { TranslateButton } from '@/components/common/TranslateButton';
 
-interface DetailsTabProps {
-  // Không cần truyền form nữa
-  // form: UseFormReturn<CourseCreateFormValues>;
-  courseLanguage?: 'vi' | 'en';
-} // Không cần truyền form nữa
+import { useGenerateCourseDescription } from '@/hooks/queries/course.queries';
+import { Button } from '@/components/ui/button';
+import { Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { AiDescriptionDialog } from './AiDescriptionDialog';
 
-const DetailsTab: React.FC<DetailsTabProps> = () => {
+interface DetailsTabProps {
+  courseId: number;
+  courseLanguage?: 'vi' | 'en';
+}
+
+const DetailsTab: React.FC<DetailsTabProps> = ({ courseId }) => {
   const { control, watch, setValue } = useFormContext();
   const courseLanguage = watch('language');
   const [editorKeys, setEditorKeys] = useState({
     fullDescription: 1,
     requirements: 1,
     learningOutcomes: 1,
+  });
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+
+  const { mutate: generateDescription, isPending: isGenerating } = useGenerateCourseDescription({
+    onSuccess: (data) => {
+      if (data.data?.course_description) {
+        setValue('fullDescription', data.data.course_description, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setEditorKeys((prev) => ({ ...prev, fullDescription: prev.fullDescription + 1 }));
+        toast.success('Đã sinh mô tả khóa học thành công!');
+      } else {
+        toast.error('AI không trả về mô tả hợp lệ.');
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi sinh mô tả.');
+    }
   });
   const TiptapFormField = ({ name, label, description }) => (
     <FormField
@@ -35,7 +59,25 @@ const DetailsTab: React.FC<DetailsTabProps> = () => {
         <FormItem>
           <div className='flex items-center justify-between mb-2'>
             <FormLabel>{label}</FormLabel>
-            <TranslateButton
+            <div className='flex items-center gap-2'>
+              {name === 'fullDescription' && (
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setIsAiDialogOpen(true)}
+                  disabled={isGenerating}
+                  className='h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700'
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 mr-2" />
+                  )}
+                  Tạo bằng AI
+                </Button>
+              )}
+              <TranslateButton
               sourceText={watch(name)}
               sourceLang={courseLanguage as 'vi' | 'en'}
               onTranslated={(text) => {
@@ -49,6 +91,7 @@ const DetailsTab: React.FC<DetailsTabProps> = () => {
                 setEditorKeys((prev) => ({ ...prev, [name]: prev[name] + 1 }));
               }}
             />
+            </div>
           </div>
           <FormControl>
             <Controller
@@ -91,6 +134,16 @@ const DetailsTab: React.FC<DetailsTabProps> = () => {
         name='learningOutcomes'
         label="What You'll Learn"
         description='List key skills and knowledge students will gain from your course.'
+      />
+
+      <AiDescriptionDialog
+        isOpen={isAiDialogOpen}
+        onClose={() => setIsAiDialogOpen(false)}
+        onGenerate={(hints) => {
+          generateDescription({ courseId, hints });
+          setIsAiDialogOpen(false);
+        }}
+        isGenerating={isGenerating}
       />
     </div>
   );

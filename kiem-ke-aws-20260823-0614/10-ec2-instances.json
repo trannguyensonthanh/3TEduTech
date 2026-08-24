@@ -1,0 +1,477 @@
+{
+    "Reservations": [
+        {
+            "ReservationId": "r-09798759beb661052",
+            "OwnerId": "552357225071",
+            "Groups": [],
+            "Instances": [
+                {
+                    "Architecture": "x86_64",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/sda1",
+                            "Ebs": {
+                                "AttachTime": "2026-08-20T01:55:28+00:00",
+                                "DeleteOnTermination": true,
+                                "Status": "attached",
+                                "VolumeId": "vol-0a0491105ba53f6d1",
+                                "EbsCardIndex": 0
+                            }
+                        }
+                    ],
+                    "ClientToken": "bc087350-3f30-4f40-a5f9-2725f3883e79",
+                    "EbsOptimized": false,
+                    "EnaSupport": true,
+                    "Hypervisor": "xen",
+                    "NetworkInterfaces": [
+                        {
+                            "Attachment": {
+                                "AttachTime": "2026-08-20T01:55:27+00:00",
+                                "AttachmentId": "eni-attach-01639afbd827983f5",
+                                "DeleteOnTermination": true,
+                                "DeviceIndex": 0,
+                                "Status": "attached",
+                                "NetworkCardIndex": 0
+                            },
+                            "Description": "",
+                            "Groups": [
+                                {
+                                    "GroupId": "sg-00c6d1043a1d2f58d",
+                                    "GroupName": "3t-gpu-ec2-1"
+                                }
+                            ],
+                            "Ipv6Addresses": [],
+                            "MacAddress": "06:c0:fa:86:42:41",
+                            "NetworkInterfaceId": "eni-067a922e7647ec0c4",
+                            "OwnerId": "552357225071",
+                            "PrivateDnsName": "ip-10-0-1-114.ap-northeast-1.compute.internal",
+                            "PrivateIpAddress": "10.0.1.114",
+                            "PrivateIpAddresses": [
+                                {
+                                    "Primary": true,
+                                    "PrivateDnsName": "ip-10-0-1-114.ap-northeast-1.compute.internal",
+                                    "PrivateIpAddress": "10.0.1.114"
+                                }
+                            ],
+                            "SourceDestCheck": true,
+                            "Status": "in-use",
+                            "SubnetId": "subnet-0f9de968a59545f67",
+                            "VpcId": "vpc-0eba431f9dc3ee04b",
+                            "InterfaceType": "interface",
+                            "Operator": {
+                                "Managed": false
+                            }
+                        }
+                    ],
+                    "RootDeviceName": "/dev/sda1",
+                    "RootDeviceType": "ebs",
+                    "SecurityGroups": [
+                        {
+                            "GroupId": "sg-00c6d1043a1d2f58d",
+                            "GroupName": "3t-gpu-ec2-1"
+                        }
+                    ],
+                    "SourceDestCheck": true,
+                    "StateReason": {
+                        "Code": "Client.UserInitiatedShutdown",
+                        "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+                    },
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": "3T-EduTech-GPU-1-vLLM"
+                        }
+                    ],
+                    "VirtualizationType": "hvm",
+                    "CpuOptions": {
+                        "CoreCount": 2,
+                        "ThreadsPerCore": 2
+                    },
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "open"
+                    },
+                    "HibernationOptions": {
+                        "Configured": false
+                    },
+                    "MetadataOptions": {
+                        "State": "applied",
+                        "HttpTokens": "optional",
+                        "HttpPutResponseHopLimit": 1,
+                        "HttpEndpoint": "enabled",
+                        "HttpProtocolIpv6": "disabled",
+                        "InstanceMetadataTags": "disabled"
+                    },
+                    "EnclaveOptions": {
+                        "Enabled": false
+                    },
+                    "BootMode": "uefi-preferred",
+                    "PlatformDetails": "Linux/UNIX",
+                    "UsageOperation": "RunInstances",
+                    "UsageOperationUpdateTime": "2026-08-20T01:55:27+00:00",
+                    "PrivateDnsNameOptions": {
+                        "HostnameType": "ip-name",
+                        "EnableResourceNameDnsARecord": false,
+                        "EnableResourceNameDnsAAAARecord": false
+                    },
+                    "MaintenanceOptions": {
+                        "AutoRecovery": "default",
+                        "RebootMigration": "default"
+                    },
+                    "CurrentInstanceBootMode": "uefi",
+                    "NetworkPerformanceOptions": {
+                        "BandwidthWeighting": "default"
+                    },
+                    "Operator": {
+                        "Managed": false,
+                        "HiddenByDefault": false
+                    },
+                    "InstanceId": "i-0f8ac78807132b82d",
+                    "ImageId": "ami-02aecf40e4b4db923",
+                    "State": {
+                        "Code": 80,
+                        "Name": "stopped"
+                    },
+                    "PrivateDnsName": "ip-10-0-1-114.ap-northeast-1.compute.internal",
+                    "PublicDnsName": "",
+                    "StateTransitionReason": "User initiated (2026-08-20 07:21:51 GMT)",
+                    "KeyName": "3t_edutech_aws",
+                    "AmiLaunchIndex": 0,
+                    "ProductCodes": [],
+                    "InstanceType": "g6.xlarge",
+                    "LaunchTime": "2026-08-20T03:16:23+00:00",
+                    "Placement": {
+                        "AvailabilityZoneId": "apne1-az4",
+                        "GroupName": "",
+                        "Tenancy": "default",
+                        "AvailabilityZone": "ap-northeast-1a"
+                    },
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "SubnetId": "subnet-0f9de968a59545f67",
+                    "VpcId": "vpc-0eba431f9dc3ee04b",
+                    "PrivateIpAddress": "10.0.1.114"
+                }
+            ]
+        },
+        {
+            "ReservationId": "r-0ad197291f06665f3",
+            "OwnerId": "552357225071",
+            "Groups": [],
+            "Instances": [
+                {
+                    "Architecture": "x86_64",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/sda1",
+                            "Ebs": {
+                                "AttachTime": "2026-08-20T01:59:03+00:00",
+                                "DeleteOnTermination": true,
+                                "Status": "attached",
+                                "VolumeId": "vol-009a72d14612e47c1",
+                                "EbsCardIndex": 0
+                            }
+                        }
+                    ],
+                    "ClientToken": "c0bd6673-608f-4bf7-8824-46e2029bd283",
+                    "EbsOptimized": false,
+                    "EnaSupport": true,
+                    "Hypervisor": "xen",
+                    "NetworkInterfaces": [
+                        {
+                            "Attachment": {
+                                "AttachTime": "2026-08-20T01:59:02+00:00",
+                                "AttachmentId": "eni-attach-0428b8ce5d80eaefa",
+                                "DeleteOnTermination": true,
+                                "DeviceIndex": 0,
+                                "Status": "attached",
+                                "NetworkCardIndex": 0
+                            },
+                            "Description": "",
+                            "Groups": [
+                                {
+                                    "GroupId": "sg-0ba227fea0379d189",
+                                    "GroupName": "3t-gpu-ec2-2"
+                                }
+                            ],
+                            "Ipv6Addresses": [],
+                            "MacAddress": "06:1c:73:cf:47:87",
+                            "NetworkInterfaceId": "eni-0c52851d7b0987c02",
+                            "OwnerId": "552357225071",
+                            "PrivateDnsName": "ip-10-0-1-85.ap-northeast-1.compute.internal",
+                            "PrivateIpAddress": "10.0.1.85",
+                            "PrivateIpAddresses": [
+                                {
+                                    "Primary": true,
+                                    "PrivateDnsName": "ip-10-0-1-85.ap-northeast-1.compute.internal",
+                                    "PrivateIpAddress": "10.0.1.85"
+                                }
+                            ],
+                            "SourceDestCheck": true,
+                            "Status": "in-use",
+                            "SubnetId": "subnet-0f9de968a59545f67",
+                            "VpcId": "vpc-0eba431f9dc3ee04b",
+                            "InterfaceType": "interface",
+                            "Operator": {
+                                "Managed": false
+                            }
+                        }
+                    ],
+                    "RootDeviceName": "/dev/sda1",
+                    "RootDeviceType": "ebs",
+                    "SecurityGroups": [
+                        {
+                            "GroupId": "sg-0ba227fea0379d189",
+                            "GroupName": "3t-gpu-ec2-2"
+                        }
+                    ],
+                    "SourceDestCheck": true,
+                    "StateReason": {
+                        "Code": "Client.UserInitiatedShutdown",
+                        "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+                    },
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": "3T-EduTech-GPU-2-AIService"
+                        }
+                    ],
+                    "VirtualizationType": "hvm",
+                    "CpuOptions": {
+                        "CoreCount": 2,
+                        "ThreadsPerCore": 2
+                    },
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "open"
+                    },
+                    "HibernationOptions": {
+                        "Configured": false
+                    },
+                    "MetadataOptions": {
+                        "State": "applied",
+                        "HttpTokens": "optional",
+                        "HttpPutResponseHopLimit": 1,
+                        "HttpEndpoint": "enabled",
+                        "HttpProtocolIpv6": "disabled",
+                        "InstanceMetadataTags": "disabled"
+                    },
+                    "EnclaveOptions": {
+                        "Enabled": false
+                    },
+                    "BootMode": "uefi-preferred",
+                    "PlatformDetails": "Linux/UNIX",
+                    "UsageOperation": "RunInstances",
+                    "UsageOperationUpdateTime": "2026-08-20T01:59:02+00:00",
+                    "PrivateDnsNameOptions": {
+                        "HostnameType": "ip-name",
+                        "EnableResourceNameDnsARecord": false,
+                        "EnableResourceNameDnsAAAARecord": false
+                    },
+                    "MaintenanceOptions": {
+                        "AutoRecovery": "default",
+                        "RebootMigration": "default"
+                    },
+                    "CurrentInstanceBootMode": "uefi",
+                    "NetworkPerformanceOptions": {
+                        "BandwidthWeighting": "default"
+                    },
+                    "Operator": {
+                        "Managed": false,
+                        "HiddenByDefault": false
+                    },
+                    "InstanceId": "i-0f6bcd18bd2c0f4eb",
+                    "ImageId": "ami-02aecf40e4b4db923",
+                    "State": {
+                        "Code": 80,
+                        "Name": "stopped"
+                    },
+                    "PrivateDnsName": "ip-10-0-1-85.ap-northeast-1.compute.internal",
+                    "PublicDnsName": "",
+                    "StateTransitionReason": "User initiated (2026-08-20 07:21:51 GMT)",
+                    "KeyName": "3t_edutech_aws",
+                    "AmiLaunchIndex": 0,
+                    "ProductCodes": [],
+                    "InstanceType": "g4dn.xlarge",
+                    "LaunchTime": "2026-08-20T03:16:23+00:00",
+                    "Placement": {
+                        "AvailabilityZoneId": "apne1-az4",
+                        "GroupName": "",
+                        "Tenancy": "default",
+                        "AvailabilityZone": "ap-northeast-1a"
+                    },
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "SubnetId": "subnet-0f9de968a59545f67",
+                    "VpcId": "vpc-0eba431f9dc3ee04b",
+                    "PrivateIpAddress": "10.0.1.85"
+                }
+            ]
+        },
+        {
+            "ReservationId": "r-06e595723d5bfc99f",
+            "OwnerId": "552357225071",
+            "Groups": [],
+            "Instances": [
+                {
+                    "Architecture": "x86_64",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/sda1",
+                            "Ebs": {
+                                "AttachTime": "2026-08-18T03:00:44+00:00",
+                                "DeleteOnTermination": true,
+                                "Status": "attached",
+                                "VolumeId": "vol-09bb0580d2a3e3ff6",
+                                "EbsCardIndex": 0
+                            }
+                        }
+                    ],
+                    "ClientToken": "0cefb087-118d-4fb0-a079-e3abb4b51ec8",
+                    "EbsOptimized": false,
+                    "EnaSupport": true,
+                    "Hypervisor": "xen",
+                    "NetworkInterfaces": [
+                        {
+                            "Association": {
+                                "IpOwnerId": "552357225071",
+                                "PublicDnsName": "ec2-18-178-30-57.ap-northeast-1.compute.amazonaws.com",
+                                "PublicIp": "18.178.30.57"
+                            },
+                            "Attachment": {
+                                "AttachTime": "2026-08-18T03:00:44+00:00",
+                                "AttachmentId": "eni-attach-006e19a226da0451f",
+                                "DeleteOnTermination": true,
+                                "DeviceIndex": 0,
+                                "Status": "attached",
+                                "NetworkCardIndex": 0
+                            },
+                            "Description": "",
+                            "Groups": [
+                                {
+                                    "GroupId": "sg-0dbefbd2d9eaad7b4",
+                                    "GroupName": "3t-cpu-ec2"
+                                }
+                            ],
+                            "Ipv6Addresses": [],
+                            "MacAddress": "06:60:66:94:ba:a1",
+                            "NetworkInterfaceId": "eni-0660b6776d86c3fcf",
+                            "OwnerId": "552357225071",
+                            "PrivateDnsName": "ip-10-0-1-9.ap-northeast-1.compute.internal",
+                            "PrivateIpAddress": "10.0.1.9",
+                            "PrivateIpAddresses": [
+                                {
+                                    "Association": {
+                                        "IpOwnerId": "552357225071",
+                                        "PublicDnsName": "ec2-18-178-30-57.ap-northeast-1.compute.amazonaws.com",
+                                        "PublicIp": "18.178.30.57"
+                                    },
+                                    "Primary": true,
+                                    "PrivateDnsName": "ip-10-0-1-9.ap-northeast-1.compute.internal",
+                                    "PrivateIpAddress": "10.0.1.9"
+                                }
+                            ],
+                            "SourceDestCheck": true,
+                            "Status": "in-use",
+                            "SubnetId": "subnet-0f9de968a59545f67",
+                            "VpcId": "vpc-0eba431f9dc3ee04b",
+                            "InterfaceType": "interface",
+                            "Operator": {
+                                "Managed": false
+                            }
+                        }
+                    ],
+                    "RootDeviceName": "/dev/sda1",
+                    "RootDeviceType": "ebs",
+                    "SecurityGroups": [
+                        {
+                            "GroupId": "sg-0dbefbd2d9eaad7b4",
+                            "GroupName": "3t-cpu-ec2"
+                        }
+                    ],
+                    "SourceDestCheck": true,
+                    "StateReason": {
+                        "Code": "Client.UserInitiatedShutdown",
+                        "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+                    },
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": "3T-EduTech-CPU-EC2"
+                        }
+                    ],
+                    "VirtualizationType": "hvm",
+                    "CpuOptions": {
+                        "CoreCount": 1,
+                        "ThreadsPerCore": 2
+                    },
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "open"
+                    },
+                    "HibernationOptions": {
+                        "Configured": false
+                    },
+                    "MetadataOptions": {
+                        "State": "applied",
+                        "HttpTokens": "optional",
+                        "HttpPutResponseHopLimit": 1,
+                        "HttpEndpoint": "enabled",
+                        "HttpProtocolIpv6": "disabled",
+                        "InstanceMetadataTags": "disabled"
+                    },
+                    "EnclaveOptions": {
+                        "Enabled": false
+                    },
+                    "BootMode": "uefi-preferred",
+                    "PlatformDetails": "Linux/UNIX",
+                    "UsageOperation": "RunInstances",
+                    "UsageOperationUpdateTime": "2026-08-18T03:00:44+00:00",
+                    "PrivateDnsNameOptions": {
+                        "HostnameType": "ip-name",
+                        "EnableResourceNameDnsARecord": false,
+                        "EnableResourceNameDnsAAAARecord": false
+                    },
+                    "MaintenanceOptions": {
+                        "AutoRecovery": "default",
+                        "RebootMigration": "default"
+                    },
+                    "CurrentInstanceBootMode": "uefi",
+                    "NetworkPerformanceOptions": {
+                        "BandwidthWeighting": "default"
+                    },
+                    "Operator": {
+                        "Managed": false,
+                        "HiddenByDefault": false
+                    },
+                    "InstanceId": "i-01f5c3c164c11042e",
+                    "ImageId": "ami-07b4cf80e7d0a1829",
+                    "State": {
+                        "Code": 80,
+                        "Name": "stopped"
+                    },
+                    "PrivateDnsName": "ip-10-0-1-9.ap-northeast-1.compute.internal",
+                    "PublicDnsName": "ec2-18-178-30-57.ap-northeast-1.compute.amazonaws.com",
+                    "StateTransitionReason": "User initiated (2026-08-20 07:21:51 GMT)",
+                    "KeyName": "3t_edutech_aws",
+                    "AmiLaunchIndex": 0,
+                    "ProductCodes": [],
+                    "InstanceType": "t3.medium",
+                    "LaunchTime": "2026-08-20T03:16:23+00:00",
+                    "Placement": {
+                        "AvailabilityZoneId": "apne1-az4",
+                        "GroupName": "",
+                        "Tenancy": "default",
+                        "AvailabilityZone": "ap-northeast-1a"
+                    },
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "SubnetId": "subnet-0f9de968a59545f67",
+                    "VpcId": "vpc-0eba431f9dc3ee04b",
+                    "PrivateIpAddress": "10.0.1.9",
+                    "PublicIpAddress": "18.178.30.57"
+                }
+            ]
+        }
+    ]
+}

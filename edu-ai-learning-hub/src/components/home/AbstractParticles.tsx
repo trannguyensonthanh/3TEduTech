@@ -70,15 +70,11 @@ export const AbstractParticles: React.FC<AbstractParticlesProps> = ({
       castShadow={false}
       receiveShadow={false}
     >
-      <sphereGeometry args={[size, 8, 8]} />
-      <meshStandardMaterial
+      <icosahedronGeometry args={[size, 0]} />
+      <meshBasicMaterial
         color={color}
-        emissive={color}
-        emissiveIntensity={2}
-        roughness={0.8}
-        metalness={0.1}
         transparent
-        opacity={0.6}
+        opacity={0.8}
       />
     </instancedMesh>
   );

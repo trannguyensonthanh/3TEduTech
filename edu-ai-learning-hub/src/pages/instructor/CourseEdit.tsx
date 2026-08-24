@@ -64,6 +64,7 @@ const CourseEdit: React.FC = () => {
 
   // State cho media files (không thuộc form)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
 
   // --- Data Fetching ---
   const {
@@ -82,9 +83,9 @@ const CourseEdit: React.FC = () => {
   });
 
   // --- Mutations ---
-  const { mutate: updateCourse, isPending: isUpdatingCourse } =
+  const { mutateAsync: updateCourse, isPending: isUpdatingCourse } =
     useUpdateCourse();
-  const { mutate: updateThumbnail, isPending: isUploadingThumb } =
+  const { mutateAsync: updateThumbnail, isPending: isUploadingThumb } =
     useUpdateCourseThumbnail();
   const { mutate: submitForApproval, isPending: isSubmitting } =
     useSubmitCourseForApproval();
@@ -302,7 +303,9 @@ const CourseEdit: React.FC = () => {
       loading: 'Đang lưu thay đổi…',
       success: (message) => {
         setThumbnailFile(null); // Reset file sau khi thành công
-        refetch(); // Fetch lại dữ liệu mới nhất để reset form state và isDirty
+        setIntroVideoFile(null); // Bỏ qua file video nếu đang nháp (như yêu cầu của user)
+        form.reset(form.getValues()); // Cập nhật defaultValues thành giá trị hiện tại để reset isDirty về false
+        refetch(); // Fetch lại dữ liệu mới nhất
         return message as string;
       },
       error: (err: any) => err.message || 'Đã xảy ra lỗi khi lưu.',
@@ -417,7 +420,7 @@ const CourseEdit: React.FC = () => {
   const canSubmit = [CourseStatusId.DRAFT, CourseStatusId.REJECTED].includes(
     currentStatus
   );
-  const hasUnsavedChanges = form.formState.isDirty || !!thumbnailFile;
+  const hasUnsavedChanges = form.formState.isDirty || !!thumbnailFile || !!introVideoFile;
 
   return (
     <InstructorLayout>
@@ -498,7 +501,7 @@ const CourseEdit: React.FC = () => {
                   forceMount
                   className={activeTab !== 'details' ? 'hidden' : ''}
                 >
-                  <DetailsTab />
+                  <DetailsTab courseId={course.courseId} />
                 </TabsContent>
                 <TabsContent
                   value='media'
@@ -507,9 +510,10 @@ const CourseEdit: React.FC = () => {
                 >
                   {/* Cập nhật MediaTab để nhận file và preview, không tự gọi API */}
                   <MediaTab
+                    initialThumbnail={course?.thumbnailUrl || null}
                     onThumbnailChange={setThumbnailFile}
-                    initialThumbnail={course.thumbnailUrl}
-                    initialIntroVideo={course.introVideoUrl}
+                    initialIntroVideo={course?.introVideoUrl || null}
+                    onIntroVideoChange={setIntroVideoFile}
                   />
                 </TabsContent>
                 <TabsContent

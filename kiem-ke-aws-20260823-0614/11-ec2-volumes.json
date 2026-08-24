@@ -1,0 +1,94 @@
+{
+    "Volumes": [
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "Iops": 3000,
+            "VolumeType": "gp3",
+            "MultiAttachEnabled": false,
+            "Throughput": 125,
+            "Operator": {
+                "Managed": false,
+                "HiddenByDefault": false
+            },
+            "VolumeId": "vol-009a72d14612e47c1",
+            "Size": 80,
+            "SnapshotId": "snap-02d2d0e7fe6bee06e",
+            "AvailabilityZone": "ap-northeast-1a",
+            "State": "in-use",
+            "CreateTime": "2026-08-20T01:59:03.146000+00:00",
+            "Attachments": [
+                {
+                    "DeleteOnTermination": true,
+                    "EbsCardIndex": 0,
+                    "VolumeId": "vol-009a72d14612e47c1",
+                    "InstanceId": "i-0f6bcd18bd2c0f4eb",
+                    "Device": "/dev/sda1",
+                    "State": "attached",
+                    "AttachTime": "2026-08-20T01:59:03+00:00"
+                }
+            ],
+            "Encrypted": true,
+            "KmsKeyId": "arn:aws:kms:ap-northeast-1:552357225071:key/1e686031-7f94-4968-9187-5ce2fa83a2df"
+        },
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "Iops": 3000,
+            "VolumeType": "gp3",
+            "MultiAttachEnabled": false,
+            "Throughput": 125,
+            "Operator": {
+                "Managed": false,
+                "HiddenByDefault": false
+            },
+            "VolumeId": "vol-09bb0580d2a3e3ff6",
+            "Size": 30,
+            "SnapshotId": "snap-014362d0e6e690ed0",
+            "AvailabilityZone": "ap-northeast-1a",
+            "State": "in-use",
+            "CreateTime": "2026-08-18T03:00:44.939000+00:00",
+            "Attachments": [
+                {
+                    "DeleteOnTermination": true,
+                    "EbsCardIndex": 0,
+                    "VolumeId": "vol-09bb0580d2a3e3ff6",
+                    "InstanceId": "i-01f5c3c164c11042e",
+                    "Device": "/dev/sda1",
+                    "State": "attached",
+                    "AttachTime": "2026-08-18T03:00:44+00:00"
+                }
+            ],
+            "Encrypted": true,
+            "KmsKeyId": "arn:aws:kms:ap-northeast-1:552357225071:key/1e686031-7f94-4968-9187-5ce2fa83a2df"
+        },
+        {
+            "AvailabilityZoneId": "apne1-az4",
+            "Iops": 3000,
+            "VolumeType": "gp3",
+            "MultiAttachEnabled": false,
+            "Throughput": 125,
+            "Operator": {
+                "Managed": false,
+                "HiddenByDefault": false
+            },
+            "VolumeId": "vol-0a0491105ba53f6d1",
+            "Size": 150,
+            "SnapshotId": "snap-02d2d0e7fe6bee06e",
+            "AvailabilityZone": "ap-northeast-1a",
+            "State": "in-use",
+            "CreateTime": "2026-08-20T01:55:28.852000+00:00",
+            "Attachments": [
+                {
+                    "DeleteOnTermination": true,
+                    "EbsCardIndex": 0,
+                    "VolumeId": "vol-0a0491105ba53f6d1",
+                    "InstanceId": "i-0f8ac78807132b82d",
+                    "Device": "/dev/sda1",
+                    "State": "attached",
+                    "AttachTime": "2026-08-20T01:55:28+00:00"
+                }
+            ],
+            "Encrypted": true,
+            "KmsKeyId": "arn:aws:kms:ap-northeast-1:552357225071:key/1e686031-7f94-4968-9187-5ce2fa83a2df"
+        }
+    ]
+}

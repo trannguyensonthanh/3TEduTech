@@ -44,6 +44,8 @@ const { Queue, Worker } = require('bullmq');
 const { createBullMQConnection } = require('./queue.config');
 const cloudinaryUtil = require('../utils/cloudinary.util');
 const lessonRepository = require('../api/lessons/lessons.repository');
+/* [THÊM 20/08/2026] Dùng để đặt ảnh bìa khóa học sau khi tải lên Cloudinary. */
+const courseRepository = require('../api/courses/courses.repository');
 const subtitleRepository = require('../api/lessons/subtitle.repository');
 const importStore = require('../services/import/importStore');
 const { cleanupJobDir } = require('../services/import/importPipeline');
@@ -238,7 +240,7 @@ const startMediaUploadWorker = () => {
   worker = new Worker(
     QUEUE_NAME,
     async (job) => {
-      const { jobId, courseId, accountId, items } = job.data;
+      const { jobId, courseId, accountId, items, coverImagePath } = job.data;
       const total = items?.length || 0;
 
       if (total === 0) {
@@ -276,6 +278,59 @@ const startMediaUploadWorker = () => {
         mediaDone: 0,
         mediaMessage: 'Bắt đầu tải video lên...',
       });
+
+      /* ==================================================================
+         [THÊM 20/08/2026] ẢNH BÌA KHÓA HỌC
+
+         Ảnh bìa lấy từ chính tệp ZIP (tệp có tên chứa cover/thumb/bia/banner,
+         hoặc ảnh đầu tiên tìm được), hoặc do giảng viên chỉ định ở màn hình
+         duyệt. Trước đây `ThumbnailUrl` của mọi khóa học nhập từ ZIP đều là
+         NULL, nên thẻ khóa học ở trang chủ và trang danh sách hiện một ô trống
+         — thứ đầu tiên người mua nhìn thấy.
+
+         Làm ở ĐÂY chứ không trong transaction tạo khóa học: gọi Cloudinary bên
+         trong một transaction CSDL nghĩa là giữ khóa hàng suốt thời gian chờ
+         mạng. Và làm TRƯỚC vòng lặp video vì ảnh chỉ vài trăm KB — khóa học có
+         ảnh bìa ngay trong vài giây, không phải đợi hết mấy trăm MB video.
+
+         Lỗi ở bước này KHÔNG được làm hỏng việc tải video: khóa học thiếu ảnh
+         bìa thì giảng viên tự tải lại được ở trang Sửa khóa học, còn video
+         hỏng thì phải làm lại cả lần nhập.
+         ================================================================== */
+      if (coverImagePath) {
+        try {
+          await importStore
+            .patch(jobId, { mediaMessage: 'Đang tải ảnh bìa khóa học...' })
+            .catch(() => {});
+
+          const anh = await cloudinaryUtil.uploadLargeFile(coverImagePath, {
+            folder: `courses/${courseId}/cover`,
+            resource_type: 'image',
+          });
+
+          if (anh?.secure_url) {
+            /* Dùng repository chung thay vì viết câu UPDATE riêng: nó đã lo
+               phần ánh xạ kiểu SQL cho từng cột, và mọi thay đổi lược đồ sau
+               này chỉ phải sửa một chỗ.
+
+               ⚠️ `ThumbnailPublicId` KHÔNG nằm trong danh sách cột mà
+               `updateCourseById` chấp nhận (xem bảng ánh xạ kiểu trong
+               courses.repository.js) nên nó bị bỏ qua lặng lẽ. Chấp nhận: cột
+               đó chỉ dùng để xóa ảnh cũ trên Cloudinary khi thay ảnh, và ảnh
+               bìa nhập từ ZIP thì chưa có ảnh cũ nào để xóa. */
+            await courseRepository.updateCourseById(courseId, {
+              ThumbnailUrl: anh.secure_url,
+            });
+            logger.info(
+              `[MediaUpload] Đã đặt ảnh bìa cho khóa học ${courseId}: ${anh.public_id}`
+            );
+          }
+        } catch (error) {
+          logger.error(
+            `[MediaUpload] Không tải được ảnh bìa cho khóa học ${courseId}: ${error.message}`
+          );
+        }
+      }
 
       let done = 0;
       let failed = 0;

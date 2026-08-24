@@ -1,28 +1,56 @@
 // src/pages/instructor/components/ImportReviewPanel.tsx
-// [THÊM 18/08/2026 — COURSE IMPORT, Giai đoạn A]
 //
-// Màn hình DUYỆT bản nháp — chốt chặn cuối cùng trước khi bất cứ thứ gì được
-// ghi vào cơ sở dữ liệu.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// ⚠️ HAI ĐIỀU CẦN BIẾT VỀ THỨ ĐƯỢC GỬI LÊN
-//
-// 1. Chỉ gửi những trường ĐƯỢC PHÉP SỬA: tên, mô tả, chọn/bỏ chọn. Máy chủ
-//    dùng schema Joi từ chối mọi khóa lạ (`imports.validation.js`), nên gửi dư
-//    một trường là hỏng CẢ request. Đường dẫn tệp, loại bài học... đều do máy
-//    chủ tự quyết định từ bản nháp của chính nó.
-//
-// 2. `sourceDir` và `sourcePath` là KHÓA ĐỐI CHIẾU, không phải dữ liệu. Máy chủ
-//    dùng chúng để tìm lại đúng chương/bài trong bản nháp gốc — nên tuyệt đối
-//    không được sửa.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// KHÔNG CÓ CHỨC NĂNG ĐỔI THỨ TỰ — VÀ ĐÓ LÀ CHỦ Ý
-//
-// Máy chủ tạo chương/bài theo thứ tự trong bản nháp của nó (đã sắp theo số ở
-// đầu tên tệp). Nếu ở đây cho kéo thả đổi thứ tự, thay đổi đó sẽ bị BỎ QUA
-// hoàn toàn mà không có lỗi nào báo — kiểu hỏng tệ nhất: người dùng tin là đã
-// lưu. Cần đổi thứ tự thì dùng trang Sửa khóa học sau khi tạo xong.
+/* ============================================================================
+   MÀN HÌNH DUYỆT BẢN NHÁP — chốt chặn cuối cùng trước khi bất cứ thứ gì được
+   ghi vào cơ sở dữ liệu.
+
+   ── [VIẾT LẠI 20/08/2026] VÌ SAO ────────────────────────────────────────
+
+   Bản trước chỉ cho sửa 5 trường: tên khóa học, danh mục, cấp độ, giá gốc và
+   hai ô mô tả. Trong khi bảng `Courses` có 14 trường do giảng viên nhập, và
+   trang tạo khóa học thủ công cho nhập đủ cả 14. Hệ quả với MỌI khóa học nhập
+   từ tệp nén:
+
+     • `Requirements` và `LearningOutcomes` luôn NULL — dù schema Joi phía máy
+       chủ đã nhận hai trường này từ lâu, chỉ là giao diện không bao giờ gửi.
+       "Bạn sẽ học được gì" là khối thuyết phục người mua mạnh nhất trên trang
+       chi tiết khóa học, và nó trống rỗng.
+     • `ThumbnailUrl` luôn NULL — thẻ khóa học hiện một ô xám ở trang chủ và
+       trang danh sách, đúng thứ đầu tiên người mua nhìn thấy.
+     • `IntroVideoUrl` luôn NULL.
+     • `DiscountedPrice` luôn NULL — không đặt được giá khuyến mãi.
+     • `Language` bị ghi cứng 'vi' ngay trong mã, nên khóa học tiếng Anh nhập
+       từ ZIP bị gán sai ngôn ngữ.
+
+   Cộng thêm hai chỗ đứt về nội dung:
+     • Video KHÔNG xem trước được — giảng viên duyệt một khóa học mà chưa từng
+       nhìn thấy nội dung của nó.
+     • Câu hỏi trắc nghiệm CHỈ ĐỌC, số câu ghi cứng 3, không có khái niệm độ
+       khó, và (nghiêm trọng nhất) câu hỏi được gắn vào bài TEXT/VIDEO nên sau
+       khi tạo xong thì không ai xem được.
+
+   ── BỐ CỤC CHIA TAB ─────────────────────────────────────────────────────
+
+   Nhét ~15 trường vào một trang cuốn thì phần quan trọng nhất — cấu trúc
+   chương trình học — bị đẩy xuống dưới ba màn hình. Chia tab theo NHÓM VIỆC:
+   nội dung bán hàng, nội dung giảng dạy, và phần kiểm tra.
+
+   ── HAI ĐIỀU CẦN BIẾT VỀ THỨ ĐƯỢC GỬI LÊN ───────────────────────────────
+
+   1. Chỉ gửi những trường ĐƯỢC PHÉP SỬA. Máy chủ dùng Joi từ chối mọi khóa lạ,
+      nên gửi dư một trường là hỏng CẢ request. Đường dẫn tệp, loại bài học,
+      trạng thái khóa học... đều do máy chủ tự quyết định.
+
+   2. `sourceDir` và `sourcePath` là KHÓA ĐỐI CHIẾU, không phải dữ liệu. Máy chủ
+      dùng chúng để tìm lại đúng chương/bài trong bản nháp gốc — tuyệt đối không
+      được sửa.
+
+   ── KHÔNG CÓ CHỨC NĂNG ĐỔI THỨ TỰ, VÀ ĐÓ LÀ CHỦ Ý ───────────────────────
+
+   Máy chủ tạo chương/bài theo thứ tự trong bản nháp của nó (đã sắp theo số ở
+   đầu tên tệp). Nếu ở đây cho kéo thả, thay đổi đó bị BỎ QUA hoàn toàn mà không
+   có lỗi nào báo — kiểu hỏng tệ nhất: người dùng tin là đã lưu.
+============================================================================ */
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,19 +67,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import SectionCard from '@/components/common/SectionCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatCard from '@/components/common/StatCard';
+import TiptapEditor from '@/components/editor/TiptapEditor';
+import ImportMediaPreview from './ImportMediaPreview';
+import ImportQuizEditor, { type QuizLessonRef } from './ImportQuizEditor';
+
 import {
   AlertTriangle,
   BookOpen,
   Captions,
-  Check,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
-  FileSearch,
   FileText,
+  Image as ImageIcon,
   Info,
   Layers,
   ListChecks,
@@ -60,7 +90,6 @@ import {
   Sparkles,
   Video,
   Wand,
-  X,
 } from 'lucide-react';
 
 import { getCategories } from '@/services/category.service';
@@ -71,7 +100,6 @@ import {
   acceptImport,
   type AcceptImportResult,
   enrichImport,
-  generateQuiz,
   formatBytes,
   formatDuration,
   type ImportProposal,
@@ -83,7 +111,6 @@ import {
 interface EditableLesson {
   sourcePath: string;
   lessonName: string;
-  /** Mô tả bài học. Hiện chỉ do AI điền — sửa chi tiết ở trang Sửa khóa học. */
   description: string;
   selected: boolean;
   // Chỉ để hiển thị — không gửi lên.
@@ -94,7 +121,6 @@ interface EditableLesson {
   hasSubtitle: boolean;
   hasText: boolean;
   note: string | null;
-  /** Câu hỏi trắc nghiệm do AI soạn — chỉ hiển thị, không sửa ở màn hình này. */
   quiz: ProposedQuizQuestion[];
 }
 
@@ -109,23 +135,25 @@ interface EditableSection {
 interface Props {
   jobId: string;
   proposal: ImportProposal;
-  /** `videosPending` = số video máy chủ ĐÃ xếp hàng tải lên (đã trừ bài bỏ tick). */
-  /* [SỬA 18/08/2026] Truyền NGUYÊN kết quả thay vì hai con số rời.
-
-     Trang cha nay cần thêm `lessonsNeedingVideo` để dựng bước "Gắn video" —
-     video không còn được giải nén ra máy chủ nên giảng viên phải tự gắn nguồn
-     cho từng bài.
-
-     Bóc sẵn vài trường rồi truyền lẻ nghĩa là mỗi lần máy chủ trả thêm thứ gì
-     lại phải sửa chữ ký hàm ở CẢ HAI nơi — và quên một nơi thì TypeScript báo
-     lỗi ở chỗ chẳng liên quan gì tới thay đổi vừa làm. */
   onAccepted: (result: AcceptImportResult) => void;
   onCancel: () => void;
 }
 
-/* Thẻ thống kê riêng của màn hình này đã bị xóa: nó tự tô ba màu nền theo
-   `tone`, nên bốn thẻ đứng cạnh nhau ra bốn màu trong khi mọi thẻ số liệu khác
-   của hệ thống đều trung tính. Nay dùng thẳng `@/components/common/StatCard`. */
+/* Sinh slug xem trước — GIỐNG HỆT cách trang sửa khóa học làm, và cũng chỉ để
+   xem. Máy chủ tự sinh slug thật kèm hậu tố ngẫu nhiên, vì hai giảng viên đặt
+   trùng tên khóa học là chuyện bình thường mà `UQ_Courses_Slug` là ràng buộc
+   duy nhất toàn hệ thống. Hiện ra ở đây để giảng viên biết đường dẫn khóa học
+   sẽ trông thế nào, không phải để họ sửa. */
+const slugXemTruoc = (ten: string): string =>
+  ten
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 
 /* ───────────────────────────── Thành phần chính ───────────────────────── */
 
@@ -135,20 +163,36 @@ const ImportReviewPanel: React.FC<Props> = ({
   onAccepted,
   onCancel,
 }) => {
-  /* --- Thông tin khóa học --- */
+  const [tab, setTab] = useState('thong-tin');
+
+  /* --- Thông tin khóa học ---
+     Khởi tạo từ bản nháp chứ không phải chuỗi rỗng: nếu giảng viên đã bấm AI
+     rồi tải lại trang, nội dung đã lưu trên Redis phải hiện lại — nếu không họ
+     sẽ tưởng mất và bấm AI thêm lần nữa, tiêu token vô ích. */
   const [courseName, setCourseName] = useState(proposal.courseName || '');
-  /* Khởi tạo từ bản nháp chứ không phải chuỗi rỗng: nếu giảng viên đã bấm AI
-     rồi tải lại trang, mô tả đã lưu trên Redis phải hiện lại — nếu không họ sẽ
-     tưởng mất và bấm AI thêm lần nữa, tiêu token vô ích. */
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [levelId, setLevelId] = useState<string>('');
+  const [language, setLanguage] = useState<string>('vi');
+
   const [shortDescription, setShortDescription] = useState(
     proposal.courseShortDescription || ''
   );
   const [fullDescription, setFullDescription] = useState(
     proposal.courseDescription || ''
   );
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [levelId, setLevelId] = useState<string>('');
+  const [requirements, setRequirements] = useState(
+    proposal.courseRequirements || ''
+  );
+  const [learningOutcomes, setLearningOutcomes] = useState(
+    proposal.courseLearningOutcomes || ''
+  );
+
   const [originalPrice, setOriginalPrice] = useState<string>('0');
+  const [discountedPrice, setDiscountedPrice] = useState<string>('');
+  const [introVideoUrl, setIntroVideoUrl] = useState<string>('');
+  const [useCoverImage, setUseCoverImage] = useState(
+    Boolean(proposal.coverImage)
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -166,18 +210,12 @@ const ImportReviewPanel: React.FC<Props> = ({
   const [beforeAi, setBeforeAi] = useState<{
     short: string;
     full: string;
+    requirements: string;
+    outcomes: string;
     sections: EditableSection[];
   } | null>(null);
 
-  /* --- Trạng thái của lượt soạn trắc nghiệm --- */
-  const [quizzing, setQuizzing] = useState(false);
   const [includeQuiz, setIncludeQuiz] = useState(false);
-  const [quizInfo, setQuizInfo] = useState<{
-    total: number;
-    lessons: number;
-    warnings: string[];
-  } | null>(null);
-  const [openQuiz, setOpenQuiz] = useState<Record<string, boolean>>({});
 
   /* --- Bản sao có thể sửa của cấu trúc --- */
   const [sections, setSections] = useState<EditableSection[]>(() =>
@@ -203,189 +241,249 @@ const ImportReviewPanel: React.FC<Props> = ({
     }))
   );
 
-  /* --- Danh mục & cấp độ --- */
-  const { data: categoryData } = useQuery({
-    queryKey: ['categories', 'all-for-import'],
-    queryFn: () => getCategories({ limit: 0 }),
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories', 'all'],
+    queryFn: () => getCategories({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
   });
-  const { data: levelData } = useQuery({
-    queryKey: ['levels', 'all-for-import'],
+  const { data: levelsData } = useQuery({
+    queryKey: ['levels', 'all'],
     queryFn: () => getLevels(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const categories = categoryData?.categories || [];
-  const levels = levelData?.levels || [];
+  /* ─────────────────────── Số liệu tổng hợp ─────────────────────── */
 
-  /* --- Số liệu sống, cập nhật theo tick chọn --- */
   const counts = useMemo(() => {
     let lessons = 0;
     let videos = 0;
-    let sectionsSelected = 0;
+    let subtitles = 0;
     let questions = 0;
+    let sectionsWithQuiz = 0;
 
     for (const section of sections) {
       if (!section.selected) continue;
-      const picked = section.lessons.filter((l) => l.selected);
-      if (picked.length === 0) continue;
-      sectionsSelected += 1;
-      lessons += picked.length;
-      videos += picked.filter((l) => l.lessonType === 'VIDEO').length;
-      questions += picked.reduce((n, l) => n + l.quiz.length, 0);
+      let cauChuong = 0;
+      for (const lesson of section.lessons) {
+        if (!lesson.selected) continue;
+        lessons += 1;
+        if (lesson.lessonType === 'VIDEO') videos += 1;
+        if (lesson.hasSubtitle) subtitles += 1;
+        cauChuong += lesson.quiz.length;
+      }
+      questions += cauChuong;
+      if (cauChuong > 0) sectionsWithQuiz += 1;
     }
-    return { sections: sectionsSelected, lessons, videos, questions };
+
+    return {
+      sections: sections.filter((s) => s.selected).length,
+      lessons,
+      videos,
+      subtitles,
+      questions,
+      sectionsWithQuiz,
+    };
   }, [sections]);
 
-  /* --- Thao tác sửa --- */
-  const patchSection = (index: number, patch: Partial<EditableSection>) =>
-    setSections((prev) =>
-      prev.map((s, i) => (i === index ? { ...s, ...patch } : s))
-    );
+  /* Danh sách phẳng cho trình soạn trắc nghiệm. */
+  const quizLessons: QuizLessonRef[] = useMemo(
+    () =>
+      sections
+        .filter((s) => s.selected)
+        .flatMap((s) =>
+          s.lessons
+            .filter((l) => l.selected)
+            .map((l) => ({
+              sourcePath: l.sourcePath,
+              lessonName: l.lessonName || 'Bài học',
+              sectionName: s.sectionName || 'Chương chưa đặt tên',
+              raDeDuoc: l.hasText,
+              questions: l.quiz,
+            }))
+        ),
+    [sections]
+  );
 
-  const patchLesson = (
-    sectionIndex: number,
-    lessonIndex: number,
-    patch: Partial<EditableLesson>
-  ) =>
+  const apDungQuiz = (
+    capNhat: Array<{ sourcePath: string; questions: ProposedQuizQuestion[] }>
+  ) => {
+    const theoDuong = new Map(capNhat.map((c) => [c.sourcePath, c.questions]));
     setSections((prev) =>
-      prev.map((s, i) =>
-        i !== sectionIndex
-          ? s
-          : {
+      prev.map((s) => ({
+        ...s,
+        lessons: s.lessons.map((l) =>
+          theoDuong.has(l.sourcePath)
+            ? { ...l, quiz: theoDuong.get(l.sourcePath) as ProposedQuizQuestion[] }
+            : l
+        ),
+      }))
+    );
+  };
+
+  /* ─────────────────────── Sửa cấu trúc ─────────────────────── */
+
+  const toggleSection = (sourceDir: string, value: boolean) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.sourceDir === sourceDir
+          ? {
               ...s,
-              lessons: s.lessons.map((l, j) =>
-                j === lessonIndex ? { ...l, ...patch } : l
-              ),
+              selected: value,
+              // Bỏ chọn cả chương thì bỏ chọn luôn mọi bài bên trong: để lệch
+              // nhau sẽ khiến số liệu ở đầu trang không khớp với thứ nhìn thấy.
+              lessons: s.lessons.map((l) => ({ ...l, selected: value })),
             }
+          : s
       )
     );
+  };
 
-  /* --- Nhờ AI viết mô tả --- */
+  const toggleLesson = (sourceDir: string, sourcePath: string, value: boolean) => {
+    setSections((prev) =>
+      prev.map((s) => {
+        if (s.sourceDir !== sourceDir) return s;
+        const lessons = s.lessons.map((l) =>
+          l.sourcePath === sourcePath ? { ...l, selected: value } : l
+        );
+        return {
+          ...s,
+          lessons,
+          // Chọn lại một bài trong chương đang tắt thì bật lại chương.
+          selected: value ? true : s.selected && lessons.some((l) => l.selected),
+        };
+      })
+    );
+  };
+
+  const suaSection = (sourceDir: string, thayDoi: Partial<EditableSection>) => {
+    setSections((prev) =>
+      prev.map((s) => (s.sourceDir === sourceDir ? { ...s, ...thayDoi } : s))
+    );
+  };
+
+  const suaLesson = (
+    sourceDir: string,
+    sourcePath: string,
+    thayDoi: Partial<EditableLesson>
+  ) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.sourceDir === sourceDir
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.sourcePath === sourcePath ? { ...l, ...thayDoi } : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  /* ─────────────────────── Nhờ AI viết nội dung ─────────────────────── */
+
   const handleEnrich = async () => {
     if (enriching) return;
-
-    setBeforeAi({ short: shortDescription, full: fullDescription, sections });
     setEnriching(true);
-
     try {
-      const result = await enrichImport(jobId);
+      setBeforeAi({
+        short: shortDescription,
+        full: fullDescription,
+        requirements,
+        outcomes: learningOutcomes,
+        sections,
+      });
 
-      /* TRỘN theo khóa, không thay thế cả cấu trúc.
-         Máy chủ trả về bản nháp đầy đủ, nhưng nếu lấy nguyên si thì mọi thứ
-         giảng viên đã sửa (đổi tên chương, bỏ tick bài) sẽ bị xóa sạch. Ở đây
-         chỉ lấy đúng phần MÔ TẢ, giữ nguyên tên và lựa chọn của họ. */
-      const sectionDesc = new Map<string, string>();
-      const lessonDesc = new Map<string, string>();
+      const kq = await enrichImport(jobId);
+      const p = kq.proposal;
 
-      for (const s of result.proposal?.sections || []) {
-        if (s.description) sectionDesc.set(s.sourceDir ?? '', s.description);
-        for (const l of s.lessons || []) {
-          if (l.description) lessonDesc.set(l.sourcePath, l.description);
-        }
-      }
+      if (p.courseShortDescription) setShortDescription(p.courseShortDescription);
+      if (p.courseDescription) setFullDescription(p.courseDescription);
+      if (p.courseRequirements) setRequirements(p.courseRequirements);
+      if (p.courseLearningOutcomes) setLearningOutcomes(p.courseLearningOutcomes);
 
-      setSections((prev) =>
-        prev.map((s) => ({
-          ...s,
-          description: sectionDesc.get(s.sourceDir) ?? s.description,
-          lessons: s.lessons.map((l) => ({
-            ...l,
-            description: lessonDesc.get(l.sourcePath) ?? l.description,
-          })),
-        }))
+      // Trộn mô tả chương/bài vào cấu trúc đang sửa, GIỮ NGUYÊN phần chọn/bỏ
+      // chọn và tên đã đổi tay của giảng viên.
+      const secTheoDir = new Map(
+        (p.sections || []).map((s) => [s.sourceDir ?? '', s])
       );
-
-      if (result.shortDescription) setShortDescription(result.shortDescription);
-      if (result.proposal?.courseDescription) {
-        setFullDescription(result.proposal.courseDescription);
-      }
+      setSections((prev) =>
+        prev.map((s) => {
+          const moi = secTheoDir.get(s.sourceDir);
+          if (!moi) return s;
+          const baiTheoDuong = new Map(
+            (moi.lessons || []).map((l) => [l.sourcePath, l])
+          );
+          return {
+            ...s,
+            description: moi.description || s.description,
+            lessons: s.lessons.map((l) => {
+              const lm = baiTheoDuong.get(l.sourcePath);
+              return lm?.description ? { ...l, description: lm.description } : l;
+            }),
+          };
+        })
+      );
 
       setAiInfo({
-        sections: result.sectionsWritten,
-        lessons: result.lessonsWritten,
-        warnings: result.warnings || [],
+        sections: kq.sectionsWritten,
+        lessons: kq.lessonsWritten,
+        warnings: kq.warnings || [],
       });
-      toast.success(
-        `AI đã viết mô tả cho ${result.sectionsWritten} chương và ${result.lessonsWritten} bài học.`
-      );
+      toast.success('AI đã viết xong phần giới thiệu khóa học.');
     } catch (error: any) {
-      setBeforeAi(null); // Không có gì thay đổi thì cũng không có gì để hoàn tác
-      toast.error(error?.message || 'Không nhờ được AI viết mô tả.');
+      toast.error(error?.message || 'AI không viết được mô tả.');
+      setBeforeAi(null);
     } finally {
       setEnriching(false);
     }
   };
 
-  const handleUndoAi = () => {
+  const hoanTacAi = () => {
     if (!beforeAi) return;
     setShortDescription(beforeAi.short);
     setFullDescription(beforeAi.full);
+    setRequirements(beforeAi.requirements);
+    setLearningOutcomes(beforeAi.outcomes);
     setSections(beforeAi.sections);
     setBeforeAi(null);
     setAiInfo(null);
-    toast.info('Đã hoàn tác nội dung do AI viết.');
+    toast.info('Đã khôi phục nội dung trước khi nhờ AI.');
   };
 
-  /* --- Nhờ AI soạn câu hỏi trắc nghiệm --- */
-  const handleGenerateQuiz = async () => {
-    if (quizzing) return;
-    setQuizzing(true);
+  /* ─────────────────────── Gửi lên ─────────────────────── */
 
-    try {
-      const result = await generateQuiz(jobId, 3);
-
-      /* Trộn theo `sourcePath`, giống hệt cách làm với mô tả: giữ nguyên tên
-         và lựa chọn giảng viên đã sửa, chỉ nhận thêm phần câu hỏi. */
-      const quizByPath = new Map<string, ProposedQuizQuestion[]>();
-      for (const s of result.proposal?.sections || []) {
-        for (const l of s.lessons || []) {
-          if (l.quizQuestions?.length) quizByPath.set(l.sourcePath, l.quizQuestions);
-        }
-      }
-
-      setSections((prev) =>
-        prev.map((s) => ({
-          ...s,
-          /* Gán `?? []` chứ không phải `?? l.quiz`: máy chủ đã xóa sạch đề cũ
-             khi soạn lại, giao diện phải phản ánh đúng như vậy. Nếu giữ lại đề
-             cũ ở đây, giảng viên sẽ thấy nhiều câu hơn số máy chủ thật sự có. */
-          lessons: s.lessons.map((l) => ({
-            ...l,
-            quiz: quizByPath.get(l.sourcePath) ?? [],
-          })),
-        }))
-      );
-
-      setQuizInfo({
-        total: result.totalQuestions,
-        lessons: result.lessonsWithQuiz,
-        warnings: result.warnings || [],
-      });
-      // Soạn xong thì bật sẵn — người ta bấm nút này là đã muốn dùng rồi.
-      setIncludeQuiz(true);
-      toast.success(
-        `AI đã soạn ${result.totalQuestions} câu hỏi cho ${result.lessonsWithQuiz} bài học.`
-      );
-    } catch (error: any) {
-      toast.error(error?.message || 'Không soạn được câu hỏi.');
-    } finally {
-      setQuizzing(false);
-    }
-  };
-
-  /* --- Gửi lên --- */
   const handleSubmit = async () => {
     if (submitting) return;
 
     if (courseName.trim().length < 3) {
       toast.error('Tên khóa học phải có ít nhất 3 ký tự.');
+      setTab('thong-tin');
       return;
     }
     if (!categoryId || !levelId) {
       toast.error('Vui lòng chọn Danh mục và Cấp độ.');
+      setTab('thong-tin');
       return;
     }
     if (counts.lessons === 0) {
       toast.error('Bạn chưa chọn bài học nào.');
+      setTab('chuong-trinh');
+      return;
+    }
+
+    const giaGoc = Number(originalPrice) || 0;
+    const giaKM = discountedPrice.trim() === '' ? null : Number(discountedPrice);
+    if (giaKM !== null && (Number.isNaN(giaKM) || giaKM < 0)) {
+      toast.error('Giá khuyến mãi không hợp lệ.');
+      setTab('media-gia');
+      return;
+    }
+    if (giaKM !== null && giaKM > giaGoc) {
+      // Máy chủ cũng chặn, nhưng bắt ở đây thì giảng viên không mất một vòng
+      // gọi mạng chỉ để nhận lại đúng câu này.
+      toast.error('Giá khuyến mãi không được lớn hơn giá gốc.');
+      setTab('media-gia');
       return;
     }
 
@@ -398,13 +496,19 @@ const ImportReviewPanel: React.FC<Props> = ({
         courseName: courseName.trim(),
         categoryId: Number(categoryId),
         levelId: Number(levelId),
+        language,
         shortDescription: shortDescription.trim() || null,
         fullDescription: fullDescription.trim() || null,
-        originalPrice: Number(originalPrice) || 0,
-        language: 'vi',
-        /* Chỉ gửi cờ. Nội dung câu hỏi KHÔNG gửi từ client — máy chủ đọc từ
-           bản nháp của chính nó, nếu không thì ai cũng tự soạn được đề và đáp
-           án tùy ý cho khóa học của mình. */
+        requirements: requirements.trim() || null,
+        learningOutcomes: learningOutcomes.trim() || null,
+        originalPrice: giaGoc,
+        discountedPrice: giaKM,
+        ...(introVideoUrl.trim() ? { introVideoUrl: introVideoUrl.trim() } : {}),
+        useCoverImage,
+        /* Chỉ gửi cờ. Nội dung câu hỏi KHÔNG gửi ở đây — máy chủ đọc từ bản
+           nháp của chính nó (đã được cập nhật qua tuyến PUT /quiz khi giảng
+           viên bấm Lưu), nếu không thì ai cũng tự soạn được đề và đáp án tùy ý
+           cho khóa học của mình. */
         includeQuiz,
         sections: sections.map((section) => {
           const name = section.sectionName.trim();
@@ -427,10 +531,6 @@ const ImportReviewPanel: React.FC<Props> = ({
       };
 
       const result = await acceptImport(jobId, payload);
-      /* Dùng con số MÁY CHỦ trả về, không dùng `counts.videos` tính ở client.
-         Hai con số có thể lệch nhau (ví dụ một video bị bỏ qua vì tệp hỏng), và
-         nếu lấy số của client thì thanh tiến độ ở bước sau sẽ không bao giờ
-         chạy hết. */
       onAccepted(result);
     } catch (error: any) {
       toast.error(error?.message || 'Không tạo được khóa học.');
@@ -440,580 +540,611 @@ const ImportReviewPanel: React.FC<Props> = ({
     }
   };
 
-  const confidencePercent = Math.round((proposal.confidence || 0) * 100);
   const lowConfidence = proposal.needsAiGrouping;
+
+  /* ─────────────────────── Giao diện ─────────────────────── */
 
   return (
     <div className='space-y-6'>
       {/* ── SỐ LIỆU ── */}
-      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+      <div className='grid grid-cols-2 gap-4 lg:grid-cols-5'>
         <StatCard label='Chương sẽ tạo' value={counts.sections} icon={Layers} />
         <StatCard label='Bài học sẽ tạo' value={counts.lessons} icon={BookOpen} />
+        <StatCard label='Video' value={counts.videos} icon={Video} />
+        <StatCard label='Phụ đề ghép được' value={counts.subtitles} icon={Captions} />
         <StatCard
-          label='Video (tải lên sau)'
-          value={counts.videos}
-          icon={Video}
-        />
-        <StatCard
-          label='Phụ đề ghép được'
-          value={proposal.stats?.subtitleMatched ?? 0}
-          icon={Captions}
+          label='Câu hỏi'
+          value={counts.questions}
+          icon={ListChecks}
+          hint={
+            counts.questions > 0
+              ? `gom thành ${counts.sectionsWithQuiz} bài kiểm tra`
+              : 'chưa soạn đề'
+          }
         />
       </div>
 
-      {/* ── CẢNH BÁO ĐỘ TIN CẬY ── */}
       {lowConfidence && (
-        <div className='flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm'>
-          <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-warning' aria-hidden='true' />
-          <div className='space-y-1'>
+        <div className='flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-soft p-4'>
+          <AlertTriangle
+            className='mt-0.5 h-5 w-5 shrink-0 text-warning'
+            aria-hidden='true'
+          />
+          <div className='text-sm'>
             <p className='font-medium text-foreground'>
-              Cấu trúc thư mục hơi khó đoán (độ tin cậy {confidencePercent}%)
+              Cấu trúc thư mục không rõ ràng
             </p>
-            <p className='text-muted-foreground'>
-              Thường là do các tệp nằm dồn trong một thư mục, hoặc tên tệp không
-              có số thứ tự. Bản nháp bên dưới vẫn dùng được — bạn chỉ cần rà lại
-              tên chương và bỏ tick những bài không muốn tạo.
+            <p className='mt-0.5 text-muted-foreground'>
+              Hệ thống không chắc chắn về cách chia chương. Bạn hãy xem kỹ tab{' '}
+              <strong>Chương trình học</strong> và sửa lại tên nếu cần.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── NHỜ AI VIẾT MÔ TẢ ── */}
-      {/* Khối AI trước đây có nền chuyển sắc tím riêng để "nổi bật". Nó nổi bật
-          thật, nhưng bằng cách phá vỡ hệ màu của cả trang. Nay là một khối bình
-          thường; việc nó quan trọng đã được nói bằng vị trí và bằng chữ. */}
-      <SectionCard>
-        <div className='flex flex-wrap items-center justify-between gap-4'>
-          <div className='flex items-start gap-3'>
-            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground'>
-              <Sparkles className='h-5 w-5' aria-hidden='true' />
-            </div>
-            <div className='space-y-1'>
-              <p className='font-medium'>Để AI viết mô tả giúp bạn</p>
-              <p className='max-w-xl text-xs text-muted-foreground'>
-                AI đọc nội dung đã bóc từ tài liệu rồi viết mô tả cho khóa học,
-                từng chương và từng bài. Bạn xem lại và sửa thoải mái trước khi
-                tạo — không có gì được lưu tự động.
-              </p>
-            </div>
-          </div>
-
-          <div className='flex shrink-0 gap-2'>
-            {beforeAi && (
-              <Button variant='ghost' onClick={handleUndoAi} disabled={enriching}>
-                <RefreshCw className='mr-2 h-4 w-4' aria-hidden='true' />
-                Hoàn tác
-              </Button>
-            )}
-
-            <Button
-              variant='outline'
-              onClick={handleGenerateQuiz}
-              disabled={quizzing || enriching}
-            >
-              {quizzing ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
-                  Đang soạn đề...
-                </>
-              ) : (
-                <>
-                  <ListChecks className='mr-2 h-4 w-4' aria-hidden='true' />
-                  {quizInfo ? 'Soạn đề lại' : 'Tạo câu hỏi trắc nghiệm'}
-                </>
-              )}
-            </Button>
-
-            <Button onClick={handleEnrich} disabled={enriching || quizzing}>
-              {enriching ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
-                  AI đang viết...
-                </>
-              ) : (
-                <>
-                  <Wand className='mr-2 h-4 w-4' aria-hidden='true' />
-                  {aiInfo ? 'Viết lại' : 'Dùng AI viết mô tả'}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {enriching && (
-          <p className='mt-4 border-t border-border pt-3 text-xs text-muted-foreground'>
-            Có thể mất tới vài phút với khóa học nhiều bài. Đừng đóng trang này.
-          </p>
-        )}
-
-        {quizzing && (
-          <p className='mt-4 border-t border-border pt-3 text-xs text-muted-foreground'>
-            Đang soạn đề từ nội dung tài liệu. Bài video chưa có phụ đề sẽ được
-            bỏ qua vì không có gì để ra đề.
-          </p>
-        )}
-
-        {(aiInfo || quizInfo) && !enriching && !quizzing && (
-          <div className='mt-4 space-y-2 border-t border-border pt-3 text-xs'>
-            {aiInfo && (
-              <p className='flex items-center gap-2 text-success'>
-                <CheckCircle2 className='h-3.5 w-3.5 shrink-0' aria-hidden='true' />
-                Đã viết mô tả cho {aiInfo.sections} chương và {aiInfo.lessons}{' '}
-                bài học.
-              </p>
-            )}
-
-            {quizInfo && (
-              <p className='flex items-center gap-2 text-success'>
-                <CheckCircle2 className='h-3.5 w-3.5 shrink-0' aria-hidden='true' />
-                Đã soạn {quizInfo.total} câu hỏi cho {quizInfo.lessons} bài học.
-                Bấm vào nhãn "N câu hỏi" ở mỗi bài để xem.
-              </p>
-            )}
-
-            <p className='flex items-start gap-2 text-muted-foreground'>
-              <Info className='mt-0.5 h-3.5 w-3.5 shrink-0' aria-hidden='true' />
-              Hãy đọc lại trước khi tạo — AI có thể hiểu sai ý bạn. Riêng câu hỏi
-              trắc nghiệm, sửa hoặc xóa từng câu ở trang Sửa khóa học sau khi tạo
-              xong.
-            </p>
-
-            {[...(aiInfo?.warnings || []), ...(quizInfo?.warnings || [])].map(
-              (w) => (
-                <p key={w} className='flex items-start gap-2 text-warning'>
-                  <AlertTriangle className='mt-0.5 h-3.5 w-3.5 shrink-0' aria-hidden='true' />
-                  {w}
-                </p>
-              )
-            )}
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ── THÔNG TIN KHÓA HỌC ── */}
-      <SectionCard title='Thông tin khóa học' bodyClassName='space-y-5 p-5'>
-        <div className='space-y-2'>
-          <Label htmlFor='import-course-name'>
-            Tên khóa học <span className='text-danger'>*</span>
-          </Label>
-          <Input
-            id='import-course-name'
-            value={courseName}
-            onChange={(e) => setCourseName(e.target.value)}
-            placeholder='VD: Lập trình Python từ con số 0'
-          />
-        </div>
-
-        <div className='grid gap-4 sm:grid-cols-3'>
-          <div className='space-y-2'>
-            <Label>
-              Danh mục <span className='text-danger'>*</span>
-            </Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder='Chọn danh mục' />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c: any) => (
-                  <SelectItem
-                    key={c.categoryId}
-                    value={String(c.categoryId)}
-                  >
-                    {c.categoryName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='space-y-2'>
-            <Label>
-              Cấp độ <span className='text-danger'>*</span>
-            </Label>
-            <Select value={levelId} onValueChange={setLevelId}>
-              <SelectTrigger>
-                <SelectValue placeholder='Chọn cấp độ' />
-              </SelectTrigger>
-              <SelectContent>
-                {levels.map((l: any) => (
-                  <SelectItem key={l.levelId} value={String(l.levelId)}>
-                    {l.levelName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='import-price'>Giá gốc (VND)</Label>
-            <Input
-              id='import-price'
-              type='number'
-              min={0}
-              value={originalPrice}
-              onChange={(e) => setOriginalPrice(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='import-short-desc'>Mô tả ngắn</Label>
-          <Input
-            id='import-short-desc'
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-            maxLength={500}
-            placeholder='Một câu tóm tắt hiện ở thẻ khóa học'
-          />
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='import-full-desc'>
-            Mô tả đầy đủ
-            {proposal.courseDescription && (
-              <span className='ml-2 text-xs font-normal text-success'>
-                (đã lấy sẵn từ tệp _khoa-hoc.md)
+      {/* ── TAB ── */}
+      <Tabs value={tab} onValueChange={setTab} className='w-full'>
+        <TabsList className='grid w-full grid-cols-2 lg:grid-cols-5'>
+          <TabsTrigger value='thong-tin'>Thông tin</TabsTrigger>
+          <TabsTrigger value='chi-tiet'>Nội dung bán hàng</TabsTrigger>
+          <TabsTrigger value='media-gia'>Ảnh &amp; giá</TabsTrigger>
+          <TabsTrigger value='chuong-trinh'>
+            Chương trình học
+            {counts.lessons > 0 && (
+              <span className='ml-1.5 rounded-full bg-muted px-1.5 text-xs text-muted-foreground'>
+                {counts.lessons}
               </span>
             )}
-          </Label>
-          <Textarea
-            id='import-full-desc'
-            value={fullDescription}
-            onChange={(e) => setFullDescription(e.target.value)}
-            rows={5}
-          />
-        </div>
-      </SectionCard>
+          </TabsTrigger>
+          <TabsTrigger value='trac-nghiem'>
+            Trắc nghiệm
+            {counts.questions > 0 && (
+              <span className='ml-1.5 rounded-full bg-muted px-1.5 text-xs text-muted-foreground'>
+                {counts.questions}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ── CẤU TRÚC ── */}
-      <section className='space-y-4'>
-        <div className='flex flex-wrap items-center justify-between gap-3'>
-          <h2 className='flex items-center gap-2 text-base font-semibold'>
-            <Layers className='h-5 w-5 text-muted-foreground' aria-hidden='true' />
-            Cấu trúc đề xuất
-          </h2>
-          <p className='text-xs text-muted-foreground'>
-            Bỏ tick những mục không muốn tạo. Thứ tự lấy theo tên tệp — đổi được
-            ở trang Sửa khóa học sau khi tạo xong.
-          </p>
-        </div>
+        {/* ═══════════════ TAB 1 — THÔNG TIN ═══════════════ */}
+        <TabsContent value='thong-tin' className='mt-5 space-y-5'>
+          <div className='space-y-1.5'>
+            <Label htmlFor='ten-khoa-hoc'>
+              Tên khóa học <span className='text-danger'>*</span>
+            </Label>
+            <Input
+              id='ten-khoa-hoc'
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              maxLength={500}
+              placeholder='Ví dụ: Lập trình Web toàn diện cho người mới'
+            />
+          </div>
 
-        {sections.map((section, sIndex) => {
-          const isCollapsed = collapsed[section.sourceDir] ?? false;
-          const pickedCount = section.lessons.filter((l) => l.selected).length;
+          <div className='space-y-1.5'>
+            <Label htmlFor='slug'>Đường dẫn (tự sinh)</Label>
+            <Input
+              id='slug'
+              value={courseName.trim() ? `${slugXemTruoc(courseName)}-xxxxxxxx` : ''}
+              disabled
+              className='font-mono text-xs'
+              placeholder='sẽ sinh từ tên khóa học'
+            />
+            <p className='text-xs text-muted-foreground'>
+              Hệ thống tự sinh đường dẫn từ tên khóa học và thêm một hậu tố ngẫu
+              nhiên, vì hai khóa học trùng tên là chuyện bình thường. Sửa được ở
+              trang Sửa khóa học sau khi tạo.
+            </p>
+          </div>
 
-          return (
-            <div
-              key={section.sourceDir || `root-${sIndex}`}
-              className={[
-                'overflow-hidden rounded-xl border border-border transition-colors',
-                section.selected ? 'bg-card' : 'bg-muted/40 opacity-60',
-              ].join(' ')}
-            >
-              {/* Đầu chương */}
-              <div className='flex flex-wrap items-center gap-3 border-b border-border p-4'>
-                <Checkbox
-                  checked={section.selected}
-                  onCheckedChange={(v) =>
-                    patchSection(sIndex, { selected: v === true })
-                  }
-                  className='shrink-0'
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
+            <div className='space-y-1.5'>
+              <Label>
+                Danh mục <span className='text-danger'>*</span>
+              </Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder='Chọn danh mục' />
+                </SelectTrigger>
+                <SelectContent>
+                  {(categoriesData?.categories || []).map((c: any) => (
+                    <SelectItem key={c.categoryId} value={String(c.categoryId)}>
+                      {c.categoryName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label>
+                Cấp độ <span className='text-danger'>*</span>
+              </Label>
+              <Select value={levelId} onValueChange={setLevelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder='Chọn cấp độ' />
+                </SelectTrigger>
+                <SelectContent>
+                  {(levelsData?.levels || []).map((l: any) => (
+                    <SelectItem key={l.levelId} value={String(l.levelId)}>
+                      {l.levelName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label>Ngôn ngữ giảng dạy</Label>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='vi'>Tiếng Việt</SelectItem>
+                  <SelectItem value='en'>English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className='space-y-1.5'>
+            <Label>Mô tả ngắn</Label>
+            <p className='text-xs text-muted-foreground'>
+              Một câu tóm tắt, hiện dưới tên khóa học ở trang danh sách. Tối đa
+              500 ký tự.
+            </p>
+            <div className='rounded-lg border border-border'>
+              <TiptapEditor
+                key={`short-${shortDescription.slice(0, 20)}`}
+                initialContent={shortDescription}
+                onContentChange={setShortDescription}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ═══════════════ TAB 2 — NỘI DUNG BÁN HÀNG ═══════════════ */}
+        <TabsContent value='chi-tiet' className='mt-5 space-y-5'>
+          {/* Khối AI */}
+          <div className='rounded-lg border border-border bg-muted/40 p-4'>
+            <div className='flex flex-wrap items-center justify-between gap-3'>
+              <div className='flex items-start gap-2'>
+                <Sparkles
+                  className='mt-0.5 h-4 w-4 shrink-0 text-primary'
+                  aria-hidden='true'
                 />
-
-                <Input
-                  value={section.sectionName}
-                  onChange={(e) =>
-                    patchSection(sIndex, { sectionName: e.target.value })
-                  }
-                  disabled={!section.selected}
-                  className='h-10 min-w-[200px] flex-1 border-transparent bg-transparent text-base font-semibold focus-visible:border-input focus-visible:bg-background'
-                />
-
-                <span className='shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground'>
-                  {pickedCount}/{section.lessons.length} bài
-                </span>
-
-                <button
-                  type='button'
-                  onClick={() =>
-                    setCollapsed((prev) => ({
-                      ...prev,
-                      [section.sourceDir]: !isCollapsed,
-                    }))
-                  }
-                  className='shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted'
-                  aria-label={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                >
-                  {isCollapsed ? (
-                    <ChevronDown className='h-4 w-4' aria-hidden='true' />
-                  ) : (
-                    <ChevronUp className='h-4 w-4' aria-hidden='true' />
-                  )}
-                </button>
-              </div>
-
-              {/* Mô tả chương — chỉ hiện khi CÓ nội dung.
-                  Trước khi bấm AI thì gần như luôn rỗng, nên hiện sẵn một ô
-                  trống chỉ làm màn hình rối thêm mà chẳng ai dùng tới. */}
-              {section.description && (
-                <div className='border-b border-border px-4 py-3'>
-                  <Textarea
-                    value={section.description}
-                    onChange={(e) =>
-                      patchSection(sIndex, { description: e.target.value })
-                    }
-                    disabled={!section.selected}
-                    rows={2}
-                    className='border-transparent bg-muted/50 text-xs focus-visible:border-input focus-visible:bg-background'
-                  />
+                <div>
+                  <p className='text-sm font-semibold'>Nhờ AI viết giúp</p>
+                  <p className='mt-0.5 text-xs text-muted-foreground'>
+                    AI đọc nội dung tài liệu bạn vừa tải lên và viết mô tả ngắn,
+                    mô tả đầy đủ, yêu cầu đầu vào, kết quả đạt được, cùng mô tả
+                    cho từng chương và từng bài.
+                  </p>
                 </div>
-              )}
+              </div>
+              <div className='flex gap-2'>
+                {beforeAi && (
+                  <Button type='button' variant='ghost' onClick={hoanTacAi}>
+                    <RefreshCw className='h-4 w-4' aria-hidden='true' />
+                    Hoàn tác
+                  </Button>
+                )}
+                <Button type='button' onClick={handleEnrich} disabled={enriching}>
+                  {enriching ? (
+                    <>
+                      <Loader2 className='h-4 w-4 animate-spin' aria-hidden='true' />
+                      Đang viết…
+                    </>
+                  ) : (
+                    <>
+                      <Wand className='h-4 w-4' aria-hidden='true' />
+                      {aiInfo ? 'Viết lại' : 'Dùng AI viết mô tả'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
 
-              {/* Danh sách bài */}
-              {!isCollapsed && (
-                <div className='divide-y divide-border'>
-                  {section.lessons.map((lesson, lIndex) => (
-                    <div
-                      key={lesson.sourcePath}
-                      className={`px-4 py-3 ${lesson.selected ? '' : 'opacity-50'}`}
+            {aiInfo && (
+              <div className='mt-3 border-t border-border pt-3 text-xs text-muted-foreground'>
+                Đã viết mô tả cho {aiInfo.sections} chương và {aiInfo.lessons} bài
+                học.
+                {aiInfo.warnings.length > 0 && (
+                  <ul className='mt-1 space-y-0.5'>
+                    {aiInfo.warnings.map((w, i) => (
+                      <li key={i}>• {w}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className='space-y-1.5'>
+            <Label>Mô tả đầy đủ</Label>
+            <p className='text-xs text-muted-foreground'>
+              Phần giới thiệu chi tiết, hiện ở đầu trang khóa học.
+            </p>
+            <div className='rounded-lg border border-border'>
+              <TiptapEditor
+                key={`full-${fullDescription.slice(0, 20)}`}
+                initialContent={fullDescription}
+                onContentChange={setFullDescription}
+              />
+            </div>
+          </div>
+
+          <div className='space-y-1.5'>
+            <Label>Yêu cầu đầu vào</Label>
+            <p className='text-xs text-muted-foreground'>
+              Kiến thức, kỹ năng hoặc công cụ người học cần có trước khi bắt đầu.
+            </p>
+            <div className='rounded-lg border border-border'>
+              <TiptapEditor
+                key={`req-${requirements.slice(0, 20)}`}
+                initialContent={requirements}
+                onContentChange={setRequirements}
+              />
+            </div>
+          </div>
+
+          <div className='space-y-1.5'>
+            <Label>Bạn sẽ học được gì</Label>
+            <p className='text-xs text-muted-foreground'>
+              Những việc người học <strong>làm được</strong> sau khóa học. Đây là
+              khối được đọc nhiều nhất trên trang bán khóa học.
+            </p>
+            <div className='rounded-lg border border-border'>
+              <TiptapEditor
+                key={`out-${learningOutcomes.slice(0, 20)}`}
+                initialContent={learningOutcomes}
+                onContentChange={setLearningOutcomes}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ═══════════════ TAB 3 — ẢNH & GIÁ ═══════════════ */}
+        <TabsContent value='media-gia' className='mt-5 space-y-5'>
+          <div className='space-y-2'>
+            <Label>Ảnh bìa khóa học</Label>
+            {proposal.coverImage ? (
+              <div className='flex flex-wrap items-center gap-4 rounded-lg border border-border p-4'>
+                <div className='flex items-start gap-3'>
+                  <Checkbox
+                    id='dung-anh-bia'
+                    checked={useCoverImage}
+                    onCheckedChange={(v) => setUseCoverImage(v === true)}
+                  />
+                  <div>
+                    <Label
+                      htmlFor='dung-anh-bia'
+                      className='cursor-pointer text-sm font-medium'
                     >
-                     <div className='flex flex-wrap items-center gap-3'>
-                      <Checkbox
-                        checked={lesson.selected}
-                        disabled={!section.selected}
-                        onCheckedChange={(v) =>
-                          patchLesson(sIndex, lIndex, { selected: v === true })
-                        }
-                        className='shrink-0'
-                      />
+                      Dùng ảnh tìm được trong tệp nén
+                    </Label>
+                    <p className='mt-0.5 font-mono text-xs text-muted-foreground'>
+                      {proposal.coverImage.relativePath}
+                    </p>
+                  </div>
+                </div>
+                <ImportMediaPreview
+                  jobId={jobId}
+                  sourcePath={proposal.coverImage.relativePath}
+                  title='Ảnh bìa khóa học'
+                  kind='image'
+                  compact={false}
+                />
+              </div>
+            ) : (
+              <div className='flex items-start gap-3 rounded-lg border border-dashed border-border p-4'>
+                <ImageIcon
+                  className='mt-0.5 h-5 w-5 shrink-0 text-muted-foreground'
+                  aria-hidden='true'
+                />
+                <div className='text-sm'>
+                  <p className='font-medium'>Không tìm thấy ảnh bìa trong tệp nén</p>
+                  <p className='mt-0.5 text-muted-foreground'>
+                    Lần sau bạn có thể đặt một tệp ảnh tên{' '}
+                    <code className='rounded bg-muted px-1'>cover.jpg</code> hoặc{' '}
+                    <code className='rounded bg-muted px-1'>bia.png</code> ở thư
+                    mục gốc. Bây giờ thì tải ảnh bìa lên ở trang Sửa khóa học sau
+                    khi tạo xong.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
-                      {/* Loại bài học được phân biệt bằng BIỂU TƯỢNG, không bằng
-                          màu nền: đây không phải trạng thái tốt hay xấu. */}
-                      <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground'>
-                        {lesson.lessonType === 'VIDEO' ? (
-                          <Video className='h-4 w-4' aria-hidden='true' />
-                        ) : (
-                          <FileText className='h-4 w-4' aria-hidden='true' />
-                        )}
-                      </div>
+          <div className='space-y-1.5'>
+            <Label htmlFor='intro-video'>Video giới thiệu (YouTube)</Label>
+            <Input
+              id='intro-video'
+              value={introVideoUrl}
+              onChange={(e) => setIntroVideoUrl(e.target.value)}
+              placeholder='https://www.youtube.com/watch?v=...'
+              maxLength={1000}
+            />
+            <p className='text-xs text-muted-foreground'>
+              Đoạn video ngắn giới thiệu khóa học, phát ngay trên trang bán hàng.
+              Để trống nếu chưa có.
+            </p>
+          </div>
 
-                      <Input
-                        value={lesson.lessonName}
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            <div className='space-y-1.5'>
+              <Label htmlFor='gia-goc'>Giá gốc (VND)</Label>
+              <Input
+                id='gia-goc'
+                type='number'
+                min={0}
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+              />
+              <p className='text-xs text-muted-foreground'>
+                Để 0 nếu đây là khóa học miễn phí.
+              </p>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label htmlFor='gia-km'>Giá khuyến mãi (VND)</Label>
+              <Input
+                id='gia-km'
+                type='number'
+                min={0}
+                value={discountedPrice}
+                onChange={(e) => setDiscountedPrice(e.target.value)}
+                placeholder='Để trống nếu không giảm giá'
+              />
+              <p className='text-xs text-muted-foreground'>
+                Phải nhỏ hơn hoặc bằng giá gốc.
+              </p>
+            </div>
+          </div>
+
+          <div className='flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft p-3'>
+            <Info className='mt-0.5 h-4 w-4 shrink-0 text-info' aria-hidden='true' />
+            <p className='text-sm text-foreground'>
+              Khóa học được tạo ở trạng thái <strong>nháp</strong>. Bạn xem lại
+              và chỉnh sửa thoải mái trước khi gửi duyệt để xuất bản.
+            </p>
+          </div>
+        </TabsContent>
+
+        {/* ═══════════════ TAB 4 — CHƯƠNG TRÌNH HỌC ═══════════════ */}
+        <TabsContent value='chuong-trinh' className='mt-5 space-y-4'>
+          {sections.map((section) => {
+            const dangThu = collapsed[section.sourceDir];
+            const soBaiChon = section.lessons.filter((l) => l.selected).length;
+
+            return (
+              <div
+                key={section.sourceDir}
+                className={`rounded-lg border ${
+                  section.selected ? 'border-border' : 'border-border opacity-60'
+                }`}
+              >
+                <div className='flex flex-wrap items-center gap-3 border-b border-border bg-muted/40 p-3'>
+                  <Checkbox
+                    checked={section.selected}
+                    onCheckedChange={(v) =>
+                      toggleSection(section.sourceDir, v === true)
+                    }
+                    aria-label={`Chọn chương ${section.sectionName}`}
+                  />
+                  <Input
+                    value={section.sectionName}
+                    onChange={(e) =>
+                      suaSection(section.sourceDir, { sectionName: e.target.value })
+                    }
+                    maxLength={255}
+                    className='h-9 min-w-0 flex-1 font-medium'
+                    placeholder='Tên chương'
+                  />
+                  <span className='shrink-0 text-xs text-muted-foreground'>
+                    {soBaiChon}/{section.lessons.length} bài
+                  </span>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className='h-9 w-9 shrink-0'
+                    onClick={() =>
+                      setCollapsed((p) => ({
+                        ...p,
+                        [section.sourceDir]: !p[section.sourceDir],
+                      }))
+                    }
+                    aria-label={dangThu ? 'Mở chương' : 'Thu gọn chương'}
+                  >
+                    {dangThu ? (
+                      <ChevronDown className='h-4 w-4' aria-hidden='true' />
+                    ) : (
+                      <ChevronUp className='h-4 w-4' aria-hidden='true' />
+                    )}
+                  </Button>
+                </div>
+
+                {!dangThu && (
+                  <div className='space-y-3 p-3'>
+                    <div className='space-y-1'>
+                      <Label className='text-xs text-muted-foreground'>
+                        Mô tả chương
+                      </Label>
+                      <Textarea
+                        value={section.description}
                         onChange={(e) =>
-                          patchLesson(sIndex, lIndex, {
-                            lessonName: e.target.value,
+                          suaSection(section.sourceDir, {
+                            description: e.target.value,
                           })
                         }
-                        disabled={!section.selected || !lesson.selected}
-                        className='h-9 min-w-[180px] flex-1 border-transparent bg-transparent text-sm focus-visible:border-input focus-visible:bg-background'
+                        rows={2}
+                        className='text-sm'
+                        placeholder='Chương này dạy gì…'
                       />
+                    </div>
 
-                      {/* Nhãn thông tin */}
-                      <div className='flex shrink-0 flex-wrap items-center gap-1.5 text-[11px]'>
-                        <span className='rounded-md bg-muted px-1.5 py-0.5 font-mono text-muted-foreground'>
-                          {lesson.ext}
-                        </span>
+                    <div className='divide-y divide-border rounded-lg border border-border'>
+                      {section.lessons.map((lesson) => (
+                        <div
+                          key={lesson.sourcePath}
+                          className={`space-y-2 p-3 ${
+                            lesson.selected ? '' : 'opacity-60'
+                          }`}
+                        >
+                          <div className='flex flex-wrap items-center gap-2'>
+                            <Checkbox
+                              checked={lesson.selected}
+                              onCheckedChange={(v) =>
+                                toggleLesson(
+                                  section.sourceDir,
+                                  lesson.sourcePath,
+                                  v === true
+                                )
+                              }
+                              aria-label={`Chọn bài ${lesson.lessonName}`}
+                            />
+                            {lesson.lessonType === 'VIDEO' ? (
+                              <Video
+                                className='h-4 w-4 shrink-0 text-muted-foreground'
+                                aria-hidden='true'
+                              />
+                            ) : (
+                              <FileText
+                                className='h-4 w-4 shrink-0 text-muted-foreground'
+                                aria-hidden='true'
+                              />
+                            )}
+                            <Input
+                              value={lesson.lessonName}
+                              onChange={(e) =>
+                                suaLesson(section.sourceDir, lesson.sourcePath, {
+                                  lessonName: e.target.value,
+                                })
+                              }
+                              maxLength={255}
+                              className='h-8 min-w-0 flex-1 text-sm'
+                            />
+                            {/* [THÊM 20/08/2026] Xem trước video ngay tại đây —
+                                trước nay giảng viên duyệt mà chưa từng nhìn
+                                thấy nội dung mình sắp xuất bản. */}
+                            {lesson.lessonType === 'VIDEO' && (
+                              <ImportMediaPreview
+                                jobId={jobId}
+                                sourcePath={lesson.sourcePath}
+                                title={lesson.lessonName || 'Video bài học'}
+                                kind='video'
+                              />
+                            )}
+                          </div>
 
-                        {lesson.lessonType === 'VIDEO' &&
-                          lesson.durationSeconds !== null && (
-                            <span className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'>
-                              <Clock className='h-3 w-3' aria-hidden='true' />
-                              {formatDuration(lesson.durationSeconds)}
+                          <div className='flex flex-wrap items-center gap-2 pl-6 text-xs text-muted-foreground'>
+                            <span className='rounded bg-muted px-1.5 py-0.5 font-mono'>
+                              {lesson.ext}
                             </span>
+                            <span>{formatBytes(lesson.sizeBytes)}</span>
+                            {lesson.durationSeconds !== null && (
+                              <span className='flex items-center gap-1'>
+                                <Clock className='h-3 w-3' aria-hidden='true' />
+                                {formatDuration(lesson.durationSeconds)}
+                              </span>
+                            )}
+                            {lesson.hasSubtitle && (
+                              <span className='flex items-center gap-1'>
+                                <Captions className='h-3 w-3' aria-hidden='true' />
+                                phụ đề
+                              </span>
+                            )}
+                            {lesson.hasText && (
+                              <span className='flex items-center gap-1'>
+                                <FileText className='h-3 w-3' aria-hidden='true' />
+                                có nội dung
+                              </span>
+                            )}
+                            {lesson.quiz.length > 0 && (
+                              <span className='flex items-center gap-1 text-primary'>
+                                <ListChecks className='h-3 w-3' aria-hidden='true' />
+                                {lesson.quiz.length} câu hỏi
+                              </span>
+                            )}
+                          </div>
+
+                          {lesson.note && (
+                            <p className='pl-6 text-xs text-warning'>{lesson.note}</p>
                           )}
 
-                        <span className='rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'>
-                          {formatBytes(lesson.sizeBytes)}
-                        </span>
-
-                        {lesson.hasSubtitle && (
-                          <span
-                            className='flex items-center gap-1 rounded-md bg-success-soft px-1.5 py-0.5 text-success'
-                            title='Đã ghép được tệp phụ đề trùng tên'
-                          >
-                            <Captions className='h-3 w-3' aria-hidden='true' />
-                            phụ đề
-                          </span>
-                        )}
-
-                        {lesson.hasText && (
-                          <span
-                            className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground'
-                            title='Đã đọc được nội dung văn bản của tệp'
-                          >
-                            <FileSearch className='h-3 w-3' aria-hidden='true' />
-                            có nội dung
-                          </span>
-                        )}
-
-                        {lesson.note && (
-                          <span
-                            className='flex items-center gap-1 rounded-md bg-warning-soft px-1.5 py-0.5 text-warning'
-                            title={lesson.note}
-                          >
-                            <Info className='h-3 w-3' aria-hidden='true' />
-                            lưu ý
-                          </span>
-                        )}
-
-                        {lesson.quiz.length > 0 && (
-                          <button
-                            type='button'
-                            onClick={() =>
-                              setOpenQuiz((prev) => ({
-                                ...prev,
-                                [lesson.sourcePath]: !prev[lesson.sourcePath],
-                              }))
+                          {/* [SỬA 20/08/2026] Mô tả bài học nay SỬA ĐƯỢC.
+                              Bản trước để chỉ đọc với lý do "màn hình sẽ quá
+                              rối" — nhưng hệ quả là mô tả AI viết sai thì phải
+                              vào trang Sửa khóa học mới đổi được, tức là phải
+                              nhớ bài nào sai rồi tự đi tìm lại. Chia tab xong
+                              thì chỗ này đã đủ thoáng để sửa tại chỗ. */}
+                          <Textarea
+                            value={lesson.description}
+                            onChange={(e) =>
+                              suaLesson(section.sourceDir, lesson.sourcePath, {
+                                description: e.target.value,
+                              })
                             }
-                            className='flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-accent'
-                          >
-                            <ListChecks className='h-3 w-3' aria-hidden='true' />
-                            {lesson.quiz.length} câu hỏi
-                          </button>
-                        )}
-                      </div>
-                     </div>
-
-                      {/* Mô tả do AI viết. Để READ-ONLY ở màn hình này có chủ
-                          đích: nhét 40 ô nhập liệu vào đây thì màn hình không
-                          còn đọc được nữa. Sửa chi tiết ở trang Sửa khóa học. */}
-                      {lesson.description && (
-                        <p className='mt-2 pl-11 text-xs leading-relaxed text-muted-foreground'>
-                          {lesson.description}
-                        </p>
-                      )}
-
-                      {/* Câu hỏi trắc nghiệm — mặc định thu gọn.
-                          Bung sẵn hết thì một khóa 30 bài × 3 câu × 4 lựa chọn
-                          sẽ thành 360 dòng, không ai đọc nổi. */}
-                      {lesson.quiz.length > 0 && openQuiz[lesson.sourcePath] && (
-                        <div className='mt-3 space-y-3 rounded-lg border border-border bg-muted/50 p-3 pl-4'>
-                          {lesson.quiz.map((q, qIndex) => (
-                            <div key={`${lesson.sourcePath}-q${qIndex}`} className='space-y-1.5'>
-                              <p className='text-xs font-medium'>
-                                {qIndex + 1}. {q.question}
-                              </p>
-
-                              <ul className='space-y-1'>
-                                {q.options.map((opt, oIndex) => {
-                                  const isCorrect = oIndex === q.correctIndex;
-                                  return (
-                                    <li
-                                      key={`${lesson.sourcePath}-q${qIndex}-o${oIndex}`}
-                                      className={`flex items-start gap-2 text-xs ${
-                                        isCorrect
-                                          ? 'font-medium text-success'
-                                          : 'text-muted-foreground'
-                                      }`}
-                                    >
-                                      <span className='mt-0.5 w-4 shrink-0'>
-                                        {isCorrect ? (
-                                          <Check className='h-3 w-3' aria-hidden='true' />
-                                        ) : (
-                                          <span className='opacity-40'>
-                                            {String.fromCharCode(65 + oIndex)}.
-                                          </span>
-                                        )}
-                                      </span>
-                                      {opt}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-
-                              {q.explanation && (
-                                <p className='pl-6 text-[11px] italic text-muted-foreground'>
-                                  {q.explanation}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                            rows={2}
+                            className='ml-6 w-[calc(100%-1.5rem)] text-sm'
+                            placeholder='Mô tả bài học…'
+                          />
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </TabsContent>
 
-                  {section.lessons.length === 0 && (
-                    <p className='px-4 py-3 text-sm text-muted-foreground'>
-                      Chương này không có bài học nào.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </section>
+        {/* ═══════════════ TAB 5 — TRẮC NGHIỆM ═══════════════ */}
+        <TabsContent value='trac-nghiem' className='mt-5'>
+          <ImportQuizEditor
+            jobId={jobId}
+            lessons={quizLessons}
+            onChange={apDungQuiz}
+            includeQuiz={includeQuiz}
+            onIncludeQuizChange={setIncludeQuiz}
+          />
+        </TabsContent>
+      </Tabs>
 
-      {/* ── HÀNH ĐỘNG ── */}
-      {/* Thanh hành động dính đáy màn hình: nền đặc `bg-card` chứ không phải
-          nền mờ, để chữ bên dưới không lem qua làm khó đọc. */}
-      <div className='sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-lg'>
-        <div className='space-y-2'>
-          <p className='text-sm text-muted-foreground'>
-            Sẽ tạo{' '}
-            <strong className='text-foreground'>{counts.sections} chương</strong>{' '}
-            và{' '}
-            <strong className='text-foreground'>{counts.lessons} bài học</strong>
-            {includeQuiz && counts.questions > 0 && (
-              <>
-                {' '}
-                cùng{' '}
-                <strong className='text-foreground'>
-                  {counts.questions} câu hỏi
-                </strong>
-              </>
-            )}{' '}
-            ở trạng thái <strong className='text-foreground'>NHÁP</strong>.
-          </p>
-
-          {counts.questions > 0 && (
-            <label className='flex cursor-pointer items-center gap-2 text-xs text-muted-foreground'>
-              <Checkbox
-                checked={includeQuiz}
-                onCheckedChange={(v) => setIncludeQuiz(v === true)}
-              />
-              Tạo kèm {counts.questions} câu hỏi trắc nghiệm do AI soạn
-            </label>
+      {/* ── THANH HÀNH ĐỘNG ── */}
+      <div className='sticky bottom-0 -mx-1 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/95 px-1 py-4 backdrop-blur'>
+        <p className='text-sm text-muted-foreground'>
+          Sẽ tạo <strong className='text-foreground'>{counts.sections}</strong>{' '}
+          chương, <strong className='text-foreground'>{counts.lessons}</strong> bài
+          học
+          {includeQuiz && counts.questions > 0 && (
+            <>
+              {' '}
+              và{' '}
+              <strong className='text-foreground'>{counts.sectionsWithQuiz}</strong>{' '}
+              bài kiểm tra
+            </>
           )}
-        </div>
-
-        <div className='flex gap-3'>
-          <Button variant='outline' onClick={onCancel} disabled={submitting}>
-            <X className='mr-2 h-4 w-4' aria-hidden='true' />
+          .
+        </p>
+        <div className='flex gap-2'>
+          <Button type='button' variant='outline' onClick={onCancel} disabled={submitting}>
             Hủy bỏ
           </Button>
-
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button type='button' onClick={handleSubmit} disabled={submitting}>
             {submitting ? (
               <>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' aria-hidden='true' />
-                Đang tạo...
+                <Loader2 className='h-4 w-4 animate-spin' aria-hidden='true' />
+                Đang tạo…
               </>
             ) : (
-              <>
-                <CheckCircle2 className='mr-2 h-4 w-4' aria-hidden='true' />
-                Tạo khóa học nháp
-              </>
+              'Tạo khóa học nháp'
             )}
           </Button>
         </div>
       </div>
-
-      {/* ── GHI CHÚ VIDEO ── */}
-      {counts.videos > 0 && (
-        <div className='flex items-start gap-3 rounded-xl border border-border bg-muted/50 p-4 text-sm'>
-          <Info className='mt-0.5 h-4 w-4 shrink-0 text-muted-foreground' aria-hidden='true' />
-          <p className='text-muted-foreground'>
-            <strong className='text-foreground'>
-              {counts.videos} video chưa được tải lên Cloudinary.
-            </strong>{' '}
-            Chúng vẫn nằm trên máy chủ và chỉ được tải lên sau khi bạn tạo khóa
-            học — làm vậy để nếu bạn đổi ý và hủy, không có tệp rác nào bị bỏ
-            lại trên Cloudinary.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

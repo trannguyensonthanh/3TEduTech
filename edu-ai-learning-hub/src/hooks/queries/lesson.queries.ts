@@ -30,6 +30,7 @@ import {
   deleteQuizQuestion,
   uploadLessonVideoDirect,
   Lesson,
+  generateLessonQuiz,
 } from '@/services/lesson.service'; // Đảm bảo service export đủ
 import { courseKeys } from './course.queries'; // Cần để invalidate course detail
 import { toast } from '@/hooks/use-toast'; // Import toast nếu muốn dùng trong
@@ -462,4 +463,30 @@ export const useMockUpdateQuestion = () => {
     error: null,
     status: 'idle',
   };
+};
+
+/** Hook AI: Sinh câu hỏi trắc nghiệm tự động */
+export const useGenerateLessonQuiz = (
+  options?: UseMutationOptions<
+    any,
+    Error,
+    { lessonId: number; questionsPerLesson?: number; difficulty?: string }
+  >
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    any,
+    Error,
+    { lessonId: number; questionsPerLesson?: number; difficulty?: string }
+  >({
+    mutationFn: ({ lessonId, questionsPerLesson, difficulty }) =>
+      generateLessonQuiz(lessonId, { questionsPerLesson, difficulty }),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: lessonKeys.quizQuestions(variables.lessonId),
+      });
+      console.log('Quiz generated successfully.');
+    },
+    ...options,
+  });
 };

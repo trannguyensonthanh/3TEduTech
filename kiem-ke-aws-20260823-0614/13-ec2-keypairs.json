@@ -1,0 +1,12 @@
+{
+    "KeyPairs": [
+        {
+            "KeyPairId": "key-009d9152adb86376f",
+            "KeyType": "rsa",
+            "Tags": [],
+            "CreateTime": "2026-08-18T02:58:47.628000+00:00",
+            "KeyName": "3t_edutech_aws",
+            "KeyFingerprint": "60:77:ca:c5:b7:25:3c:48:eb:47:5c:f5:e6:ac:47:88"
+        }
+    ]
+}

@@ -1,6 +1,10 @@
 // File: src/api/imports/imports.controller.js
 // [THÊM 18/08/2026 — COURSE IMPORT, Giai đoạn A]
 
+/* Cần CẢ HAI biến thể: `fs.createReadStream` chỉ có ở API đồng bộ, còn
+   `stat` thì dùng bản promise cho gọn với async/await. */
+const fs = require('fs');
+const fsp = require('fs/promises');
 const httpStatus = require('http-status').status;
 const importService = require('./imports.service');
 const { catchAsync } = require('../../utils/catchAsync');
@@ -105,9 +109,94 @@ const generateQuiz = catchAsync(async (req, res) => {
   const result = await importService.generateQuiz(
     req.user,
     req.params.jobId,
-    req.body?.questionsPerLesson
+    req.body?.questionsPerLesson,
+    req.body?.difficulty
   );
   res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * PUT /v1/imports/:jobId/quiz — lưu câu hỏi giảng viên đã sửa.
+ *
+ * [THÊM 20/08/2026] Trước đây câu hỏi do AI soạn là chỉ đọc: sai một chữ cũng
+ * phải soạn lại toàn bộ đề (đốt thêm một lượt gọi mô hình và mất cả những câu
+ * đang tốt) hoặc bỏ hết rồi gõ lại trong trang Sửa khóa học.
+ */
+const saveQuiz = catchAsync(async (req, res) => {
+  const result = await importService.saveQuizEdits(
+    req.user,
+    req.params.jobId,
+    req.body
+  );
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * GET /v1/imports/:jobId/preview?path=... — phát một tệp trong bản nháp.
+ *
+ * [THÊM 20/08/2026] Để giảng viên XEM video (và ảnh bìa) trước khi bấm tạo
+ * khóa học. Tệp đã nằm trên đĩa máy chủ sau khi giải nén nhưng chưa lên
+ * Cloudinary, nên không có URL công khai nào trỏ tới nó.
+ *
+ * ── VÌ SAO PHẢI HỖ TRỢ HTTP RANGE ────────────────────────────────────────
+ * Không có nó, thẻ <video> phải tải TRỌN tệp trước khi phát được khung hình
+ * đầu tiên, và thanh tua kéo đi đâu cũng không nhảy được. Với video bài giảng
+ * hàng trăm MB thì đó là không dùng được. Trình duyệt gửi `Range: bytes=0-` cho
+ * yêu cầu đầu tiên và chỉ chấp nhận tua khi máy chủ đáp `Accept-Ranges: bytes`.
+ *
+ * Ba hàng rào an toàn nằm ở tầng service (`resolvePreviewFile`): kiểm quyền sở
+ * hữu, tra đường dẫn tuyệt đối TỪ BẢN NHÁP chứ không từ tham số client, và
+ * kiểm tra đường dẫn nằm trong thư mục của job.
+ */
+const previewFile = catchAsync(async (req, res) => {
+  const { absolutePath, mimeType, fileName } =
+    await importService.resolvePreviewFile(
+      req.user,
+      req.params.jobId,
+      req.query.path
+    );
+
+  const stat = await fsp.stat(absolutePath);
+  const total = stat.size;
+
+  /* `Content-Disposition: inline` + tên tệp đã mã hóa: trình duyệt hiển thị
+     tại chỗ với các kiểu nó hiểu, và tải xuống với kiểu octet-stream. */
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader(
+    'Content-Disposition',
+    `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`
+  );
+  /* Nội dung riêng tư của một bản nháp — không cho proxy hay CDN nào giữ lại. */
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  const range = req.headers.range;
+  if (!range) {
+    res.setHeader('Content-Length', total);
+    fs.createReadStream(absolutePath).pipe(res);
+    return;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!match) {
+    res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
+    return;
+  }
+
+  let start = match[1] ? parseInt(match[1], 10) : 0;
+  let end = match[2] ? parseInt(match[2], 10) : total - 1;
+
+  if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= total) {
+    res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
+    return;
+  }
+  if (end >= total) end = total - 1;
+
+  res.status(206);
+  res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+  res.setHeader('Content-Length', end - start + 1);
+  fs.createReadStream(absolutePath, { start, end }).pipe(res);
 });
 
 /** POST /v1/imports/:jobId/accept — tạo khóa học DRAFT từ bản nháp. */
@@ -134,6 +223,8 @@ module.exports = {
   getProposal,
   enrichImport,
   generateQuiz,
+  saveQuiz,
+  previewFile,
   acceptImport,
   cancelImport,
 };

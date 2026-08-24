@@ -49,6 +49,7 @@ import {
   getPendingApprovalRequestByCourseId,
   InstructorCourseParams,
   getMyInstructorCourses, // *** Import kiểu dữ liệu mới ***
+  generateCourseDescription,
 } from '@/services/course.service'; // Điều chỉnh đường dẫn nếu cần
 
 // Query Key Factory
@@ -192,6 +193,7 @@ export const useDeleteCourse = (
     onSuccess: (data, courseId, context) => {
       queryClient.removeQueries({ queryKey: courseKeys.detailById(courseId) });
       queryClient.invalidateQueries({ queryKey: courseKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['myCourses'] });
       console.log('Course deleted successfully.');
       options?.onSuccess?.(data, courseId, context);
     },
@@ -333,7 +335,7 @@ export const useReviewCourseApproval = (
       // queryClient.invalidateQueries({ queryKey: courseKeys.detailById(courseId) });
       queryClient.invalidateQueries({ queryKey: courseKeys.details() }); // Invalidate all details
       queryClient.invalidateQueries({ queryKey: courseKeys.lists() }); // Invalidate lists
-      // Invalidate cache danh sách approval requests (nếu có)
+      queryClient.invalidateQueries({ queryKey: courseKeys.approvalRequests }); // Invalidate cache danh sách approval requests
       console.log('Course approval reviewed.');
       // toast.success('Đã xử lý yêu cầu duyệt.');
     },
@@ -636,6 +638,16 @@ export const usePendingApprovalRequestByCourseId = (
       return getPendingApprovalRequestByCourseId(courseId);
     },
     enabled: !!courseId,
+    ...options,
+  });
+};
+
+/** Hook AI: Sinh mô tả khóa học */
+export const useGenerateCourseDescription = (
+  options?: UseMutationOptions<any, Error, { courseId: number; hints?: string }>
+) => {
+  return useMutation<any, Error, { courseId: number; hints?: string }>({
+    mutationFn: ({ courseId, hints }) => generateCourseDescription(courseId, hints),
     ...options,
   });
 };

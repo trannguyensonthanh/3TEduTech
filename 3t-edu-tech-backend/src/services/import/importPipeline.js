@@ -30,6 +30,7 @@ const { safeExtract, ImportRejectedError } = require('./safeExtract');
 const { classifyAll, FileKind } = require('./fileClassifier');
 const { analyzeTree } = require('./treeAnalyzer');
 const { extractForProposal, readPlainText, sanitizeText } = require('./textExtractor');
+const { aiGroupLessons } = require('./aiGrouper');
 const {
   getVideoDurationSeconds,
   estimateDurationFromSize,
@@ -51,8 +52,9 @@ const STEP_WEIGHTS = {
   extract: 20,
   classify: 5,
   probe: 10,
-  text: 55,
+  text: 50,
   analyze: 10,
+  aiGroup: 5,
 };
 
 /** Thư mục làm việc của một job. */
@@ -261,12 +263,25 @@ const runPipeline = async ({ jobId, zipPath, zipFileName, onProgress }) => {
   );
   base += STEP_WEIGHTS.text;
 
-  // ---------- 6. Siêu dữ liệu + ảnh bìa ----------
+  // ---------- 6. AI Grouping (Giai đoạn B — chỉ khi cần) ----------
+  let aiGroupResult = { success: false, llmCalls: 0, tokensEstimated: 0 };
+  if (proposal.needsAiGrouping) {
+    report(base, 'AI đang phân tích và nhóm bài học...');
+    aiGroupResult = await aiGroupLessons(proposal);
+    logger.info(
+      `[Import] Job ${jobId}: AI Grouping ${aiGroupResult.success ? 'thành công' : 'bỏ qua/thất bại'} ` +
+        `(${aiGroupResult.llmCalls} lời gọi LLM).`
+    );
+  }
+  base += STEP_WEIGHTS.aiGroup;
+
+  // ---------- 7. Siêu dữ liệu + ảnh bìa ----------
   await readMetadataFiles(proposal, classified);
   proposal.coverImage = pickCoverImage(classified);
 
-  // ---------- 7. Tổng hợp ----------
-  proposal.aiEnriched = false; // Giai đoạn B sẽ bật cờ này
+  // ---------- 8. Tổng hợp ----------
+  // aiEnriched đã được đặt bởi aiGrouper nếu thành công
+  if (!proposal.aiEnriched) proposal.aiEnriched = false;
   proposal.warnings = [];
 
   if (extraction.encodingWarnings > 0) {
@@ -277,12 +292,22 @@ const runPipeline = async ({ jobId, zipPath, zipFileName, onProgress }) => {
         'Bạn nên kiểm tra và sửa lại tên các bài học bên dưới.',
     });
   }
-  if (proposal.needsAiGrouping) {
+  if (proposal.needsAiGrouping && !proposal.aiEnriched) {
+    /* AI đã được gọi nhưng thất bại (lỗi mạng, timeout, JSON sai...) hoặc
+       không đủ bài để nhóm. Giữ nguyên cảnh báo để giảng viên tự chỉnh. */
     proposal.warnings.push({
       code: 'LOW_CONFIDENCE',
       message:
         `Cấu trúc thư mục chưa rõ ràng (độ tin cậy ${proposal.confidence}). ` +
-        'Bạn nên kiểm tra kỹ thứ tự chương/bài bên dưới.',
+        'AI đã thử nhóm bài học nhưng không thành công. Bạn nên kiểm tra kỹ thứ tự chương/bài bên dưới.',
+    });
+  }
+  if (proposal.aiEnriched) {
+    proposal.warnings.push({
+      code: 'AI_GROUPED',
+      message:
+        'AI đã tự động phân nhóm bài học thành các chương do cấu trúc thư mục chưa rõ ràng. ' +
+        'Vui lòng kiểm tra lại và điều chỉnh nếu cần.',
     });
   }
   if (textStats.failures > 0) {
@@ -300,10 +325,8 @@ const runPipeline = async ({ jobId, zipPath, zipFileName, onProgress }) => {
     videosWithExactDuration: videoStats.exact,
     documentsParsed: textStats.total,
     aiServiceCalls: textStats.aiCalls,
-    // ★ Số lời gọi LLM — Giai đoạn A luôn bằng 0. Đây là dữ liệu cho "đồng hồ
-    // tiết kiệm token" ở Giai đoạn C.
-    llmCalls: 0,
-    tokensUsed: 0,
+    llmCalls: aiGroupResult.llmCalls,
+    tokensUsed: aiGroupResult.tokensEstimated,
   };
   proposal.skippedFiles = extraction.skipped.slice(0, 50);
 

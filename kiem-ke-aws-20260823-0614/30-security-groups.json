@@ -1,0 +1,291 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0dbefbd2d9eaad7b4",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-0dbefbd2d9eaad7b4",
+            "OwnerId": "552357225071",
+            "GroupName": "3t-cpu-ec2",
+            "Description": "Security Group for CPU EC2 Control Tower",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "113.185.87.165/32"
+                        },
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        },
+                        {
+                            "CidrIp": "14.241.253.151/32"
+                        },
+                        {
+                            "CidrIp": "113.185.85.84/32"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        },
+        {
+            "GroupId": "sg-0c72aa22c2170af63",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-0c72aa22c2170af63",
+            "OwnerId": "552357225071",
+            "GroupName": "3t-rds",
+            "Description": "Security Group for AWS RDS SQL Server",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 1433,
+                    "ToPort": 1433,
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "552357225071",
+                            "GroupId": "sg-0dbefbd2d9eaad7b4"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        },
+        {
+            "GroupId": "sg-00c6d1043a1d2f58d",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-00c6d1043a1d2f58d",
+            "OwnerId": "552357225071",
+            "GroupName": "3t-gpu-ec2-1",
+            "Description": "Security Group for GPU EC2 #1 vLLM Server",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "113.185.87.165/32"
+                        },
+                        {
+                            "CidrIp": "113.185.77.205/32"
+                        },
+                        {
+                            "CidrIp": "116.109.35.130/32"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 8000,
+                    "ToPort": 8000,
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "552357225071",
+                            "GroupId": "sg-0ba227fea0379d189"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        },
+        {
+            "GroupId": "sg-0ba227fea0379d189",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-0ba227fea0379d189",
+            "OwnerId": "552357225071",
+            "GroupName": "3t-gpu-ec2-2",
+            "Description": "Security Group for GPU EC2 #2 AI Service",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "113.185.87.165/32"
+                        },
+                        {
+                            "CidrIp": "116.109.35.130/32"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 2111,
+                    "ToPort": 2111,
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "552357225071",
+                            "GroupId": "sg-0dbefbd2d9eaad7b4"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        },
+        {
+            "GroupId": "sg-0ab29b26d422dec77",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0c1dc8f95719e0032",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-0ab29b26d422dec77",
+            "OwnerId": "552357225071",
+            "GroupName": "default",
+            "Description": "default VPC security group",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "552357225071",
+                            "GroupId": "sg-0ab29b26d422dec77"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        },
+        {
+            "GroupId": "sg-0671c6e6fafe2ff20",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0eba431f9dc3ee04b",
+            "SecurityGroupArn": "arn:aws:ec2:ap-northeast-1:552357225071:security-group/sg-0671c6e6fafe2ff20",
+            "OwnerId": "552357225071",
+            "GroupName": "default",
+            "Description": "default VPC security group",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "552357225071",
+                            "GroupId": "sg-0671c6e6fafe2ff20"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}

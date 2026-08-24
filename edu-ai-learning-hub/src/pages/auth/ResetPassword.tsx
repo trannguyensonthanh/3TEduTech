@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/common/Icons';
 import { useToast } from '@/components/ui/use-toast';
+import { resetPasswordApi } from '@/services/auth.service';
 
 const ResetPassword = () => {
   const { toast } = useToast();
@@ -50,22 +51,21 @@ const ResetPassword = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
-      // In a real application, this would be an API call to reset the password using the token
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Gọi API thực tế thay vì mock
+      await resetPasswordApi(token, password);
       
       setIsSuccess(true);
       
       toast({
-        title: "Password reset successful",
-        description: "Your password has been reset. You can now log in with your new password.",
+        title: "Đổi mật khẩu thành công",
+        description: "Mật khẩu của bạn đã được thay đổi. Bạn có thể đăng nhập bằng mật khẩu mới.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Reset failed",
-        description: "There was an error resetting your password. Please try again.",
+        title: "Đổi mật khẩu thất bại",
+        description: error.message || "Có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại.",
       });
     } finally {
       setIsSubmitting(false);

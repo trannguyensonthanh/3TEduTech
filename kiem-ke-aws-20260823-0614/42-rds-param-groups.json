@@ -1,0 +1,10 @@
+{
+    "DBParameterGroups": [
+        {
+            "DBParameterGroupName": "default.sqlserver-ex-16.0",
+            "DBParameterGroupFamily": "sqlserver-ex-16.0",
+            "Description": "Default parameter group for sqlserver-ex-16.0",
+            "DBParameterGroupArn": "arn:aws:rds:ap-northeast-1:552357225071:pg:default.sqlserver-ex-16.0"
+        }
+    ]
+}

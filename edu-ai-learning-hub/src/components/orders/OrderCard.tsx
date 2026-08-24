@@ -11,6 +11,17 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/common/Icons'; // FileText, ShoppingCart, ChevronDown, ChevronUp, ArrowRight, Spinner
 import { format, parseISO } from 'date-fns';
@@ -343,29 +354,43 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               </Button>
             )}
             {fullOrderDataForActions.orderStatus === 'PENDING_PAYMENT' && (
-              <Button
-                size='sm'
-                variant='outline'
-                disabled={isCancelling}
-                onClick={async () => {
-                  if (!fullOrderDataForActions.orderId) return;
-                  if (
-                    window.confirm(
-                      'Bạn có chắc chắn muốn hủy đơn hàng chờ thanh toán này để dọn dẹp danh sách không?'
-                    )
-                  ) {
-                    await cancelOrderMutate(fullOrderDataForActions.orderId);
-                  }
-                }}
-                className='h-9 border-destructive text-destructive hover:bg-destructive hover:text-white text-xs sm:text-sm transition-colors'
-              >
-                {isCancelling ? (
-                  <Icons.spinner className='mr-1.5 h-4 w-4 animate-spin' />
-                ) : (
-                  <Icons.trash2 className='mr-1.5 h-4 w-4' />
-                )}
-                Hủy đơn hàng
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    disabled={isCancelling}
+                    className='h-9 border-destructive text-destructive hover:bg-destructive hover:text-white text-xs sm:text-sm transition-colors'
+                  >
+                    {isCancelling ? (
+                      <Icons.spinner className='mr-1.5 h-4 w-4 animate-spin' />
+                    ) : (
+                      <Icons.trash2 className='mr-1.5 h-4 w-4' />
+                    )}
+                    Hủy đơn hàng
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hủy đơn hàng chờ thanh toán</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn hủy đơn hàng chờ thanh toán này để dọn dẹp danh sách không? Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Không</AlertDialogCancel>
+                    <AlertDialogAction
+                      className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                      onClick={async () => {
+                        if (!fullOrderDataForActions.orderId) return;
+                        await cancelOrderMutate(fullOrderDataForActions.orderId);
+                      }}
+                    >
+                      Xác nhận hủy
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {(fullOrderDataForActions.orderStatus === 'FAILED' ||
               fullOrderDataForActions.orderStatus === 'PENDING_PAYMENT') && (

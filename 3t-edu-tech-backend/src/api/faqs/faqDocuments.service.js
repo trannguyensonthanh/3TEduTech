@@ -152,7 +152,7 @@ const extractText = async (file) => {
     response = await aiClient.post(
       '/api/extract/document',
       {
-        filename: file.originalname || 'tai-lieu',
+        filename: Buffer.from(file.originalname || 'tai-lieu', 'latin1').toString('utf8'),
         content_base64: file.buffer.toString('base64'),
         max_chars: MAX_TEXT_CHARS,
       },
@@ -230,7 +230,8 @@ const uploadDocument = async (file, { title, category, uploadedBy } = {}) => {
   const { text, warnings, meta } = await extractText(file);
 
   const docId = store.newId();
-  const displayTitle = (title || file.originalname || 'Tài liệu').trim().slice(0, 200);
+  const rawFileName = Buffer.from(file.originalname || 'Tài liệu', 'latin1').toString('utf8');
+  const displayTitle = (title || rawFileName).trim().slice(0, 200);
 
   // BƯỚC 2 — tải tệp gốc lên Cloudinary.
   //
@@ -296,7 +297,7 @@ const uploadDocument = async (file, { title, category, uploadedBy } = {}) => {
     docId,
     title: displayTitle,
     category: (category || 'Chính sách').trim().slice(0, 100),
-    fileName: file.originalname || `tai-lieu${ext}`,
+    fileName: Buffer.from(file.originalname || `tai-lieu${ext}`, 'latin1').toString('utf8'),
     fileExt: ext,
     sizeBytes: file.buffer.length,
     chars: text.length,
