@@ -69,12 +69,12 @@ Nếu muốn một cơ sở dữ liệu SẠCH (chỉ lược đồ, không dữ
 CÁCH DÙNG
     # lược đồ + dữ liệu (mặc định)
     python3 scripts/13-chuan-hoa-baseline.py \\
-        db-init/_nguon/all_database_new.sql \\
+        db-archive/nguon/all_database_new.sql \\
         db-init/V1__baseline.sql
 
     # chỉ lược đồ, không dữ liệu
     python3 scripts/13-chuan-hoa-baseline.py --chi-luoc-do \\
-        db-init/_nguon/all_database_new.sql \\
+        db-archive/nguon/all_database_new.sql \\
         db-init/V1__baseline.sql
 """
 

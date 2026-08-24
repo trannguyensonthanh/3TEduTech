@@ -3,14 +3,32 @@
 ## Cấu trúc
 
 ```
-db-init/
-  V1__baseline.sql     ← Flyway CHỈ đọc tệp này (và các V2, V3... sau này)
-  _nguon/              ← bản xuất thô từ SSMS. Không phải migration.
-  _lich_su/            ← V1..V10 cũ, giữ để tra cứu. Flyway không đọc.
+db-init/                 ← thư mục Flyway mount. CHỈ chứa migration.
+  V1__baseline.sql
+  README.md              (không phải .sql, Flyway bỏ qua)
+
+db-archive/              ← NGOÀI tầm với của Flyway
+  nguon/                 bản xuất thô từ SSMS
+  lich-su/               V1..V10 cũ, giữ để tra cứu
 ```
 
-Flyway không đệ quy vào thư mục con, nên `_nguon/` và `_lich_su/` nằm đó hoàn
-toàn vô hại.
+## ⚠️ Đừng để tệp .sql nào trong thư mục con của `db-init/`
+
+**Flyway quét ĐỆ QUY.** Bản dọn đầu tiên cất V1..V10 vào `db-init/_lich_su/`
+với giả định sai rằng Flyway chỉ đọc cấp một. Kết quả:
+
+```
+ERROR: Found more than one migration with version 1
+Offenders:
+-> /flyway/sql/_lich_su/V1__init.sql (SQL)
+-> /flyway/sql/_lich_su/V1__init.bak.sql (SQL)
+```
+
+Dấu gạch dưới đầu tên thư mục không có ý nghĩa gì với Flyway. Kho lưu trữ phải
+nằm **ngoài** thư mục migration — đó là lý do có `db-archive/`.
+
+`scripts/02-chay-migration.sh` nay kiểm điều này trước khi gọi Flyway và dừng
+với thông báo rõ ràng nếu phát hiện, thay vì để Flyway báo lỗi khó hiểu.
 
 ## `V1__baseline.sql` là gì
 
@@ -46,12 +64,12 @@ GO
 ### Cách làm lại nền — chỉ khi chưa có dữ liệu thật ở đâu
 
 1. Trong SSMS: chuột phải CSDL → Tasks → Generate Scripts → **Schema and data**
-2. Lưu đè `db-init/_nguon/all_database_new.sql`
+2. Lưu đè `db-archive/nguon/all_database_new.sql`
 3. Sinh lại baseline:
 
 ```bash
 python3 scripts/13-chuan-hoa-baseline.py \
-    db-init/_nguon/all_database_new.sql \
+    db-archive/nguon/all_database_new.sql \
     db-init/V1__baseline.sql
 ```
 
@@ -62,7 +80,7 @@ Muốn bản chỉ có lược đồ, không kèm dữ liệu demo:
 
 ```bash
 python3 scripts/13-chuan-hoa-baseline.py --chi-luoc-do \
-    db-init/_nguon/all_database_new.sql db-init/V1__baseline.sql
+    db-archive/nguon/all_database_new.sql db-init/V1__baseline.sql
 ```
 
 ## Vì sao phải chạy qua script chuẩn hóa

@@ -231,8 +231,12 @@ AWS_S3_REGION=ap-northeast-1
 
 [SỬA 24/08/2026] Thư mục `db-init/` đã được gộp lại: Flyway giờ **chỉ thấy một
 tệp** `V1__baseline.sql` (47 bảng, 88 khóa ngoại, 745 hàng dữ liệu). Chuỗi
-V1..V10 cũ đã chuyển vào `_lich_su/`, bản xuất SSMS vào `_nguon/`. Chi tiết ở
-`db-init/README.md`.
+V1..V10 cũ và bản xuất SSMS đã chuyển sang `db-archive/` — **ngoài** `db-init/`,
+vì Flyway quét đệ quy và sẽ đọc luôn thư mục con. Chi tiết ở `db-init/README.md`.
+
+Bước thử bên dưới **bắt được đúng lỗi đó**: nếu còn tệp .sql nào lạc trong cây
+`db-init/`, Flyway sẽ báo `Found more than one migration with version 1` ngay ở
+máy dev, không phải trên RDS.
 
 Chạy thử trên SQL Server trong Docker **trước khi** động vào RDS. Nó bắt mọi
 lỗi cú pháp mà không tốn một giây nào của instance đang tính tiền:

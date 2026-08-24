@@ -34,15 +34,29 @@
 # Script này giờ chỉ còn: kiểm kết nối → tạo CSDL nếu chưa có → chạy Flyway.
 #
 # -----------------------------------------------------------------------------
-# ★ THƯ MỤC db-init SAU KHI DỌN
+# ★ [SỬA 24/08/2026 — lần 2] FLYWAY QUÉT ĐỆ QUY. THƯ MỤC CON KHÔNG AN TOÀN.
 #
-#     db-init/
-#       V1__baseline.sql        ← Flyway CHỈ thấy tệp này
-#       _nguon/                 ← bản xuất thô từ SSMS, không phải migration
-#       _lich_su/               ← V1..V10 cũ, giữ để tra cứu, Flyway không đọc
+# Bản trước cất V1..V10 cũ vào `db-init/_lich_su/` với giả định sai rằng Flyway
+# chỉ đọc tệp ở cấp một. Nó KHÔNG phải vậy — Flyway quét cả cây thư mục con của
+# mỗi location. Kết quả là migration chết ngay trước khi chạy:
 #
-# Flyway không đệ quy vào thư mục con, nên `_nguon/` và `_lich_su/` nằm đó
-# hoàn toàn vô hại.
+#     ERROR: Found more than one migration with version 1
+#     Offenders:
+#     -> /flyway/sql/_lich_su/V1__init.sql (SQL)
+#     -> /flyway/sql/_lich_su/V1__init.bak.sql (SQL)
+#
+# Dấu gạch dưới đầu tên thư mục không có ý nghĩa gì với Flyway. Cách duy nhất
+# chắc chắn là để thư mục migration chỉ chứa migration:
+#
+#     db-init/                  ← Flyway mount thư mục NÀY
+#       V1__baseline.sql
+#       README.md               (không phải .sql, Flyway bỏ qua)
+#
+#     db-archive/               ← NGOÀI tầm với của Flyway
+#       lich-su/                V1..V10 cũ, giữ để tra cứu
+#       nguon/                  bản xuất thô từ SSMS
+#
+# Bước 4 bên dưới có một phép kiểm chặn việc này tái diễn.
 #
 # -----------------------------------------------------------------------------
 # CÁCH DÙNG
@@ -254,6 +268,37 @@ buoc "4/4 — Chạy Flyway"
 # KHÔNG còn bước "chuẩn bị bản SQL tương thích RDS": Flyway nay gắn thẳng
 # db-init/ vào container và đọc tệp gốc trong git, không qua bản sao tạm nào.
 #
+# ★ CHỐT CHẶN: db-init/ chỉ được chứa migration, không thư mục con nào có .sql
+#
+# Flyway quét đệ quy. Một tệp .sql bỏ quên trong thư mục con sẽ làm hỏng cả lần
+# chạy, và thông báo lỗi của Flyway ("Found more than one migration with version
+# 1") không nói cho bạn biết phải làm gì. Kiểm ở đây, báo cho rõ.
+
+SQL_LONG="$(find "${THU_MUC_SQL}" -mindepth 2 -name '*.sql' 2>/dev/null)"
+if [[ -n "${SQL_LONG}" ]]; then
+  loi "Có tệp .sql nằm trong thư mục con của ${THU_MUC_SQL}:"
+  echo "${SQL_LONG}" | sed 's/^/     /'
+  cat <<'CHAN_DOAN'
+
+Flyway quét ĐỆ QUY, nên nó sẽ đọc luôn những tệp này và báo trùng số phiên bản.
+Đặt tên thư mục bắt đầu bằng dấu gạch dưới KHÔNG giúp gì cả.
+
+Chuyển chúng ra ngoài db-init/:
+
+    mkdir -p db-archive
+    git mv db-init/<thu-muc-con> db-archive/
+
+db-init/ chỉ được chứa: V*.sql, U*.sql, R*.sql và các tệp không phải .sql.
+
+CHAN_DOAN
+  exit 1
+fi
+
+# Liệt kê đúng những gì Flyway sắp đọc, trước khi nó đọc.
+echo "  Migration Flyway sẽ thấy:"
+find "${THU_MUC_SQL}" -name '*.sql' | sort | sed 's/^/     /'
+echo
+
 # ⚠️ KHÔNG có `repair` ở đây, KHÁC hẳn docker-compose.dev.yml.
 #
 # `repair` âm thầm chấp nhận một migration đã bị sửa sau khi chạy — đúng thứ mà

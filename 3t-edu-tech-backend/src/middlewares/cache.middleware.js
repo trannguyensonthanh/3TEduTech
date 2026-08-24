@@ -73,6 +73,11 @@ const cache = (ttlSeconds = 1800) => {
  */
 const clearCache = async (pattern) => {
   try {
+    // Tương thích ngược: Bổ sung wildcard cho identity nếu pattern cũ được sử dụng
+    if (pattern.startsWith('cache:/v1/')) {
+      pattern = pattern.replace('cache:/v1/', 'cache:*:/v1/');
+    }
+
     const keys = await redisClient.keys(pattern);
     if (keys.length > 0) {
       await redisClient.del(...keys);
