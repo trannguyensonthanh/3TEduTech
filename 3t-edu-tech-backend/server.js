@@ -13,10 +13,6 @@ const {
 const {
   scheduleProgressReminders,
 } = require('./src/jobs/progressReminderJob');
-const {
-  startCourseSyncWorker,
-  closeCourseSyncQueue,
-} = require('./src/queues/courseSync.queue');
 const { syncInitialDataToAi } = require('./src/services/aiSync.service');
 // [THÊM 17/08/2026 — LEVEL 2, mục 2.3] Lớp realtime hai chiều (Socket.IO).
 const {
@@ -87,7 +83,6 @@ const startBackgroundJobs = () => {
     ['Hủy đơn hàng quá hạn', schedulePendingOrderCancellation],
     ['Cập nhật tỷ giá', scheduleExchangeRateUpdate],
     ['Nhắc nhở tiến độ học', scheduleProgressReminders],
-    ['Worker đồng bộ khóa học sang AI', startCourseSyncWorker],
     // 📥 Nhập khóa học từ ZIP (concurrency = 1 — xem import.queue.js)
     ['Worker nhập khóa học từ ZIP', startImportWorker],
     // 🎬 Tải video của khóa học vừa nhập lên Cloudinary
@@ -154,12 +149,6 @@ const startServer = async () => {
 
 const shutdown = async (signal) => {
   logger.info(`${signal} received. Closing http server...`);
-  // Graceful shutdown: đóng Worker và Queue trước khi tắt server
-  try {
-    await closeCourseSyncQueue();
-  } catch (err) {
-    logger.error('Error closing course sync queue:', err);
-  }
   // Đóng Socket.IO TRƯỚC server.close(). Nếu không, các kết nối WebSocket đang
   // mở sẽ giữ HTTP server sống mãi và callback của server.close() không bao giờ
   // chạy — container treo cho tới khi Docker buộc phải SIGKILL.
