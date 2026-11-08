@@ -465,10 +465,14 @@ export const useUpdateSectionsOrder = (
       queryClient.invalidateQueries({
         queryKey: courseKeys.detailById(variables.courseId),
       });
+      /* [SỬA] Trước đây là courseKeys.detailBySlug(undefined), tạo khóa
+         ['courses','detail','slug', undefined]. React Query so khớp từng phần tử
+         nên KHÔNG mục cache nào khớp — lệnh vô hiệu hóa này chẳng làm gì cả, và
+         bản xem phía học viên vẫn giữ thứ tự chương cũ. courseKeys.details()
+         khớp mọi khóa chi tiết, giống cách useUpdateLessonsOrder vẫn làm. */
       queryClient.invalidateQueries({
-        queryKey: courseKeys.detailBySlug(undefined),
+        queryKey: courseKeys.details(),
       });
-      console.log(`Sections order updated for course ${variables.courseId}`);
       // toast.success(data.message || 'Sections order updated!');
     },
     onError: (error) => {

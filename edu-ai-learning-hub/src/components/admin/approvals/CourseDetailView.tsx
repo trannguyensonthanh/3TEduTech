@@ -31,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { Course } from '@/services/course.service';
 import { useSettings } from '@/contexts/SettingsContext';
 import he from 'he'; // Import he for HTML decoding
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 export interface AdminCourseView extends Course {
   // được dùng trong code này
@@ -198,7 +199,7 @@ const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                   <div
                     className='prose prose-sm dark:prose-invert max-w-none'
                     dangerouslySetInnerHTML={{
-                      __html: he.decode(courseDetails.shortDescription),
+                      __html: sanitizeHtml(he.decode(courseDetails.shortDescription)),
                     }}
                   ></div>
                 </div>
@@ -249,7 +250,7 @@ const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                   <div
                     className='prose prose-sm dark:prose-invert max-w-none'
                     dangerouslySetInnerHTML={{
-                      __html: he.decode(courseDetails.fullDescription),
+                      __html: sanitizeHtml(he.decode(courseDetails.fullDescription)),
                     }}
                   ></div>
                 </div>
@@ -264,7 +265,7 @@ const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                   <div
                     className='prose prose-sm dark:prose-invert max-w-none'
                     dangerouslySetInnerHTML={{
-                      __html: he.decode(courseDetails.requirements),
+                      __html: sanitizeHtml(he.decode(courseDetails.requirements)),
                     }}
                   ></div>
                 </div>
@@ -279,7 +280,7 @@ const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                   <div
                     className='prose prose-sm dark:prose-invert max-w-none'
                     dangerouslySetInnerHTML={{
-                      __html: he.decode(courseDetails.learningOutcomes),
+                      __html: sanitizeHtml(he.decode(courseDetails.learningOutcomes)),
                     }}
                   ></div>
                 </div>
@@ -305,8 +306,7 @@ const CourseDetailView: React.FC<CourseDetailViewProps> = ({
                 <div className='border rounded-md divide-y'>
                   {courseDetails.sections &&
                   courseDetails.sections.length > 0 ? (
-                    courseDetails.sections
-                      .sort((a, b) => a.sectionOrder - b.sectionOrder) // Sắp xếp section
+                    [...courseDetails.sections].sort((a, b) => a.sectionOrder - b.sectionOrder) // Sắp xếp section
                       .map((section) => (
                         <CurriculumSectionAdminView // Component con mới
                           key={section.sectionId}

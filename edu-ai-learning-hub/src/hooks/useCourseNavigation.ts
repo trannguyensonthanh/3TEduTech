@@ -119,9 +119,11 @@ export const useCourseNavigation = ({
       }
     },
     [
+      // [SỬA] Đã gỡ handleNavigateToLessonDirection: nó được khai trong mảng phụ
+      // thuộc nhưng KHÔNG xuất hiện ở thân hàm, nên chỉ khiến callback này đổi
+      // danh tính theo mỗi lần đổi bài học và kéo theo render lại không cần.
       activeLesson,
       course?.slug,
-      handleNavigateToLessonDirection,
       markCompleteMutate,
       queryClient,
     ]

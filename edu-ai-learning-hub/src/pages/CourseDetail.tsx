@@ -60,6 +60,7 @@ import { Review } from '@/services/review.service';
 import { Section } from '@/services/section.service';
 import PriceCard from '@/components/courses/PriceCard';
 import he from 'he';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface CurriculumSectionItemProps {
   section: Section;
@@ -118,8 +119,7 @@ const CurriculumSectionItem: React.FC<CurriculumSectionItemProps> = ({
       </button>
       {isExpanded && (
         <div className='divide-y divide-border border-t border-border bg-muted/30'>
-          {section.lessons
-            .sort((a, b) => a.lessonOrder - b.lessonOrder)
+          {[...section.lessons].sort((a, b) => a.lessonOrder - b.lessonOrder)
             .map((lesson) => (
               <div
                 key={lesson.lessonId || lesson.tempId}
@@ -560,7 +560,7 @@ const CourseDetailPage: React.FC = () => {
                 <div
                   className='mb-5 max-w-3xl text-lg text-muted-foreground'
                   dangerouslySetInnerHTML={{
-                    __html: he.decode(course.shortDescription),
+                    __html: sanitizeHtml(he.decode(course.shortDescription)),
                   }}
                 />
               )}
@@ -678,7 +678,7 @@ const CourseDetailPage: React.FC = () => {
                           <CheckCircle className='mr-2.5 mt-0.5 h-4 w-4 shrink-0 text-success' />{' '}
                           <span
                             dangerouslySetInnerHTML={{
-                              __html: he.decode(outcome),
+                              __html: sanitizeHtml(he.decode(outcome)),
                             }}
                           />
                         </div>
@@ -694,7 +694,7 @@ const CourseDetailPage: React.FC = () => {
                     <div
                       className='prose prose-sm dark:prose-invert max-w-none leading-relaxed'
                       dangerouslySetInnerHTML={{
-                        __html: he.decode(course.requirements),
+                        __html: sanitizeHtml(he.decode(course.requirements)),
                       }}
                     />
                   </section>
@@ -707,7 +707,7 @@ const CourseDetailPage: React.FC = () => {
                     <div
                       className='prose prose-sm dark:prose-invert max-w-none leading-relaxed'
                       dangerouslySetInnerHTML={{
-                        __html: he.decode(course.fullDescription),
+                        __html: sanitizeHtml(he.decode(course.fullDescription)),
                       }}
                     />
                   </section>
@@ -741,8 +741,7 @@ const CourseDetailPage: React.FC = () => {
                 )}
                 {course.sections.length > 0 ? (
                   <div className='divide-y divide-border overflow-hidden rounded-xl border border-border'>
-                    {course.sections
-                      .sort((a, b) => a.sectionOrder - b.sectionOrder)
+                    {[...course.sections].sort((a, b) => a.sectionOrder - b.sectionOrder)
                       .map((section) => (
                         <CurriculumSectionItem
                           key={section.sectionId}
@@ -815,7 +814,7 @@ const CourseDetailPage: React.FC = () => {
                         <div
                           className='text-sm text-muted-foreground leading-relaxed line-clamp-5'
                           dangerouslySetInnerHTML={{
-                            __html: instructorProfile.bio,
+                            __html: sanitizeHtml(instructorProfile.bio),
                           }}
                         />
                       )}
@@ -825,7 +824,7 @@ const CourseDetailPage: React.FC = () => {
                     <div
                       className='prose prose-sm mt-6 max-w-none border-t border-border pt-4 dark:prose-invert'
                       dangerouslySetInnerHTML={{
-                        __html: he.decode(instructorProfile.aboutMe),
+                        __html: sanitizeHtml(he.decode(instructorProfile.aboutMe)),
                       }}
                     />
                   )}

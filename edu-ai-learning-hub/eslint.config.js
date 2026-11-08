@@ -23,7 +23,16 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
-      "@typescript-eslint/no-unused-vars": "off",
+      /* [SỬA] Trước đây tắt hẳn ("off"), nên biến và import không dùng tích tụ
+         mà không ai thấy. Đặt mức "warn" kèm bỏ qua tham số bắt đầu bằng "_". */
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      /* [SỬA] Trong bộ quy tắc khuyến nghị của react-hooks, quy tắc này chỉ ở
+         mức "warn" nên chưa bao giờ chặn được gì. Mảng phụ thuộc sai gây ra
+         closure cũ — đúng loại lỗi khó lần ra nhất khi gỡ rối. */
+      "react-hooks/exhaustive-deps": "error",
     },
   }
 );

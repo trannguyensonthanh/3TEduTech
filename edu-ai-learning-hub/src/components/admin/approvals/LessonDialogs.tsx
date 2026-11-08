@@ -20,6 +20,7 @@ import {
   getVimeoEmbedUrl,
 } from '../../../utils/video.util'; // Import utils
 import { useTranslation } from 'react-i18next';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 // --- Video Preview Dialog ---
 interface VideoPreviewDialogProps {
@@ -167,7 +168,7 @@ export const TextContentDialog: React.FC<TextContentDialogProps> = ({
           {lesson?.textContent ? (
             <div
               className='prose prose-sm sm:prose-base dark:prose-invert max-w-none p-4'
-              dangerouslySetInnerHTML={{ __html: lesson.textContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.textContent) }}
             />
           ) : (
             <p className='text-muted-foreground text-center py-12'>

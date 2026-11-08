@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 /**
  * Dải "vì sao chọn 3TEduTech".
@@ -263,7 +264,7 @@ const FeaturesSection = () => {
                     />
                     <p
                       className='text-sm text-muted-foreground'
-                      dangerouslySetInnerHTML={{ __html: text }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
                     />
                   </li>
                 ))}

@@ -123,6 +123,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({
         },
       });
     }
+    /* Cố ý BỎ `t` khỏi mảng phụ thuộc: hàm dịch đổi danh tính mỗi khi người dùng
+       đổi ngôn ngữ, mà effect này KHỞI TẠO MỘT LƯỢT LÀM BÀI — chạy lại sẽ tạo
+       thêm lượt làm bài chỉ vì đổi ngôn ngữ. `t` ở đây chỉ dùng trong thông báo
+       lỗi, nên cùng lắm là thông báo hiện bằng ngôn ngữ trước đó. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     lessonId,
     startAttemptMutate,
@@ -368,8 +373,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({
           </motion.p>
           <div className='space-y-3'>
             {/* Sắp xếp options theo optionOrder từ API */}
-            {reviewedQuestion.options
-              .sort((a, b) => a.optionOrder - b.optionOrder)
+            {[...reviewedQuestion.options].sort((a, b) => a.optionOrder - b.optionOrder)
               .map((option) => {
                 const isSelectedByUser =
                   option.optionId === reviewedQuestion.selectedOptionId;
@@ -538,8 +542,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({
             }
             className='space-y-3'
           >
-            {currentQ.options
-              .sort((a, b) => a.optionOrder - b.optionOrder)
+            {[...currentQ.options].sort((a, b) => a.optionOrder - b.optionOrder)
               .map((option, index) => (
                 <motion.div
                   key={option.optionId}

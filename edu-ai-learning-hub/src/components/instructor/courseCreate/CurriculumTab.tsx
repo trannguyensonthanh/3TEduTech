@@ -127,8 +127,7 @@ const CurriculumTab: React.FC<CurriculumTabProps> = ({
       {/* ... (Your tips/info box can go here) ... */}
       <div className='space-y-4'>
         {sections.length > 0 ? (
-          sections
-            .sort((a, b) => a.sectionOrder - b.sectionOrder)
+          [...sections].sort((a, b) => a.sectionOrder - b.sectionOrder)
             .map((section, index) => (
               <Card
                 key={section.sectionId || section.tempId}
@@ -176,8 +175,7 @@ const CurriculumTab: React.FC<CurriculumTabProps> = ({
                 <CardContent className='p-0'>
                   <div className='divide-y'>
                     {section.lessons && section.lessons.length > 0 ? (
-                      section.lessons
-                        .sort((a, b) => a.lessonOrder - b.lessonOrder)
+                      [...section.lessons].sort((a, b) => a.lessonOrder - b.lessonOrder)
                         .map((lesson, lessonIndex) => (
                           <div
                             key={lesson.lessonId || lesson.tempId}

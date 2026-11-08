@@ -1,12 +1,5 @@
 // src/contexts/SettingsContext.tsx
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -59,15 +52,19 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   // Hàm private để set currency, lưu vào storage và lập tức làm mới data từ API
   const updateCurrency = useCallback(
     (newCurrency: Currency) => {
-      setCurrencyState((prev) => {
-        if (prev !== newCurrency) {
-          localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
-          queryClient.invalidateQueries({ refetchType: 'active' });
-        }
-        return newCurrency;
-      });
+      /* [SỬA] Trước đây localStorage.setItem và invalidateQueries nằm BÊN TRONG
+         hàm cập nhật của setCurrencyState. Hàm cập nhật phải THUẦN: React 18 ở
+         chế độ StrictMode gọi nó hai lần, nên mọi truy vấn đang hoạt động bị làm
+         mới hai lần (lời gọi không truyền queryKey nên nó quét TẤT CẢ), và chúng
+         còn có thể chạy ngay trong giai đoạn render. Nay side effect nằm ngoài. */
+      if (currency === newCurrency) {
+        return;
+      }
+      setCurrencyState(newCurrency);
+      localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
+      queryClient.invalidateQueries({ refetchType: 'active' });
     },
-    [queryClient]
+    [currency, queryClient]
   );
 
   const setLanguage = useCallback(
@@ -122,7 +119,13 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
     [language, currency]
   );
 
-  const value = { language, currency, setLanguage, formatPrice };
+  /* [SỬA] Trước đây tạo object mới ở mỗi lượt render của Provider, nên MỌI
+     component dùng useSettings() đều render lại theo. AuthContext đã dùng
+     useMemo cho đúng việc này. */
+  const value = useMemo(
+    () => ({ language, currency, setLanguage, formatPrice }),
+    [language, currency, setLanguage, formatPrice]
+  );
 
   return (
     <SettingsContext.Provider value={value}>

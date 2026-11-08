@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 // Hiệu ứng xuất hiện khi cuộn tới
 const sectionVariants = {
@@ -244,7 +245,7 @@ const PrivacyPolicyPage = () => {
                   {section.content?.map((paragraph, pIndex) => (
                     <p
                       key={pIndex}
-                      dangerouslySetInnerHTML={{ __html: toHtml(paragraph) }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(toHtml(paragraph)) }}
                     />
                   ))}
 
@@ -257,13 +258,13 @@ const PrivacyPolicyPage = () => {
                     >
                       <h3
                         className='mb-2 text-base font-semibold text-foreground'
-                        dangerouslySetInnerHTML={{ __html: toHtml(sub.title) }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(toHtml(sub.title)) }}
                       />
                       {sub.intro && (
                         <p
                           className='mb-2.5'
                           dangerouslySetInnerHTML={{
-                            __html: toHtml(sub.intro),
+                            __html: sanitizeHtml(toHtml(sub.intro)),
                           }}
                         />
                       )}
@@ -273,7 +274,7 @@ const PrivacyPolicyPage = () => {
                             <li
                               key={lIndex}
                               dangerouslySetInnerHTML={{
-                                __html: toHtml(item),
+                                __html: sanitizeHtml(toHtml(item)),
                               }}
                             />
                           ))}
@@ -287,7 +288,7 @@ const PrivacyPolicyPage = () => {
                       {section.list.map((item, lIndex) => (
                         <li
                           key={lIndex}
-                          dangerouslySetInnerHTML={{ __html: toHtml(item) }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(toHtml(item)) }}
                         />
                       ))}
                     </ul>
@@ -297,7 +298,7 @@ const PrivacyPolicyPage = () => {
                     <p
                       className='mt-5 border-t border-border pt-4 text-sm'
                       dangerouslySetInnerHTML={{
-                        __html: toHtml(section.footerContent),
+                        __html: sanitizeHtml(toHtml(section.footerContent)),
                       }}
                     />
                   )}

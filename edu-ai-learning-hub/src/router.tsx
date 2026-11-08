@@ -25,7 +25,6 @@ import TermsInstructor from '@/pages/TermsInstructor';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import ActivateAccount from './pages/auth/ActivateAccount';
-import SocialLoginCallback from './pages/auth/SocialLoginCallback';
 
 // Authenticated User Pages
 import MyCourses from './pages/MyCourses';
@@ -123,7 +122,6 @@ const AppRouter = () => {
         <Route path='/verify-email' element={<ActivateAccount />} />
         <Route path='/auth/forgot-password' element={<ForgotPassword />} />
         <Route path='/auth/reset-password/:token' element={<ResetPassword />} />
-        <Route path='/auth/social-success' element={<SocialLoginCallback />} />
 
         {/* Payment callback routes (public) */}
         <Route path='/payment/result' element={<CheckoutReturn />} />

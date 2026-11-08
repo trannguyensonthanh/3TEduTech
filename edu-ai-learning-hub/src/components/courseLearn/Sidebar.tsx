@@ -215,8 +215,7 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
 
           <ScrollArea className='flex-grow'>
             <div className='py-2 px-1 md:px-2'>
-              {courseData.sections
-                .sort((a, b) => a.sectionOrder - b.sectionOrder)
+              {[...courseData.sections].sort((a, b) => a.sectionOrder - b.sectionOrder)
                 .map((section) => {
                   const sectionLessonsCount = section.lessons.length;
                   const sectionCompletedLessons = section.lessons.filter(
@@ -269,8 +268,7 @@ const SidebarComponent: React.FC<SidebarComponentProps> = ({
 
                       {expandedSections.has(section.sectionId) && (
                         <div className='pl-4 mt-1 space-y-0.5'>
-                          {section.lessons
-                            .sort((a, b) => a.lessonOrder - b.lessonOrder)
+                          {[...section.lessons].sort((a, b) => a.lessonOrder - b.lessonOrder)
                             .map((lesson) => {
                               const isLessonActive =
                                 activeLessonId === lesson.lessonId;

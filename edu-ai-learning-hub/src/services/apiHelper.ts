@@ -63,7 +63,6 @@ export const fetchWithAuth = async (
   options: RequestInit = {},
   isRetry = false
 ): Promise<any> => {
-  console.log('Fetching:', path, options); // Log để kiểm tra request
   const currentToken = TokenService.getLocalAccessToken(); // Lấy access token từ localStorage
   const currentCurrency = getLocalCurrency();
   // Chuẩn bị headers
@@ -102,11 +101,9 @@ export const fetchWithAuth = async (
         refreshPromise = refreshToken({}, currentToken) // Gọi API refresh token (backend đọc cookie)
           .then((response) => {
             const newAccessToken = response?.accessToken; // Lấy token mới từ response refresh
-            console.log('Refresh token response:', response); // Log kết quả để kiểm tra
             if (!newAccessToken)
               throw new Error('Refresh response missing accessToken');
             TokenService.updateLocalAccessToken(newAccessToken);
-            console.log('Token refreshed successfully via fetchWithAuth.');
             return newAccessToken; // Trả về token mới
           })
           .catch(async (refreshError) => {
@@ -121,9 +118,6 @@ export const fetchWithAuth = async (
               // Lấy token cũ (có thể đã hết hạn) để gửi nếu API logout cần
               const expiredToken = TokenService.getLocalAccessToken();
               await logoutUserApi(expiredToken || ''); // Gọi hàm gọi API logout gốc
-              console.log(
-                'Attempted to call backend logout API after refresh failure.'
-              );
             } catch (logoutApiError) {
               console.error('Backend logout API call failed:', logoutApiError);
               // Không cần làm gì thêm ở đây, lỗi đã được log
@@ -137,8 +131,14 @@ export const fetchWithAuth = async (
             return null; // Trả về null để báo refresh lỗi
           })
           .finally(() => {
-            isRefreshing = false; // Reset cờ
-            // refreshPromise = null; // Xóa promise đã hoàn thành
+            isRefreshing = false;
+            /* [SỬA] Dòng này trước đây BỊ COMMENT LẠI, nên promise đã hoàn tất
+               được giữ lại vĩnh viễn ở phạm vi module. Sau một lần refresh thất
+               bại, promise còn đó luôn resolve null, khiến MỌI lỗi 401 tiếp theo
+               lại rơi vào nhánh !isRefreshing và kích hoạt thêm một chu trình
+               refreshToken + logoutUserApi + window.location.href='/'.
+               N request 401 song song = N lần gọi đăng xuất và N lần điều hướng. */
+            refreshPromise = null;
           });
       }
 
@@ -147,7 +147,6 @@ export const fetchWithAuth = async (
 
       if (newAccessToken) {
         // Nếu refresh thành công, gọi lại API gốc với token mới và đánh dấu là retry
-        console.log('Retrying original request with new token...');
         // Tạo options mới với header đã cập nhật token
         const retryHeaders = new Headers(fetchOptions.headers);
         retryHeaders.set('Authorization', `Bearer ${newAccessToken}`);

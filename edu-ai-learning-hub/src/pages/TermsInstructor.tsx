@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/common/Icons'; // Để lấy các icon chung nếu cần
 import { Button } from '@/components/ui/button';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 // Animation Variants (Tương tự PrivacyPolicyPage)
 const sectionVariants = {
@@ -255,12 +256,12 @@ const InstructorTermsPage = () => {
                     <p
                       key={pIndex}
                       dangerouslySetInnerHTML={{
-                        __html: paragraph
+                        __html: sanitizeHtml(paragraph
                           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(
                             /\[(.*?)\]\((.*?)\)/g,
                             '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">$1</a>'
-                          ),
+                          )),
                       }}
                     />
                   ))}
@@ -275,10 +276,10 @@ const InstructorTermsPage = () => {
                       <h3
                         className="mb-3 mt-0 text-lg font-semibold text-foreground"
                         dangerouslySetInnerHTML={{
-                          __html: sub.title.replace(
+                          __html: sanitizeHtml(sub.title.replace(
                             /\*\*(.*?)\*\*/g,
                             '<strong>$1</strong>'
-                          ),
+                          )),
                         }}
                       />
                       {/* KIỂM TRA sub.content TRƯỚC KHI MAP */}
@@ -287,10 +288,10 @@ const InstructorTermsPage = () => {
                           key={pIdx}
                           className="mb-2.5"
                           dangerouslySetInnerHTML={{
-                            __html: p.replace(
+                            __html: sanitizeHtml(p.replace(
                               /\*\*(.*?)\*\*/g,
                               '<strong>$1</strong>'
-                            ),
+                            )),
                           }}
                         />
                       ))}
@@ -301,10 +302,10 @@ const InstructorTermsPage = () => {
                             <li
                               key={lIndex}
                               dangerouslySetInnerHTML={{
-                                __html: item.replace(
+                                __html: sanitizeHtml(item.replace(
                                   /\*\*(.*?)\*\*/g,
                                   '<strong>$1</strong>'
-                                ),
+                                )),
                               }}
                             />
                           ))}
@@ -320,10 +321,10 @@ const InstructorTermsPage = () => {
                         <li
                           key={lIndex}
                           dangerouslySetInnerHTML={{
-                            __html: item.replace(
+                            __html: sanitizeHtml(item.replace(
                               /\*\*(.*?)\*\*/g,
                               '<strong>$1</strong>'
-                            ),
+                            )),
                           }}
                         />
                       ))}
@@ -333,10 +334,10 @@ const InstructorTermsPage = () => {
                     <p
                       className="mt-5 border-t border-border pt-4 text-sm italic text-muted-foreground"
                       dangerouslySetInnerHTML={{
-                        __html: section.footerContent.replace(
+                        __html: sanitizeHtml(section.footerContent.replace(
                           /\*\*(.*?)\*\*/g,
                           '<strong>$1</strong>'
-                        ),
+                        )),
                       }}
                     />
                   )}

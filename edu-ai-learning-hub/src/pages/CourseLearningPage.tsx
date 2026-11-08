@@ -61,11 +61,9 @@ const CourseLearningPage: React.FC = () => {
   // --- Logic Điều hướng và Tiến độ được đóng gói trong custom hook ---
   const allLessonsFlat = useMemo(() => {
     if (!course?.sections) return [];
-    return course.sections
-      .sort((a, b) => a.sectionOrder - b.sectionOrder)
+    return [...course.sections].sort((a, b) => a.sectionOrder - b.sectionOrder)
       .flatMap((section) =>
-        section.lessons
-          .sort((a, b) => a.lessonOrder - b.lessonOrder)
+        [...section.lessons].sort((a, b) => a.lessonOrder - b.lessonOrder)
           .map((lesson) => ({
             sectionId: section.sectionId,
             lesson: {
@@ -96,7 +94,17 @@ const CourseLearningPage: React.FC = () => {
   });
 
   // --- Logic Cập nhật thời gian học chung (Time Tracker) ---
-  const isTimeTrackerEnabled = !!user && !!course && (course.isEnrolled || user.role === 'SA' || (course.pricing.display.originalPrice === 0 && course.pricing.display.discountedPrice === 0));
+  /* [SỬA] course.pricing được khai là bắt buộc nhưng thực tế là trường do API
+     ghép thêm; phản hồi thiếu nó sẽ ném "Cannot read properties of undefined
+     (reading 'display')" NGAY trong thân render — trước cả guard `!course` ở
+     dưới — và làm trắng toàn bộ trang học. */
+  const isTimeTrackerEnabled =
+    !!user &&
+    !!course &&
+    (course.isEnrolled ||
+      user.role === 'SA' ||
+      (course.pricing?.display?.originalPrice === 0 &&
+        course.pricing?.display?.discountedPrice === 0));
   useLessonTimeTracker(Number(activeLessonId), isTimeTrackerEnabled);
 
   // --- Logic Cập nhật thời gian xem Video ---
@@ -227,8 +235,8 @@ const CourseLearningPage: React.FC = () => {
   const canAccessCourse =
     course.isEnrolled ||
     user.role === 'SA' ||
-    (course.pricing.display.originalPrice === 0 &&
-      course.pricing.display.discountedPrice === 0);
+    (course.pricing?.display?.originalPrice === 0 &&
+      course.pricing?.display?.discountedPrice === 0);
   if (!canAccessCourse) {
     // Không có quyền truy cập
     return (

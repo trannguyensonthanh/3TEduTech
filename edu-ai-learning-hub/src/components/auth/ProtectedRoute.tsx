@@ -1,6 +1,6 @@
 // src/components/auth/ProtectedRoute.tsx
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // Giả sử bạn đã tạo AuthContext
+import TokenService from '@/services/token.service';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[]; // Mảng các vai trò được phép, ví dụ ['SA', 'ADMIN']
@@ -9,9 +9,15 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const location = useLocation();
 
-  // Lấy user từ localStorage
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  /* [SỬA] Trước đây gọi thẳng JSON.parse(localStorage.getItem('user')) ngay
+     trong thân render, không try/catch. Một giá trị hỏng hoặc bị cắt cụt sẽ ném
+     lỗi từ giai đoạn render, mà cây component không có ErrorBoundary nào —
+     kết quả là MÀN HÌNH TRẮNG ở mọi route được bảo vệ, kéo dài cho tới khi
+     người dùng tự xóa dữ liệu trình duyệt.
+     TokenService.getLocalUser() đã bọc try/catch sẵn và trả null khi hỏng.
+     Vẫn đọc đồng bộ (không dùng AuthContext) vì AuthContext nạp bất đồng bộ,
+     lượt render đầu sẽ là chưa đăng nhập và gây nháy chuyển hướng. */
+  const user = TokenService.getLocalUser();
   const isAuthenticated = !!user;
   const userRole = user?.role;
 

@@ -99,7 +99,9 @@ export const RequestWithdrawalDialog: React.FC<
 
   const selectedPayoutOption = useMemo(
     () =>
-      balanceData?.payoutOptions.find(
+      // [SỬA] Chuỗi optional dừng sớm một tầng: balanceData?.payoutOptions.find()
+      // vẫn ném lỗi khi balanceData có nhưng thiếu payoutOptions.
+      balanceData?.payoutOptions?.find(
         (opt) => opt.currencyId === selectedPayoutCurrency
       ),
     [selectedPayoutCurrency, balanceData]
@@ -117,7 +119,7 @@ export const RequestWithdrawalDialog: React.FC<
   useEffect(() => {
     if (isOpen) {
       // Mặc định chọn option đầu tiên có thể rút tiền
-      const defaultOption = balanceData?.payoutOptions.find(
+      const defaultOption = balanceData?.payoutOptions?.find(
         (opt) => opt.maxWithdrawal > 0
       );
       reset({

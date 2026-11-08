@@ -178,20 +178,20 @@ export const refreshToken = async (
 
 /** Đăng xuất */
 export const logoutUser = async (): Promise<{ message: string }> => {
-  // Gọi API backend để backend xử lý phía server (vd: blacklist token nếu cần, xóa cookie)
-  const response = await apiHelper.post(
-    '/auth/logout',
-    {},
-    '',
-    {},
-    {
-      credentials: 'include', // Gửi cookie (nếu có)
-    }
-  ); // apiHelper sẽ tự động gửi token hiện tại
-  // Xóa thông tin user và token khỏi localStorage phía client
-  document.cookie = 'refreshToken=; Max-Age=0; path=/;'; // Xóa refreshToken bằng cách đặt Max-Age=0
-  TokenService.removeUser();
-  return response;
+  /* [SỬA] Trước đây gọi qua apiHelper.post, tức đi qua fetchWithAuth. Khi access
+     token đã hết hạn, /auth/logout trả 401 và fetchWithAuth lại nhảy vào nhánh
+     refresh: nó có thể refresh THÀNH CÔNG, cấp một access token mới, rồi mới
+     đăng xuất; còn nếu refresh thất bại thì fetchWithAuth điều hướng cứng về '/'
+     trước khi onSuccess kịp chạy. Ngoài ra TokenService.removeUser() chỉ chạy ở
+     nhánh thành công, nên lỗi mạng để lại phiên treo ở phía client.
+     Nay gọi thẳng logoutUserApi (fetch trần, không có lớp refresh) và LUÔN dọn
+     dẹp phía client trong finally. */
+  try {
+    return await logoutUserApi(TokenService.getLocalAccessToken() || '');
+  } finally {
+    document.cookie = 'refreshToken=; Max-Age=0; path=/;';
+    TokenService.removeUser();
+  }
 };
 
 export const logoutUserApi = async (token = ''): Promise<any> => {

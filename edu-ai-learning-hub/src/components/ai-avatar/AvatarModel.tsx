@@ -92,8 +92,12 @@ export const AvatarModel: React.FC<AvatarModelProps> = ({
         );
       }
     }
-    // Bỏ activeAction khỏi dependency array để tránh vòng lặp không cần thiết khi setActiveAction
-  }, [animationName, actions, mixer]); // Chỉ phụ thuộc vào animationName, actions, mixer
+    /* Cố ý BỎ activeAction khỏi mảng phụ thuộc: chính effect này gọi
+       setActiveAction, nên thêm vào sẽ tạo vòng lặp effect -> setState ->
+       effect. Giá trị cũ chỉ dùng để so sánh "đã phát chưa", nên closure cũ ở
+       đây vô hại. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animationName, actions, mixer]);
 
   // ----- THAY ĐỔI QUAN TRỌNG: Render bằng primitive -----
   // Áp dụng transform trực tiếp lên primitive nếu cần

@@ -304,7 +304,7 @@ const InstructorProfilePage = () => {
                         {instructor.bio ? (
                           <p>{instructor.bio}</p> // Giả sử bio là plain text
                         ) : (
-                          // <div dangerouslySetInnerHTML={{ __html: instructor.bio }} /> // Nếu bio là HTML
+                          // <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(instructor.bio) }} /> // Nếu bio là HTML (nhớ bọc sanitizeHtml)
                           <p>Giảng viên chưa cập nhật tiểu sử.</p>
                         )}
                       </div>
