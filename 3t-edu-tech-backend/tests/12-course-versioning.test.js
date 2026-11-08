@@ -91,7 +91,9 @@ describe('🔄 COURSE VERSIONING — Phiên bản khóa học', () => {
 
   test('Kiểm tra IsLatestVersion filter hoạt động', async () => {
     const res = await get('/courses', {
-      query: { page: 1, limit: 5, sortBy: 'studentCount_desc', userPage: true },
+      // [SỬA] Dạng `truong_desc` không được máy chủ hiểu — xem ghi chú trong
+      // 02-courses-browse.test.js.
+      query: { page: 1, limit: 5, sortBy: 'CreatedAt:desc', userPage: true },
     });
     expect(res.status).toBe(200);
     // Phải chỉ trả về bản latest (IsLatestVersion=1)
