@@ -70,15 +70,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install uv Package Manager
-        uses: astral-sh/setup-uv@v1
-        with:
-          version: "latest"
-
       - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # [SỬA] Thay action astral-sh/setup-uv@v1 bằng `pip install uv`.
+      #
+      # Job này chạy tốt hồi tháng 8 rồi tự hỏng với "uv: command not found":
+      # action v1 đã lỗi thời (log còn kèm cảnh báo Node 20 bị khai tử) và
+      # không còn đưa uv vào PATH, nhất là khi setup-python chạy sau nó và dựng
+      # lại PATH. Đây là trôi dạt của phụ thuộc bên ngoài, không phải do thay
+      # đổi trong kho.
+      #
+      # `pip install uv` không phụ thuộc phiên bản action, chạy sau setup-python
+      # nên chắc chắn nằm đúng môi trường Python vừa dựng.
+      - name: Install uv Package Manager
+        run: pip install uv
 
       - name: Install Python Dependencies
         run: uv pip install --system -r pyproject.toml

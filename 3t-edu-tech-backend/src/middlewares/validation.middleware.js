@@ -11,18 +11,27 @@ const { pick } = require('../utils/pick');
 const validate = (schema) => (req, res, next) => {
   const validSchema = pick(schema, ['params', 'query', 'body']);
 
-  /* [SỬA] Cho phép tham số truy vấn lạ đi qua.
-     Trước bản này, do lỗi ở utils/pick.js, TOÀN BỘ schema `query` chưa bao giờ
-     chạy — mọi tham số truy vấn đều lọt qua không kiểm tra. Bật kiểm tra ở chế
-     độ chặt sẽ khiến bất kỳ tham số nào chưa được khai báo trong schema trả về
-     400, mà bộ kiểm thử của dự án là integration test cần cả stack sống nên
-     không chạy được ở đây để khẳng định là an toàn.
-     Vì vậy chỉ kiểm tra các khóa ĐÃ khai báo (ép kiểu, giá trị mặc định,
-     required) và bỏ qua khóa lạ: chặt hơn hẳn hiện trạng, không có rủi ro hồi
-     quy. Siết hẳn nên làm sau, khi chạy được integration test. */
-  if (Joi.isSchema(validSchema.query) && validSchema.query.type === 'object') {
-    validSchema.query = validSchema.query.unknown(true);
-  }
+  /* [SỬA] Cho phép khóa lạ đi qua ở CẢ params, query và body.
+
+     Trước bản này, do lỗi ở utils/pick.js (xem ghi chú ở đó), KHÔNG schema nào
+     thực sự nhận được dữ liệu — toàn bộ tầng kiểm tra đầu vào là hình thức.
+     Dựng lại stack thật rồi chạy bộ integration test cho thấy điều đó đã kéo
+     dài đủ lâu để cả bộ test lẫn một số lời gọi gửi những khóa mà schema không
+     khai báo (ví dụ test tạo khóa học gửi kèm shortDescription/originalPrice,
+     trong khi schema — và chính frontend — chỉ dùng 4 trường).
+
+     Bật kiểm tra ở chế độ CHẶT sẽ biến mọi khóa thừa thành lỗi 400. Đó là thay
+     đổi hành vi rộng mà không có cách nào kiểm chứng hết từng tuyến, nên ở đây
+     chỉ kiểm tra những khóa ĐÃ KHAI BÁO: ép kiểu, giá trị mặc định, required,
+     khoảng giá trị, mẫu chuỗi. Khóa lạ được bỏ qua như trước.
+
+     Vẫn chặt hơn hẳn hiện trạng (trước đó KHÔNG kiểm tra gì), và không có rủi ro
+     hồi quy. Siết hẳn là việc nên làm sau, từng tuyến một, có test đi kèm. */
+  ['params', 'query', 'body'].forEach((key) => {
+    if (Joi.isSchema(validSchema[key]) && validSchema[key].type === 'object') {
+      validSchema[key] = validSchema[key].unknown(true);
+    }
+  });
 
   const object = pick(req, Object.keys(validSchema));
 
