@@ -189,14 +189,19 @@ describe('❓ FAQ — Danh sách công khai & quản trị tài liệu', () => {
        (toCamelCaseArray). Lỗi kiểu đó không lộ ra cho tới khi có người mở
        trang FAQ — giữ lại phép thử này để nó không tái diễn. */
     expectStatus(res, 200, 'lấy danh sách FAQ công khai');
-    const list = res.data?.faqs || res.data?.results || res.data || [];
+    /* [SỬA] Máy chủ bọc kết quả trong { status, data: [...] } (SuccessResponse),
+       nên phải dò cả res.data.data. Thiếu nhánh này thì `list` là object bao
+       ngoài chứ không phải mảng, và phép thử trượt dù HTTP đã là 200. */
+    const list =
+      res.data?.faqs || res.data?.results || res.data?.data || res.data || [];
     expect(Array.isArray(list)).toBe(true);
     console.log(`  ✅ FAQ công khai: ${list.length} mục`);
   });
 
   test('Trường trả về dùng camelCase (faqId chứ không phải FAQID)', async () => {
     const res = await get('/faqs');
-    const list = res.data?.faqs || res.data?.results || res.data || [];
+    const list =
+      res.data?.faqs || res.data?.results || res.data?.data || res.data || [];
     if (!list.length) {
       console.log('  ⏭️ Chưa có FAQ nào để kiểm tra tên trường');
       return;
@@ -216,7 +221,8 @@ describe('❓ FAQ — Danh sách công khai & quản trị tài liệu', () => {
   test('Admin xem danh sách tài liệu FAQ → 200', async () => {
     const res = await get('/faqs/documents', { token: adminToken });
     expectStatus(res, 200, 'admin liệt kê tài liệu FAQ');
-    const list = res.data?.documents || res.data?.results || res.data || [];
+    const list =
+      res.data?.documents || res.data?.results || res.data?.data || res.data || [];
     expect(Array.isArray(list)).toBe(true);
     console.log(`  ✅ Tài liệu FAQ đã nạp: ${list.length}`);
   });
