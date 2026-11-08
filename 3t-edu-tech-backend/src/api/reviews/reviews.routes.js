@@ -22,10 +22,6 @@ const courseScopedReviewRouter = express.Router({ mergeParams: true });
 courseScopedReviewRouter.post(
   '/',
   authenticate,
-  (req, res, next) => {
-    console.log('req.body', req.body);
-    next();
-  },
   validate(reviewValidation.createOrUpdateReview),
   reviewController.createOrUpdateReview
 );

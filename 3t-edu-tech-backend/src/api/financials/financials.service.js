@@ -317,6 +317,7 @@ const reviewWithdrawalRequest = async (
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
 
+  let committed = false;
   try {
     await transaction.begin();
 
@@ -380,6 +381,7 @@ const reviewWithdrawalRequest = async (
         );
 
         await transaction.commit();
+        committed = true;
         logger.info(
           `Withdrawal request ${requestId} approved. Payout ${newPayoutId} created and request status set to PROCESSING.`
         );
@@ -398,6 +400,7 @@ const reviewWithdrawalRequest = async (
         transaction
       );
       await transaction.commit();
+      committed = true;
       logger.info(
         `Withdrawal request ${requestId} rejected by admin ${adminUser.id}.`
       );
@@ -422,7 +425,12 @@ const reviewWithdrawalRequest = async (
     return updatedRequest;
   } catch (error) {
     logger.error(`Error reviewing withdrawal request ${requestId}:`, error);
-    if (transaction.rolledBack === false) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       await transaction.rollback();
     }
     if (
@@ -738,7 +746,6 @@ const getMyTransactions = async (instructorId, options = {}) => {
     } else if (t.Type === 'DEBIT_WITHDRAWAL' && t.PayoutMethodName) {
       detailedDescription = `Rút tiền thành công qua ${t.PayoutMethodName} (Yêu cầu Payout #${t.RelatedEntityID})`;
     }
-    console.log(t);
     return {
       transactionId: t.TransactionID,
       transactionTimestamp: t.TransactionTimestamp,

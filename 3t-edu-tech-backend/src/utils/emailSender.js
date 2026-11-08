@@ -68,7 +68,10 @@ const sendEmailWithTemplate = async (to, subject, template, context) => {
     },
   };
 
-  console.log('Sending email with options:', mailOptions);
+  /* [GỠ] Trước đây in nguyên văn mailOptions — bao gồm cả phần html đã dựng,
+     tức ĐƯỜNG DẪN ĐẶT LẠI MẬT KHẨU / XÁC THỰC EMAIL kèm token — ra nhật ký
+     container. Chỉ ghi lại người nhận và tiêu đề. */
+  logger.debug(`Chuẩn bị gửi email tới ${to} — chủ đề: ${subject}`);
 
   try {
     const info = await transporter.sendMail(mailOptions);

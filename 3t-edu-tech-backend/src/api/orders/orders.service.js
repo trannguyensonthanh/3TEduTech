@@ -270,7 +270,6 @@ const processSuccessfulOrder = async (
  */
 const createOrderFromCart = async (accountId, options = {}) => {
   const { promotionCode, currency } = options;
-  console.log('Promotion code:', promotionCode);
   const cartDetails = await cartService.viewCart(accountId, currency);
   if (cartDetails.items.length === 0) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Giỏ hàng của bạn đang trống.');
@@ -372,7 +371,6 @@ const createOrderFromCart = async (accountId, options = {}) => {
         basePriceBeforePromo
       );
 
-      console.log(`Promotion code ${promotionCode} applied:`, promoResult);
       calculatedPromoDiscountAmount = promoResult.discountAmount;
       promotionId = promoResult.promotionId;
     } catch (promoError) {
@@ -397,8 +395,14 @@ const createOrderFromCart = async (accountId, options = {}) => {
   const orderDiscountAmount = calculatedPromoDiscountAmount;
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  /* [SỬA] Trước đây rollback vô điều kiện trong catch: nếu chính begin() ném lỗi
+     thì rollback() ném tiếp ENOTBEGUN, đè mất lỗi gốc. */
+  let begun = false;
+  let committed = false;
+  let orderId;
   try {
     await transaction.begin();
+    begun = true;
 
     const orderData = {
       AccountID: accountId,
@@ -411,7 +415,7 @@ const createOrderFromCart = async (accountId, options = {}) => {
         finalAmount > 0 ? OrderStatus.PENDING_PAYMENT : OrderStatus.COMPLETED,
     };
     const newOrder = await orderRepository.createOrder(orderData, transaction);
-    const orderId = newOrder.OrderID;
+    orderId = newOrder.OrderID;
 
     const orderItemsData = cartDetails.items.map((item) => {
       const priceAtOrder =
@@ -439,27 +443,37 @@ const createOrderFromCart = async (accountId, options = {}) => {
       await processSuccessfulOrder(newOrder.OrderID, null, transaction);
     }
     await transaction.commit();
-
-    logger.info(
-      `Order ${orderId} created with promotion ${
-        promotionCode || 'N/A'
-      } for user ${accountId}.`
-    );
-    const orderDetails =
-      await orderRepository.findOrderByIdWithDetails(orderId);
-    return toCamelCaseObject(orderDetails);
+    committed = true;
   } catch (error) {
     logger.error(
       `Error creating order with promotion ${promotionCode} for user ${accountId}:`,
       error
     );
-    await transaction.rollback();
+    if (begun && !committed) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error('Rollback khi tạo đơn hàng thất bại:', rollbackError);
+      }
+    }
     if (error instanceof ApiError) throw error;
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       'Tạo đơn hàng thất bại.'
     );
   }
+
+  /* [SỬA] Phần đọc lại đơn hàng trước đây nằm TRONG try, SAU commit. Nếu nó lỗi
+     thì control rơi vào catch và gọi rollback() trên một transaction đã commit —
+     rollback ném lỗi mới đè lỗi gốc, và client nhận 500 cho một đơn hàng thực ra
+     đã được tạo và thanh toán thành công. */
+  logger.info(
+    `Order ${orderId} created with promotion ${
+      promotionCode || 'N/A'
+    } for user ${accountId}.`
+  );
+  const orderDetails = await orderRepository.findOrderByIdWithDetails(orderId);
+  return toCamelCaseObject(orderDetails);
 };
 
 /**
@@ -558,8 +572,11 @@ const cancelPendingOrder = async (accountId, orderId) => {
 
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  let begun = false;
+  let committed = false;
   try {
     await transaction.begin();
+    begun = true;
 
     await orderRepository.updateOrderStatusAndPayment(
       orderId,
@@ -572,15 +589,23 @@ const cancelPendingOrder = async (accountId, orderId) => {
     }
 
     await transaction.commit();
-    logger.info(`Order ${orderId} successfully cancelled by user ${accountId}.`);
-
-    const updatedOrder = await orderRepository.findOrderByIdWithDetails(orderId);
-    return toCamelCaseObject(updatedOrder);
+    committed = true;
   } catch (error) {
-    await transaction.rollback();
+    if (begun && !committed) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error('Rollback khi hủy đơn hàng thất bại:', rollbackError);
+      }
+    }
     logger.error(`Error cancelling order ${orderId}:`, error);
     throw error;
   }
+
+  // Đọc lại sau khi commit, nằm NGOÀI try (xem ghi chú ở createOrder).
+  logger.info(`Order ${orderId} successfully cancelled by user ${accountId}.`);
+  const updatedOrder = await orderRepository.findOrderByIdWithDetails(orderId);
+  return toCamelCaseObject(updatedOrder);
 };
 
 /**

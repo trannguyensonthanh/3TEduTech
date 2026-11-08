@@ -17,6 +17,7 @@ const cancelOverduePendingOrders = async () => {
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
 
+  let committed = false;
   try {
     await transaction.begin();
 
@@ -87,9 +88,15 @@ const cancelOverduePendingOrders = async () => {
     }
 
     await transaction.commit();
+    committed = true;
   } catch (error) {
     logger.error('[CRON_JOB] Error cancelling overdue pending orders:', error);
-    if (transaction.active) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       try {
         await transaction.rollback();
         logger.info('[CRON_JOB] Transaction rolled back due to error.');

@@ -44,12 +44,23 @@ const createEnrollment = async (enrollmentData, transaction = null) => {
  * Tìm bản ghi đăng ký dựa trên AccountID và CourseID.
  * @param {number} accountId
  * @param {number} courseId
+ * @param {object} [transaction=null] - Dùng khi cần đọc trong cùng giao dịch.
  * @returns {Promise<object|null>} - Enrollment hoặc null nếu không tìm thấy.
  */
-const findEnrollmentByUserAndCourse = async (accountId, courseId) => {
+const findEnrollmentByUserAndCourse = async (
+  accountId,
+  courseId,
+  transaction = null
+) => {
   try {
-    const pool = await getConnection();
-    const request = pool.request();
+    /* [SỬA] Trước đây luôn tự mở kết nối riêng. Khi được gọi từ bên trong một
+       giao dịch (processSuccessfulOrder -> createEnrollment), nó đọc trên một
+       kết nối KHÁC nên không nhìn thấy các dòng giao dịch đó vừa chèn — kiểm
+       tra trùng đăng ký trở nên vô nghĩa — và còn có thể bị chặn bởi chính khóa
+       của giao dịch đó. */
+    const request = transaction
+      ? transaction.request()
+      : (await getConnection()).request();
     request.input('AccountID', sql.BigInt, accountId);
     request.input('CourseID', sql.BigInt, courseId);
     const result = await request.query(`

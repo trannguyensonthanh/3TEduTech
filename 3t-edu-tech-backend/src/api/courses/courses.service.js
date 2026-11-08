@@ -361,6 +361,7 @@ const updateCourse = async (courseId, updateBody, user) => {
   const dataToUpdate = { ...updateBody };
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  let committed = false;
   try {
     await transaction.begin();
     if (updateBody.courseName && updateBody.courseName !== course.CourseName) {
@@ -412,13 +413,20 @@ const updateCourse = async (courseId, updateBody, user) => {
         true
       );
       await transaction.commit();
+      committed = true;
       return currentCourse;
     }
     await transaction.commit();
+    committed = true;
     return toCamelCaseObject(updatedCourse);
   } catch (error) {
     logger.error(`Error updating course ${courseId}:`, error);
-    if (transaction && transaction.active) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       try {
         await transaction.rollback();
         logger.debug(`Transaction rolled back for course ${courseId}.`);
@@ -1328,8 +1336,8 @@ const reviewCourseApproval = async (
       ) {
         newCourseStatus = CourseStatus.ARCHIVED;
       } else {
-        console.log(
-          `Decision: ${decision}, RequestType: ${approvalRequest.RequestType}`
+        logger.warn(
+          `Quyết định duyệt không hợp lệ: ${decision} (RequestType: ${approvalRequest.RequestType}).`
         );
         throw new ApiError(httpStatus.BAD_REQUEST, 'Quyết định không hợp lệ.');
       }

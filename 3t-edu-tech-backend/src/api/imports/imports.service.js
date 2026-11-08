@@ -792,7 +792,6 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
 
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
-  await transaction.begin();
 
   let courseId;
   let createdSections = 0;
@@ -817,6 +816,11 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
   const lessonsNeedingVideo = [];
 
   try {
+    /* [SỬA] begin() trước đây nằm NGOÀI try này, nên nếu chính nó ném lỗi thì
+       lỗi thoát hoàn toàn khỏi phần xử lý lỗi của hàm (không rollback, không
+       dọn dẹp, không thông báo cho giảng viên). */
+    await transaction.begin();
+
     const courseData = buildCourseData({
       proposal,
       body,

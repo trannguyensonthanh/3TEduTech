@@ -57,10 +57,6 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 const handleStripeWebhook = catchAsync(async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
-  console.log(
-    'Webhook Raw Body Type:',
-    Buffer.isBuffer(req.body) ? 'Buffer' : typeof req.body
-  );
   try {
     event = stripe.webhooks.constructEvent(
       req.body,

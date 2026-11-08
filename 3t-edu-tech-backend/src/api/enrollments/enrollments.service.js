@@ -23,7 +23,7 @@ const createEnrollment = async (
   purchasePrice,
   transaction = null
 ) => {
-  const course = await courseRepository.findCourseById(courseId);
+  const course = await courseRepository.findCourseById(courseId, false, transaction);
   if (!course || course.StatusID !== CourseStatus.PUBLISHED) {
     throw new ApiError(
       httpStatus.NOT_FOUND,
@@ -34,7 +34,8 @@ const createEnrollment = async (
   const existingEnrollment =
     await enrollmentRepository.findEnrollmentByUserAndCourse(
       accountId,
-      courseId
+      courseId,
+      transaction
     );
   if (existingEnrollment) {
     throw new ApiError(
