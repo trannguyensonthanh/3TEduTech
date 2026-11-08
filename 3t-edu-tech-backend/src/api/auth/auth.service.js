@@ -24,6 +24,10 @@ const {
   generateRandomToken,
   calculateTokenExpiration,
 } = require('../../utils/generateToken');
+const {
+  revokeRefreshToken,
+  isRefreshTokenRevoked,
+} = require('../../utils/tokenDenylist');
 
 const jwtConfig = require('../../config/jwt');
 const ApiError = require('../../core/errors/ApiError');
@@ -243,6 +247,15 @@ const refreshAuth = async (providedRefreshToken) => {
       'Refresh token không hợp lệ hoặc đã hết hạn.'
     );
   }
+
+  /* [THÊM] Thẻ đã bị thu hồi khi đăng xuất thì không dùng lại được nữa. */
+  if (await isRefreshTokenRevoked(payload.jti)) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.'
+    );
+  }
+
   const account = await authRepository.findAccountById(payload.accountId);
   if (!account || account.Status !== AccountStatus.ACTIVE) {
     throw new ApiError(
@@ -255,6 +268,31 @@ const refreshAuth = async (providedRefreshToken) => {
     role: account.RoleID,
   });
   return { accessToken: newAccessToken };
+};
+
+/**
+ * [THÊM] Đăng xuất: thu hồi thẻ làm mới.
+ *
+ * Trước đây controller chỉ xóa cookie, nên một thẻ đã bị sao chép vẫn đổi được
+ * thẻ truy cập mới cho tới ngày hết hạn.
+ *
+ * Thẻ hỏng hoặc đã hết hạn không phải là lỗi của thao tác đăng xuất — người
+ * dùng vẫn phải đăng xuất được, nên chỉ ghi log rồi bỏ qua.
+ *
+ * @param {string} providedRefreshToken
+ */
+const logout = async (providedRefreshToken) => {
+  if (!providedRefreshToken) {
+    return;
+  }
+  try {
+    const payload = await verifyToken(providedRefreshToken);
+    await revokeRefreshToken(payload);
+  } catch (error) {
+    logger.debug(
+      'Đăng xuất với thẻ làm mới không hợp lệ hoặc đã hết hạn — bỏ qua thu hồi.'
+    );
+  }
 };
 
 /**
@@ -1011,6 +1049,7 @@ module.exports = {
   register,
   login,
   refreshAuth,
+  logout,
   verifyEmail,
   requestPasswordReset,
   resetPassword,

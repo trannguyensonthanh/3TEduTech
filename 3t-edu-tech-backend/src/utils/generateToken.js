@@ -35,9 +35,14 @@ const generateAccessToken = (payload) => {
 const generateRefreshToken = (payload) => {
   const expiresIn = `${jwtConfig.refreshExpirationDays}d`;
   try {
-    return jwt.sign({ ...payload, type: 'refresh' }, jwtConfig.secret, {
-      expiresIn,
-    });
+    /* [THÊM] jti để thẻ làm mới có thể bị thu hồi khi đăng xuất. Thiếu nó thì
+       thẻ không trạng thái này còn hiệu lực tới tận ngày hết hạn dù người dùng
+       đã đăng xuất — xem src/utils/tokenDenylist.js. */
+    return jwt.sign(
+      { ...payload, type: 'refresh', jti: uuidv4() },
+      jwtConfig.secret,
+      { expiresIn }
+    );
   } catch (error) {
     logger.error('Error generating refresh token:', error);
     throw new Error('Could not generate refresh token');

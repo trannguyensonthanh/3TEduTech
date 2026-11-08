@@ -26,7 +26,11 @@ router.post('/login', validate(authValidation.login), authController.login);
 /**
  * Logout user
  */
-router.post('/logout', authenticate, authController.logout);
+/* [SỬA] Bỏ authenticate. Đăng xuất không phải thao tác đặc quyền: nó chỉ xóa
+   cookie và thu hồi đúng thẻ làm mới được gửi kèm. Khi còn authenticate, một
+   phiên có access token đã hết hạn sẽ nhận 401 và thẻ làm mới KHÔNG bao giờ bị
+   thu hồi — đúng tình huống cần thu hồi nhất. */
+router.post('/logout', authController.logout);
 
 /**
  * Refresh authentication tokens
