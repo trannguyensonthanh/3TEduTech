@@ -38,6 +38,12 @@ describe('🛒 CART & ORDER — Giỏ hàng & Đặt hàng', () => {
     });
 
     if (!published) {
+      /* [SỬA] Phải XÓA state.cartCourseId khi bỏ qua.
+         state được lưu xuống đĩa và dùng lại giữa các lượt chạy, nên nếu không
+         xóa thì phép thử "Thêm trùng khóa" phía dưới sẽ đọc giá trị CŨ của một
+         khóa học không còn nằm trong giỏ, thêm nó vào thành công và nhận 200 —
+         báo trượt vì một lý do hoàn toàn không liên quan tới thứ nó kiểm tra. */
+      state.cartCourseId = null;
       console.log('  ⏭️ Skip: Không tìm thấy khóa học có giá > 0');
       return;
     }
