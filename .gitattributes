@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Chuẩn hóa line-ending.
+#
+# Trước khi có tệp này: git lưu LF nhưng thư mục làm việc là CRLF, nên
+# `git status` luôn báo 1085 tệp "modified" dù không ai sửa gì — không ai đọc
+# được diff thật. Các tệp .sh được scp lên EC2 cũng hỏng vì CRLF
+# (`bash: \r: command not found`).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Mặc định: git tự nhận diện tệp text, lưu LF, checkout ra LF.
+* text=auto eol=lf
+
+# Script chạy trên Windows — phải giữ CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Bắt buộc LF: chạy trong container Linux hoặc trên EC2.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+Dockerfile.* text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Nhị phân — git không được đụng vào nội dung.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.svg   text eol=lf
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+*.otf   binary
+*.mp4   binary
+*.mp3   binary
+*.bak   binary
+*.crt   text eol=lf
+*.key   text eol=lf
