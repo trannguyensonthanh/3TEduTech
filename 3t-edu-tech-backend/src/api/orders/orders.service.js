@@ -56,8 +56,17 @@ const processSuccessfulOrder = async (
     if (!updatedOrder) {
       throw new Error(`Order ${orderId} not found or already processed?`);
     }
-    if (updatedOrder.OrderStatus === OrderStatus.COMPLETED) {
-      logger.warn(`Order ${orderId} has already been processed.`);
+    // [SỬA] Guard chống xử lý lặp. Trước đây so sánh updatedOrder.OrderStatus,
+    // nhưng đó là trạng thái SAU update nên luôn bằng COMPLETED — guard không
+    // bao giờ chặn được gì, chỉ ghi log rồi chạy tiếp và cộng tiền lần nữa.
+    if (updatedOrder.PreviousOrderStatus === OrderStatus.COMPLETED) {
+      logger.warn(
+        `Order ${orderId} đã được xử lý trước đó (trạng thái cũ: COMPLETED). Bỏ qua để không cộng doanh thu lặp.`
+      );
+      if (!useExternalTransaction) {
+        await internalTransaction.commit();
+      }
+      return;
     }
     const orderItemsResult = await internalTransaction
       .request()
@@ -574,10 +583,48 @@ const cancelPendingOrder = async (accountId, orderId) => {
   }
 };
 
+/**
+ * [THÊM] Thanh toán mô phỏng dùng cho demo.
+ *
+ * Trước đây controller gọi thẳng processSuccessfulOrder(orderId, null) mà
+ * KHÔNG kiểm tra đơn hàng có thuộc về người gọi hay không — accountId được đọc
+ * ra rồi bỏ không dùng. Hệ quả: bất kỳ tài khoản nào cũng hoàn tất được đơn
+ * của người khác, miễn phí và lặp lại không giới hạn.
+ *
+ * @param {number} accountId - Người đang gọi.
+ * @param {number} orderId   - Đơn hàng cần xử lý.
+ * @param {'success'|'failed'} status
+ */
+const processMockPayment = async (accountId, orderId, status) => {
+  const order = await orderRepository.findOrderByIdWithDetails(orderId);
+  if (!order) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Không tìm thấy đơn hàng.');
+  }
+  if (Number(order.AccountID) !== Number(accountId)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Bạn không có quyền thanh toán đơn hàng này.'
+    );
+  }
+  if (order.OrderStatus !== OrderStatus.PENDING_PAYMENT) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Chỉ có thể thanh toán đơn hàng đang ở trạng thái chờ thanh toán.'
+    );
+  }
+
+  if (status === 'success') {
+    await processSuccessfulOrder(orderId, null);
+    return;
+  }
+  await cancelPendingOrder(accountId, orderId);
+};
+
 module.exports = {
   createOrderFromCart,
   processSuccessfulOrder,
   getMyOrders,
   getMyOrderDetails,
   cancelPendingOrder,
+  processMockPayment,
 };

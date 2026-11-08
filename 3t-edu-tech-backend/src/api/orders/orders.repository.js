@@ -109,7 +109,11 @@ const updateOrderStatusAndPayment = async (
     const result = await executor.query(`
             UPDATE Orders
             SET ${setClauses.join(', ')}
-            OUTPUT Inserted.*
+            -- [SỬA] Trước đây chỉ có OUTPUT Inserted.*, tức dòng SAU khi update,
+            -- nên bên gọi không thể biết đơn đã COMPLETED từ trước hay chưa —
+            -- mọi lần webhook chạy lại đều cộng tiền instructor thêm một lần.
+            -- Deleted.OrderStatus là trạng thái TRƯỚC khi update.
+            OUTPUT Deleted.OrderStatus AS PreviousOrderStatus, Inserted.*
             WHERE OrderID = @OrderID;
         `);
     return result.recordset[0];

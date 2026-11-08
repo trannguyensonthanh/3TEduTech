@@ -26,9 +26,22 @@ const getMyOrderDetails = {
   }),
 };
 
+// [THÊM] Thanh toán mô phỏng (chỉ dùng cho demo). Trước đây route này không có
+// schema nào, nên `status` có thể là bất cứ giá trị gì và mọi giá trị khác
+// 'success' đều rơi vào nhánh hủy đơn.
+const mockPayment = {
+  params: Joi.object().keys({
+    orderId: Joi.number().integer().required(),
+  }),
+  body: Joi.object().keys({
+    status: Joi.string().valid('success', 'failed').required(),
+  }),
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
   getMyOrderDetails,
   cancelOrder: getMyOrderDetails,
+  mockPayment,
 };

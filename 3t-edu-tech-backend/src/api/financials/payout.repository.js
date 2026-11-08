@@ -10,10 +10,14 @@ const WithdrawalStatus = require('../../core/enums/WithdrawalStatus');
 /**
  * Tạo yêu cầu rút tiền mới.
  */
-const createWithdrawalRequest = async (requestData) => {
+const createWithdrawalRequest = async (requestData, transaction = null) => {
   try {
-    const pool = await getConnection();
-    const request = pool.request();
+    // [SỬA] Nhận transaction để việc kiểm tra số dư và ghi yêu cầu nằm trong
+    // cùng một giao dịch — nếu không, hai yêu cầu gửi đồng thời đều đọc được
+    // số dư cũ và cùng được chấp nhận.
+    const request = transaction
+      ? transaction.request()
+      : (await getConnection()).request();
     request.input('InstructorID', sql.BigInt, requestData.InstructorID);
     request.input(
       'RequestedAmount',
@@ -601,7 +605,47 @@ const getPendingPayoutsAmount = async (instructorId, transaction = null) => {
   }
 };
 
+/**
+ * [THÊM] Lấy chi tiết các yêu cầu rút tiền đang treo của một giảng viên.
+ *
+ * Khác getPendingPayoutsAmount ở chỗ KHÔNG cộng gộp: hàm kia dùng
+ * SUM(RequestedAmount) bất kể RequestedCurrencyID, nên cộng lẫn VND với USD.
+ * Trả về từng dòng để bên gọi tự quy đổi về VND rồi mới cộng.
+ */
+const getPendingWithdrawalAmounts = async (instructorId, transaction = null) => {
+  const executor = transaction
+    ? transaction.request()
+    : (await getConnection()).request();
+  executor.input('InstructorID', sql.BigInt, instructorId);
+  const pendingStatuses = [
+    WithdrawalStatus.PENDING,
+    WithdrawalStatus.PROCESSING,
+  ];
+  const statusPlaceholders = pendingStatuses
+    .map((_, i) => `@pstatus${i}`)
+    .join(',');
+  pendingStatuses.forEach((s, i) =>
+    executor.input(`pstatus${i}`, sql.VarChar, s)
+  );
+
+  try {
+    const result = await executor.query(`
+            SELECT RequestedAmount, RequestedCurrencyID
+            FROM WithdrawalRequests
+            WHERE InstructorID = @InstructorID AND Status IN (${statusPlaceholders});
+        `);
+    return result.recordset;
+  } catch (error) {
+    logger.error(
+      `Error getting pending withdrawal amounts for instructor ${instructorId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 module.exports = {
+  getPendingWithdrawalAmounts,
   createWithdrawalRequest,
   findWithdrawalRequestById,
   updateWithdrawalRequestStatus,

@@ -34,9 +34,11 @@ router.patch(
   orderController.cancelOrder
 );
 
-// [ADD] Route for Mock Payment
+// Thanh toán mô phỏng (demo). Nằm sau router.use(authenticate) ở trên, và
+// service kiểm tra đơn hàng có thuộc về người gọi hay không.
 router.post(
   '/:orderId/mock-payment',
+  validate(orderValidation.mockPayment),
   orderController.mockPayment
 );
 

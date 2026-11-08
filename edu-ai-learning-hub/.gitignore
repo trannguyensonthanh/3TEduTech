@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Artifact cua tsc -b (sinh ra khi build/typecheck, khong nen theo doi)
+*.tsbuildinfo

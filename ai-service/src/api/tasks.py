@@ -120,11 +120,16 @@ async def download_and_transcribe_task(
             if webhook_url and srt_content:
                 logger.info(f"Delivering SRT subtitle to webhook: {webhook_url}")
                 try:
+                    # Backend yêu cầu khóa nội bộ cho endpoint webhook này.
+                    # Để trống ở cả hai phía = chạy mở, đúng quy ước sẵn có.
+                    wh_headers = {}
+                    if settings.internal_api_key:
+                        wh_headers["X-Internal-Key"] = settings.internal_api_key
                     async with aiohttp.ClientSession() as session:
                         async with session.post(webhook_url, json={
                             "srtContent": srt_content,
                             "languageCode": lang_code or "vi"
-                        }, timeout=15) as wh_res:
+                        }, headers=wh_headers, timeout=15) as wh_res:
                             if wh_res.status in (200, 201):
                                 logger.info("✅ Successfully synced auto-generated SRT subtitle with Backend!")
                             else:
