@@ -40,13 +40,25 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> l
         if len(current_chunk) + len(para) + 2 <= chunk_size:
             current_chunk = f"{current_chunk}\n\n{para}" if current_chunk else para
         else:
+            # [SỬA] Trước đây nhánh này chia làm hai: nếu current_chunk KHÔNG
+            # rỗng thì gán thẳng `overlap + para` mà không kiểm tra kích thước,
+            # còn phần tách theo câu chỉ với tới khi current_chunk rỗng. Nên một
+            # đoạn văn 50KB đến sau một chunk đang mở sẽ thành MỘT chunk 50KB và
+            # được gửi nguyên vẹn vào embed_texts — chunk_size bị vi phạm trong
+            # im lặng. Văn bản bóc từ PDF/DOCX rất dễ sinh đoạn nhiều KB.
+            # Nay luôn kiểm tra kích thước trước, rồi mới quyết định có phải
+            # tách theo câu hay không.
+            overlap_text = ""
             if current_chunk:
                 chunks.append(current_chunk.strip())
                 # Keep overlap from the end of previous chunk
                 overlap_text = current_chunk[-chunk_overlap:] if len(current_chunk) > chunk_overlap else current_chunk
-                current_chunk = f"{overlap_text}\n\n{para}"
+
+            if len(overlap_text) + len(para) + 2 <= chunk_size:
+                current_chunk = f"{overlap_text}\n\n{para}" if overlap_text else para
             else:
-                # Single paragraph is bigger than chunk_size — split by sentences
+                # Đoạn văn một mình đã lớn hơn chunk_size — tách theo câu.
+                current_chunk = ""
                 sentences = para.replace(". ", ".\n").split("\n")
                 for sentence in sentences:
                     if len(current_chunk) + len(sentence) + 1 <= chunk_size:
@@ -54,6 +66,14 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> l
                     else:
                         if current_chunk:
                             chunks.append(current_chunk.strip())
+                            current_chunk = ""
+                        # Bản thân một "câu" vẫn có thể dài hơn chunk_size: văn
+                        # bản bóc từ PDF thường mất hết dấu câu và cả đoạn thành
+                        # một chuỗi liền. Khi đó phải cắt cứng theo ký tự, nếu
+                        # không chunk_size vẫn bị vi phạm.
+                        while len(sentence) > chunk_size:
+                            chunks.append(sentence[:chunk_size].strip())
+                            sentence = sentence[chunk_size:]
                         current_chunk = sentence
 
     if current_chunk.strip():

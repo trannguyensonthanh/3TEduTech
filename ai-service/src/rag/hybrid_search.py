@@ -103,6 +103,14 @@ async def hybrid_course_search(
         all_docs = collection.get(
             limit=min(collection.count(), 500),  # Cap at 500 for performance
             include=["documents", "metadatas"],
+            # [SỬA] Trước đây KHÔNG truyền `where`, trong khi nhánh dense ở trên
+            # có. Hệ quả: RRF xếp được cả đoạn bài học và đoạn phụ đề tự động
+            # vào kết quả của một truy vấn đã lọc type=course_overview, rồi
+            # agent.py dựng thẻ COURSE_CAROUSEL từ đó — thẻ khóa học hiện tên
+            # bài học với price 0. Thêm nữa, giới hạn 500 trước đây áp lên TOÀN
+            # BỘ collection nên với kho lớn, nhánh BM25 có thể không bao giờ
+            # nhìn thấy đoạn tổng quan nào.
+            where=where,
         )
     except Exception as e:
         logger.warning(f"BM25 corpus fetch failed, falling back to dense only: {e}")

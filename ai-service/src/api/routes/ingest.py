@@ -21,6 +21,10 @@ from src.api.tasks import download_and_transcribe_task
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
+# [THÊM] Trần dung lượng cho tệp nạp trực tiếp. Chọn 8MB cho khớp với giới hạn
+# sẵn có của đường bóc tài liệu (document_parser.MAX_DOCUMENT_BYTES).
+MAX_INGEST_FILE_BYTES = 8 * 1024 * 1024
+
 
 @router.post("/transcribe")
 async def transcribe_video_endpoint(request: TranscriptionRequest, background_tasks: BackgroundTasks):
@@ -60,7 +64,10 @@ async def ingest_text_content(request: IngestTextRequest):
         )
     except Exception as e:
         logger.error(f"Text ingestion error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.post("/course", response_model=IngestResponse)
@@ -89,7 +96,10 @@ async def ingest_course(request: IngestCourseRequest):
         )
     except Exception as e:
         logger.error(f"Course ingestion error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.post("/file", response_model=IngestResponse)
@@ -113,7 +123,20 @@ async def ingest_file_upload(
         )
 
     try:
+        # [THÊM] Giới hạn dung lượng. Trước đây `await file.read()` nạp TOÀN BỘ
+        # thân yêu cầu vào RAM không giới hạn, rồi .decode() tạo bản sao thứ
+        # hai — trong khi container đặt mem_limit 1024m. Đường nạp còn lại
+        # (/api/extract/document) đã kiểm tra kích thước trước khi giải mã;
+        # hai đường upload trước giờ có hai chuẩn khác hẳn nhau.
         content = await file.read()
+        if len(content) > MAX_INGEST_FILE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"Tệp vượt quá giới hạn "
+                    f"{MAX_INGEST_FILE_BYTES // (1024 * 1024)}MB."
+                ),
+            )
         text = content.decode("utf-8")
         name = source_name or file.filename or "uploaded_file"
 
@@ -131,9 +154,16 @@ async def ingest_file_upload(
         )
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail="File is not valid UTF-8 text")
+    except HTTPException:
+        # Giữ nguyên mã trạng thái đã chọn có chủ ý (ví dụ 413 Payload Too Large);
+        # nếu không, khối `except Exception` bên dưới sẽ đổi hết thành 500.
+        raise
     except Exception as e:
         logger.error(f"File ingestion error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.get("/stats")
@@ -154,7 +184,10 @@ async def delete_collection_endpoint(collection_name: str):
         delete_collection(collection_name)
         return {"message": f"Collection '{collection_name}' deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.delete("/collection/{collection_name}/source/{source_name}")
@@ -169,7 +202,10 @@ async def delete_by_source_endpoint(collection_name: str, source_name: str):
         
         return {"message": f"Deleted all chunks for source '{source_name}' in '{collection_name}'"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.delete("/course/{course_name}")
@@ -183,7 +219,10 @@ async def delete_course_knowledge_endpoint(course_name: str):
         return {"message": f"Deleted all RAG knowledge for course '{course_name}'"}
     except Exception as e:
         logger.error(f"Failed to delete course knowledge for {course_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
 
 
 @router.delete("/lesson/{lesson_name}")
@@ -197,4 +236,7 @@ async def delete_lesson_knowledge_endpoint(lesson_name: str):
         return {"message": f"Deleted all RAG knowledge for lesson '{lesson_name}'"}
     except Exception as e:
         logger.error(f"Failed to delete lesson knowledge for {lesson_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Xử lý yêu cầu thất bại. Xem nhật ký máy chủ để biết chi tiết.",
+        )
