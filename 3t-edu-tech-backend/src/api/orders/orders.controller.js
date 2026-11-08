@@ -37,8 +37,16 @@ const getMyOrderDetails = catchAsync(async (req, res) => {
 
 // Callback/Webhook (Ví dụ - Sẽ cần điều chỉnh theo cổng thanh toán)
 const handlePaymentWebhook = catchAsync(async (req, res) => {
-  const vnpParams = req.query;
-  logger.info('Received VNPay IPN:', vnpParams);
+  /* [SỬA] Tuyến này được đăng ký cho CẢ GET lẫn POST (xem orders.routes.js),
+     nhưng trước đây chỉ đọc req.query — nhánh POST luôn nhận object rỗng nên
+     luôn trượt bước kiểm tra chữ ký. VNPay gửi IPN bằng GET, còn trình duyệt
+     quay về có thể là POST tùy cấu hình, nên gộp cả hai nguồn. */
+  const vnpParams = { ...req.query, ...req.body };
+  /* Chỉ ghi lại mã đơn và mã phản hồi; payload IPN chứa mã giao dịch và số tiền
+     nên không in nguyên văn ra nhật ký. */
+  logger.info(
+    `Received VNPay IPN for order ${vnpParams.vnp_TxnRef || 'N/A'} (code ${vnpParams.vnp_ResponseCode || 'N/A'}).`
+  );
   const result = await paymentService.processVnpayIpn(vnpParams);
   res.status(httpStatus.OK).json({
     RspCode: result.RspCode,
