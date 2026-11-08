@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { getConnection, sql } = require('../database/connection');
 // [THÊM 18/08/2026] FAQ nay là hằng số trong mã nguồn, không còn bảng CSDL.
 const faqData = require('../api/faqs/faqs.data');
@@ -8,7 +9,6 @@ const config = require('../config');
    aiClient là nơi DUY NHẤT gắn header đó — gọi axios thẳng ở đây sẽ nhận 401
    và toàn bộ tri thức RAG không bao giờ được đồng bộ. */
 const aiClient = require('./aiClient');
-const crypto = require('crypto');
 // [THÊM 18/08/2026] Dùng để nhớ "lần trước đã nạp nội dung FAQ nào".
 // Khi Redis không dùng được, module này trả về một client giả với `get` luôn
 // trả null — nghĩa là "chưa từng nạp" — nên hệ thống tự động quay lại hành vi
@@ -169,7 +169,10 @@ const syncInitialDataToAi = async ({ force = false } = {}) => {
           }, 60000);
 
           successCourses++;
-          await new Promise(r => setTimeout(r, 500)); // Nhờn chút để tránh rate limit của Embedding API
+          // Nhờn chút để tránh rate limit của Embedding API
+          await new Promise((r) => {
+            setTimeout(r, 500);
+          });
         } catch (err) {
           logger.error(`🤖 [AI Sync] Lỗi đồng bộ khóa học #${c.CourseID}: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
         }

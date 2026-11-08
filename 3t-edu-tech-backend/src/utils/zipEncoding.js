@@ -104,12 +104,15 @@ const CANDIDATE_ENCODINGS = ['windows-1258', 'cp437', 'windows-1252'];
  * Combining Diacritics, và Latin Extended Additional U+1EA0–U+1EF9 — nơi chứa
  * phần lớn nguyên âm tiếng Việt như ạ, ả, ấ, ầ...).
  */
-const VIETNAMESE_RANGE =
-  /[À-ɏ̀-ͯẠ-ỹƠơƯư]/;
+/* Dải này CỐ Ý chứa dấu phụ tổ hợp (U+0300–U+036F) — đó chính là thứ cần bắt
+   khi tên tệp dùng chuẩn Unicode tổ hợp (NFD) thay vì dựng sẵn (NFC). */
+// eslint-disable-next-line no-misleading-character-class
+const VIETNAMESE_RANGE = /[À-ɏ̀-ͯẠ-ỹƠơƯư]/;
 
-/** Ký tự điều khiển hoặc ký tự vẽ khung — dấu hiệu giải mã SAI bảng mã. */
-const GARBAGE_RANGE =
-  /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\u2500-\u257F\u2580-\u259F]/;
+/** Ký tự điều khiển hoặc ký tự vẽ khung — dấu hiệu giải mã SAI bảng mã.
+ *  Bắt ký tự điều khiển ở đây là MỤC ĐÍCH của biểu thức, không phải sơ suất. */
+// eslint-disable-next-line no-control-regex
+const GARBAGE_RANGE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\u2500-\u257F\u2580-\u259F]/;
 
 /**
  * Chấm điểm "trông có giống tiếng Việt / tên file hợp lệ không".
@@ -130,6 +133,7 @@ const scoreDecoded = (s) => {
   if (garbageMatches) score -= garbageMatches.length * 10;
 
   // Có ký tự tiếng Việt hợp lệ → dấu hiệu tốt.
+  // eslint-disable-next-line no-misleading-character-class
   const vnMatches = s.match(new RegExp(VIETNAMESE_RANGE, 'g'));
   if (vnMatches) score += vnMatches.length * 2;
 

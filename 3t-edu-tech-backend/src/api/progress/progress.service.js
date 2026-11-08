@@ -191,7 +191,9 @@ const updateLastWatchedPosition = async (
   if (position !== undefined && position >= 0) {
     updateData.LastWatchedPosition = parseInt(position, 10);
   }
-  if (timeSpentDelta && !isNaN(timeSpentDelta) && timeSpentDelta > 0) {
+  // [SỬA] isNaN toàn cục ép kiểu đối số trước khi kiểm tra nên isNaN('') cho
+  // ra false; Number.isNaN không ép kiểu.
+  if (timeSpentDelta && !Number.isNaN(Number(timeSpentDelta)) && timeSpentDelta > 0) {
     updateData.TimeSpentDelta = parseInt(timeSpentDelta, 10);
   }
 
