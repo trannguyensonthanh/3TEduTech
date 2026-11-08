@@ -563,19 +563,26 @@ const findQuizAttemptDetails = async (attemptId) => {
         WHERE qa.AttemptID = @AttemptID;
     `);
 
-    const attemptDetails = {
-      ...result.recordset[0],
-    };
+    /* [SỬA] Guard cũ vô tác dụng. Khi không tìm thấy lượt làm bài,
+       `result.recordset[0]` là undefined, nhưng `{ ...undefined }` cho ra `{}`
+       — một object RỖNG nhưng TRUTHY — nên `if (!attemptDetails) return null`
+       không bao giờ chạy, và dòng ngay dưới deref `undefined.DetailsJSON`.
+       Hậu quả: GET /quizzes/attempts/:id/result và POST .../submit trả 500
+       "Cannot read properties of undefined" cho mọi attemptId không tồn tại —
+       và cũng cho attempt của NGƯỜI KHÁC, vì lỗi nổ trước khi service kịp chạy
+       bước kiểm tra chủ sở hữu (vốn đã có sẵn và trả 403 đúng). */
+    const row = result.recordset[0];
+    if (!row) return null;
+
+    const attemptDetails = { ...row };
     delete attemptDetails.DetailsJSON;
     let detailsResult;
 
-    if (!attemptDetails) return null;
-
-    if (result.recordset[0].DetailsJSON) {
+    if (row.DetailsJSON) {
       const details =
-        typeof result.recordset[0].DetailsJSON === 'string'
-          ? JSON.parse(result.recordset[0].DetailsJSON)
-          : result.recordset[0].DetailsJSON;
+        typeof row.DetailsJSON === 'string'
+          ? JSON.parse(row.DetailsJSON)
+          : row.DetailsJSON;
 
       details.forEach((detail) => {
         const opts = detail.OptionsJSON;

@@ -108,9 +108,9 @@ const HEALTH_REDIS_TIMEOUT_MS = 2000;
 const withTimeout = (promise, ms, label) =>
   Promise.race([
     promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} quá hạn ${ms}ms`)), ms)
-    ),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} quá hạn ${ms}ms`)), ms);
+    }),
   ]);
 
 apiV1Router.get('/', async (req, res) => {

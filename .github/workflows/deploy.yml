@@ -42,9 +42,19 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # [SỬA] Bỏ continue-on-error.
+      #
+      # Trước đây bước này luôn "xanh" dù lint hỏng, nên nó không phải là một
+      # cổng chặn mà chỉ là trang trí: 112 lỗi nằm im suốt mà không ai thấy —
+      # trong đó có một lỗi THẬT (`quizRepository` không hề được import ở
+      # lessons.service.js, tức ReferenceError ngay khi tính năng sinh câu hỏi
+      # bằng AI được gọi).
+      #
+      # Trước khi bỏ cờ này, số lỗi đã được đưa về 0: nhóm quy tắc thuần phong
+      # cách của airbnb mà dự án cố ý không theo đã được tắt tường minh trong
+      # .eslintrc.js (kèm lý do), các lỗi thật thì được sửa.
       - name: Run ESLint (Linter check)
         run: npm run lint
-        continue-on-error: true # Cho phép qua tiếp nếu có cảnh báo style nhẹ
 
       # 💡 Khi bạn bắt đầu bổ sung Jest Unit Test, chỉ cần mở khóa dòng bên dưới:
       # - name: Run Unit & Integration Tests (Jest)
@@ -60,15 +70,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install uv Package Manager
-        uses: astral-sh/setup-uv@v1
-        with:
-          version: "latest"
-
       - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # [SỬA] Thay action astral-sh/setup-uv@v1 bằng `pip install uv`.
+      #
+      # Job này chạy tốt hồi tháng 8 rồi tự hỏng với "uv: command not found":
+      # action v1 đã lỗi thời (log còn kèm cảnh báo Node 20 bị khai tử) và
+      # không còn đưa uv vào PATH, nhất là khi setup-python chạy sau nó và dựng
+      # lại PATH. Đây là trôi dạt của phụ thuộc bên ngoài, không phải do thay
+      # đổi trong kho.
+      #
+      # `pip install uv` không phụ thuộc phiên bản action, chạy sau setup-python
+      # nên chắc chắn nằm đúng môi trường Python vừa dựng.
+      - name: Install uv Package Manager
+        run: pip install uv
 
       - name: Install Python Dependencies
         run: uv pip install --system -r pyproject.toml
@@ -107,6 +125,12 @@ jobs:
       # --noEmit với nó thì không kiểm tra tệp nào cả mà vẫn báo thành công.
       - name: Verify TypeScript types (tsc -b)
         run: npm run typecheck
+
+      # [THÊM] Job frontend trước đây KHÔNG có bước lint nào, nên
+      # react-hooks/exhaustive-deps (vốn chỉ ở mức warn) chưa bao giờ chặn được
+      # gì. Nay quy tắc đó là error và lint đã sạch, nên có thể làm cổng chặn.
+      - name: Run ESLint (Linter check)
+        run: npm run lint
 
       - name: Build Vite Production Bundle
         run: npm run build

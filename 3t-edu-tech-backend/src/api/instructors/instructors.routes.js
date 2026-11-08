@@ -16,6 +16,39 @@ const router = express.Router();
 const reviewValidation = require('../reviews/reviews.validation');
 const reviewController = require('../reviews/reviews.controller');
 
+/* ============================================================================
+   [SỬA] `/me/profile` PHẢI đứng trước `/:instructorId/profile`.
+
+   Express so khớp theo THỨ TỰ khai báo. Trước đây khối này nằm mãi phía dưới,
+   nên `GET /v1/instructors/me/profile` — đường dẫn mà GIAO DIỆN THẬT đang gọi —
+   rơi vào route công khai với instructorId = "me", tức chạy nhầm
+   getInstructorPublicProfile thay vì getMyProfile. Controller không hề xử lý
+   chuỗi "me".
+
+   Lỗi này không lộ ra vì tầng kiểm tra đầu vào chưa bao giờ chạy (xem
+   utils/pick.js): schema đòi instructorId là số, nhưng schema đó không được áp
+   dụng, nên yêu cầu đi thẳng xuống handler sai và vẫn trả về 200. Bộ test chỉ
+   kiểm tra mã trạng thái nên cũng không phát hiện.
+
+   Cùng một lỗi với khối chú thích đã có trong faqs.routes.js.
+
+   Vì khối này nằm trên `router.use(authenticate, ...)` nên phải tự gắn
+   middleware xác thực/phân quyền.
+   ========================================================================== */
+router
+  .route('/me/profile')
+  .get(
+    authenticate,
+    authorize([Roles.INSTRUCTOR, Roles.SUPERADMIN]),
+    instructorController.getMyProfile
+  )
+  .patch(
+    authenticate,
+    authorize([Roles.INSTRUCTOR, Roles.SUPERADMIN]),
+    validate(instructorValidation.updateMyProfile),
+    instructorController.updateMyProfile
+  );
+
 // --- Public Route ---
 router.get(
   '/:instructorId/profile',
@@ -53,15 +86,6 @@ router.get(
   validate(instructorValidation.getInstructorStudents),
   instructorController.getMyStudents
 );
-
-// --- Profile Management ---
-router
-  .route('/me/profile')
-  .get(instructorController.getMyProfile)
-  .patch(
-    validate(instructorValidation.updateMyProfile),
-    instructorController.updateMyProfile
-  );
 
 // --- Skills Management ---
 router.post(

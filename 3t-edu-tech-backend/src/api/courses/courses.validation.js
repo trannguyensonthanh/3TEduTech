@@ -45,9 +45,17 @@ const createCourse = {
  */
 const getCourses = {
   query: Joi.object().keys({
-    page: Joi.number().integer().min(1),
-    limit: Joi.number().integer().min(0),
-    searchTerm: Joi.string().allow(null, ''),
+    /* [SỬA] Thêm trần cho page/limit và độ dài cho searchTerm.
+
+       Thiếu chúng, hai yêu cầu dưới đây làm máy chủ trả 500 chứ không phải 400:
+         - page rất lớn  -> page*limit tràn khỏi int32 khi tính Offset, mssql
+           báo "Validation failed for parameter 'Offset'".
+         - searchTerm dài -> "String or binary data would be truncated".
+       Cả hai là đầu vào từ người dùng nên phải bị chặn ở tầng kiểm tra, không
+       để rơi xuống tầng CSDL. (Khối getInstructors bên dưới vốn đã làm đúng.) */
+    page: Joi.number().integer().min(1).max(100000),
+    limit: Joi.number().integer().min(0).max(100),
+    searchTerm: Joi.string().max(255).allow(null, ''),
     categoryId: Joi.number().integer(),
     levelId: Joi.number().integer(),
     instructorId: Joi.number().integer(),

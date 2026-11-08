@@ -212,14 +212,32 @@ const getQuizScoresByCourse = async (courseId = null) => {
             ISNULL(AVG(CAST(qa.Score AS FLOAT)), 0) as AvgScore,
             ISNULL(MAX(qa.Score), 0) as HighestScore,
             ISNULL(MIN(qa.Score), 0) as LowestScore,
-            ISNULL(AVG(CAST(qa.CorrectAnswers AS FLOAT)), 0) as AvgCorrectAnswers,
-            ISNULL(MAX(qa.TotalQuestions), 0) as TotalQuestions,
+            /* [SỬA] qa.CorrectAnswers và qa.TotalQuestions KHÔNG TỒN TẠI.
+               Bảng QuizAttempts chỉ có: AttemptID, LessonID, AccountID,
+               StartedAt, CompletedAt, Score, IsPassed, AttemptNumber. Truy vấn
+               cũ làm GET /v1/admin/reports/quiz-scores luôn trả 500
+               "Invalid column name 'TotalQuestions'".
+               Số câu đúng lấy từ QuizAttemptAnswers, số câu hỏi từ
+               QuizQuestions — cả hai qua OUTER APPLY, vì đặt truy vấn con
+               thẳng trong AVG()/MAX() thì SQL Server từ chối. */
+            ISNULL(AVG(CAST(ca.CorrectCount AS FLOAT)), 0) as AvgCorrectAnswers,
+            ISNULL(MAX(tq.QuestionCount), 0) as TotalQuestions,
             SUM(CASE WHEN qa.Score >= 70 THEN 1 ELSE 0 END) as PassCount,
             SUM(CASE WHEN qa.Score < 70 THEN 1 ELSE 0 END) as FailCount
         FROM QuizAttempts qa
         JOIN Lessons l ON qa.LessonID = l.LessonID
         JOIN Sections s ON l.SectionID = s.SectionID
         JOIN Courses c ON s.CourseID = c.CourseID
+        OUTER APPLY (
+            SELECT COUNT(*) AS CorrectCount
+            FROM QuizAttemptAnswers qaa
+            WHERE qaa.AttemptID = qa.AttemptID AND qaa.IsCorrect = 1
+        ) ca
+        OUTER APPLY (
+            SELECT COUNT(*) AS QuestionCount
+            FROM QuizQuestions qq
+            WHERE qq.LessonID = l.LessonID
+        ) tq
         WHERE qa.CompletedAt IS NOT NULL ${courseFilter}
         GROUP BY c.CourseID, c.CourseName, c.Slug, l.LessonID, l.LessonName
         ORDER BY c.CourseName, l.LessonName;
@@ -260,22 +278,37 @@ const getCourseEffectiveness = async () => {
             /* Tỷ lệ hoàn thành trung bình: tính thật từ LessonProgress.
                Học viên đã được khóa cờ IsCompleted=1 luôn tính 100% để tôn trọng
                cơ chế "Progress Protection". Bài/chương đã lưu trữ bị loại khỏi mẫu số. */
+            /* [SỬA] SQL Server không cho phép hàm gộp bao quanh biểu thức có
+               chứa truy vấn con — bản cũ đặt hai SELECT lồng ngay trong AVG()
+               nên endpoint này luôn trả 500 "Cannot perform an aggregate
+               function on an expression containing an aggregate or a subquery".
+               Nay tính tỷ lệ từng học viên ở bảng dẫn xuất rồi mới AVG. */
             ISNULL((
-                SELECT AVG(
-                    CASE WHEN e2.IsCompleted = 1 THEN 100.0 ELSE ISNULL(
-                        CAST((SELECT COUNT(*) FROM LessonProgress lp
-                                JOIN Lessons lx  ON lp.LessonID = lx.LessonID
-                                JOIN Sections sx ON lx.SectionID = sx.SectionID
-                               WHERE lp.AccountID = e2.AccountID AND sx.CourseID = e2.CourseID
-                                 AND lp.IsCompleted = 1 AND lx.IsArchived = 0 AND sx.IsArchived = 0
-                             ) AS FLOAT) * 100.0
-                        / NULLIF((SELECT COUNT(*) FROM Lessons ly
-                                    JOIN Sections sy ON ly.SectionID = sy.SectionID
-                                   WHERE sy.CourseID = e2.CourseID
-                                     AND ly.IsArchived = 0 AND sy.IsArchived = 0), 0)
-                    , 0) END
-                )
-                FROM Enrollments e2 WHERE e2.CourseID = c.CourseID
+                SELECT AVG(x.Pct)
+                FROM (
+                    SELECT CASE
+                             WHEN e2.IsCompleted = 1 THEN 100.0
+                             ELSE ISNULL(
+                               CAST(done.Cnt AS FLOAT) * 100.0 / NULLIF(total.Cnt, 0), 0)
+                           END AS Pct
+                    FROM Enrollments e2
+                    OUTER APPLY (
+                        SELECT COUNT(*) AS Cnt
+                        FROM LessonProgress lp
+                        JOIN Lessons lx  ON lp.LessonID = lx.LessonID
+                        JOIN Sections sx ON lx.SectionID = sx.SectionID
+                        WHERE lp.AccountID = e2.AccountID AND sx.CourseID = e2.CourseID
+                          AND lp.IsCompleted = 1 AND lx.IsArchived = 0 AND sx.IsArchived = 0
+                    ) done
+                    OUTER APPLY (
+                        SELECT COUNT(*) AS Cnt
+                        FROM Lessons ly
+                        JOIN Sections sy ON ly.SectionID = sy.SectionID
+                        WHERE sy.CourseID = e2.CourseID
+                          AND ly.IsArchived = 0 AND sy.IsArchived = 0
+                    ) total
+                    WHERE e2.CourseID = c.CourseID
+                ) x
             ), 0) as AvgCompletionRate,
             ISNULL((SELECT SUM(oi.PriceAtOrder) FROM OrderItems oi JOIN Orders o ON oi.OrderID = o.OrderID WHERE oi.CourseID = c.CourseID AND o.OrderStatus = @CompletedStatus), 0) as TotalRevenue,
             /* [SỬA] Loại bài/chương đã lưu trữ để khớp với giáo trình học viên thực sự nhìn thấy */

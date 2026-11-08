@@ -71,7 +71,7 @@ const CourseDetailsDialog: React.FC<CourseDetailsDialogProps> = ({
               <Badge variant='outline'>{course.categoryName}</Badge>
               <Badge variant='secondary'>{course.levelName}</Badge>
               <Badge variant='success'>
-                {formatPrice(course.pricing.base.originalPrice)}
+                {formatPrice(course.pricing?.base?.originalPrice ?? 0)}
               </Badge>
             </div>
           </div>

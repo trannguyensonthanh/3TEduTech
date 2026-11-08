@@ -251,7 +251,13 @@ const scheduleProgressReminders = () => {
       logger.info(
         `[CRON_JOB] Triggering progress reminder job with schedule: ${cronSchedule}`
       );
-      triggerAIProgressReminders();
+      /* [SỬA] Trước đây gọi trần, không gắn .catch(). Hai cron anh em
+         (pendingOrderCanceller, exchangeRateUpdater) đều có. Hàm này hiện còn
+         sống nhờ khối try/catch bao toàn thân, nhưng bất kỳ lần tái cấu trúc
+         nào chạm vào khối đó sẽ biến lỗi thành unhandledRejection. */
+      triggerAIProgressReminders().catch((error) => {
+        logger.error('[CRON_JOB] Lỗi khi chạy nhắc nhở tiến độ học:', error);
+      });
     });
     logger.info(
       `[CRON_JOB] Scheduled AI progress reminder job with schedule: ${cronSchedule}`

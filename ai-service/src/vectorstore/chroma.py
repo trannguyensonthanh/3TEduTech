@@ -32,7 +32,12 @@ def get_or_create_collection(collection_name: str) -> chromadb.Collection:
         name=collection_name,
         metadata={"hnsw:space": "cosine"},  # Use cosine similarity
     )
-    logger.debug(f"Collection '{collection_name}' ready. Count: {collection.count()}")
+    # [SỬA] Trước đây là logger.debug(f"... {collection.count()}") — f-string
+    # được dựng TRƯỚC khi kiểm tra mức log, nên một truy vấn đếm đầy đủ chạy ở
+    # MỌI lời gọi kể cả khi LOG_LEVEL=WARNING (đúng mức mà cả hai tệp compose
+    # đang đặt cho production).
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"Collection '{collection_name}' ready. Count: {collection.count()}")
     return collection
 
 
@@ -93,7 +98,11 @@ async def add_documents(
                     f"trong collection '{collection_name}'."
                 )
         except Exception as e:
-            logger.warning(f"Không dọn được đoạn cũ của nguồn '{src}': {e}")
+            # [SỬA] Trước đây chỉ logger.warning rồi đi tiếp, nên việc nạp vẫn
+            # báo THÀNH CÔNG trong khi các đoạn lỗi thời ở lại kho vĩnh viễn —
+            # đúng cái lỗi mà khối chú thích phía trên được viết ra để chữa.
+            logger.error(f"Không dọn được đoạn cũ của nguồn '{src}': {e}")
+            raise
 
     # Smart RAG Deduplication: Check existing IDs in ChromaDB before calling Gemini Embedding API
     existing = collection.get(ids=ids)
@@ -110,7 +119,9 @@ async def add_documents(
 
     if not new_docs:
         logger.info(f"⚡ [Smart Cache] All {len(documents)} chunks already exist in collection '{collection_name}'. Zero Gemini API calls used!")
-        return len(documents)
+        # [SỬA] Trước đây trả len(documents), nên IngestResponse.chunks_added
+        # luôn bằng số đầu vào kể cả khi KHÔNG đoạn nào được ghi thêm.
+        return 0
 
     logger.info(f"💎 [Smart Cache] Generating embeddings for {len(new_docs)} new/changed chunks ({len(documents) - len(new_docs)} served from cache)...")
     # Generate embeddings using Gemini ONLY for new/changed documents
@@ -125,7 +136,8 @@ async def add_documents(
     )
 
     logger.info(f"Added {len(new_docs)} new documents to collection '{collection_name}' ({len(documents) - len(new_docs)} deduplicated)")
-    return len(documents)
+    # [SỬA] Trả số đoạn THỰC SỰ được ghi, không phải số đầu vào.
+    return len(new_docs)
 
 
 async def search_documents(
@@ -192,12 +204,24 @@ def delete_collection(collection_name: str) -> None:
 
 
 def get_collection_stats(collection_name: str) -> dict:
-    """Get statistics for a collection."""
+    """Thống kê của một collection.
+
+    [SỬA] Trước đây `except Exception: return {"name": ..., "count": 0}` —
+    KHÔNG ghi log gì cả. Khi kho vector hỏng (volume không được gắn, SQLite bị
+    khóa — đúng tình huống mà chú thích ở config.py cảnh báo), /health vẫn trả
+    200 {"status": "healthy", "count": 0} và Docker tiếp tục giữ container
+    trong danh sách phục vụ. Nay trả thêm cờ `ok` để /health phân biệt được
+    "không có tài liệu nào" với "không đọc được kho".
+    """
     try:
         collection = get_or_create_collection(collection_name)
         return {
             "name": collection_name,
             "count": collection.count(),
+            "ok": True,
         }
-    except Exception:
-        return {"name": collection_name, "count": 0}
+    except Exception as e:
+        # Chi tiết lỗi chỉ ghi vào nhật ký: /health là endpoint CÔNG KHAI, không
+        # trả nguyên văn thông báo ngoại lệ ra ngoài.
+        logger.error(f"Không đọc được collection '{collection_name}': {e}")
+        return {"name": collection_name, "count": 0, "ok": False}

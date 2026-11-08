@@ -1,19 +1,14 @@
 {
+  // [SỬA] Đã bỏ khối "compilerOptions" ở đây.
+  //
+  // Với "files": [] + "references", tsc chạy ở chế độ build (solution style) và
+  // chỉ biên dịch các dự án được tham chiếu — các tùy chọn khai ở tệp này KHÔNG
+  // BAO GIỜ được áp dụng. Khối cũ đặt baseUrl, paths, noImplicitAny,
+  // strictNullChecks... khiến người đọc tin rằng đó là cấu hình đang có hiệu
+  // lực, trong khi cấu hình thật nằm ở tsconfig.app.json.
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ],
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "noImplicitAny": false,
-    "noUnusedParameters": false,
-    "skipLibCheck": true,
-    "allowJs": true,
-    "noUnusedLocals": false,
-    "strictNullChecks": false
-  }
+  ]
 }

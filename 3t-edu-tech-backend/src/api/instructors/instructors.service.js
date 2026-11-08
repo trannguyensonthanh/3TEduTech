@@ -511,7 +511,6 @@ const getStudentsOfInstructor = async (instructorId, options) => {
     courseId,
     sortBy,
   } = options;
-  console.log('getStudentsOfInstructor', instructorId, options);
   const result = await instructorRepository.findStudentsOfInstructor({
     instructorId,
     page,

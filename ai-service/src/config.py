@@ -117,6 +117,19 @@ class Settings(BaseSettings):
     # Để TRỐNG thì AI Service chạy ở chế độ không xác thực (giữ nguyên hành vi
     # cũ, tránh làm chết hệ thống khi ai đó quên đặt biến môi trường). Chỉ khi
     # đặt giá trị ở CẢ HAI phía thì lớp bảo vệ mới bật — xem src/core/security.py.
+    # [THÊM] Danh sách gốc (scheme://host:port) được phép nhận webhook, phân
+    # tách bằng dấu phẩy. Webhook là lời gọi NGƯỢC về backend của chính hệ thống
+    # nên địa chỉ của nó thường là nội bộ (127.0.0.1 khi chạy local, tên service
+    # Docker khi chạy compose) — không thể áp cùng một luật chống SSRF như với
+    # video_url. Thay vào đó dùng danh sách cho phép, vốn chặt hơn hẳn.
+    # Để trống = chấp nhận mọi gốc, kèm một dòng cảnh báo (giữ cho bản demo dựng
+    # lên là chạy, giống cách internal_api_key đang làm).
+    webhook_allowed_origins: str = ""
+
+    # [THÊM] Bật /docs, /redoc và /openapi.json. Mặc định TẮT: chúng nằm ngoài
+    # prefix /api nên không qua lớp xác thực nội bộ.
+    enable_api_docs: bool = False
+
     internal_api_key: str = ""
 
     # Logging
@@ -137,6 +150,14 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]
+
+    @property
+    def webhook_allowed_origins_list(self) -> list[str]:
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.webhook_allowed_origins.split(",")
+            if origin.strip()
+        ]
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

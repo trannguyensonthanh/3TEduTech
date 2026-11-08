@@ -77,12 +77,29 @@ describe('👨‍🏫 INSTRUCTOR FLOW — Tạo & quản lý khóa học', () =>
       `/courses/${state.createdCourseId}/sections/${state.createdSectionId}/lessons`,
       {
         token: state.instructorToken,
+        /* [SỬA] Bổ sung videoSourceType + externalVideoInput.
+
+           Bài học VIDEO BẮT BUỘC phải có nguồn video — cả schema Joi lẫn
+           lessons.service đều kiểm tra (xem lessons.service.js: "Vui lòng chọn
+           nguồn video..."). Payload cũ thiếu hai trường này nên không thể tạo
+           được bài học.
+
+           Phép thử trước đây vẫn "đạt" chỉ vì nó TỰ BỎ QUA: việc tạo khóa học ở
+           phía trên thất bại nên state.createdSectionId không bao giờ được đặt,
+           và dòng guard đầu test cho return sớm. Jest tính một test không có
+           assertion nào là đạt.
+
+           Dùng CLOUDINARY + chuỗi rỗng, tức luồng "tạo bài học trước, tải video
+           lên sau" mà màn hình LessonVideoManager phục vụ. Không dùng YOUTUBE
+           vì đường đó gọi YouTube API để lấy thời lượng và cần YOUTUBE_API_KEY. */
         body: {
           lessonName: 'Bài 1: Hello World',
           lessonOrder: 1,
           lessonType: 'VIDEO',
           description: 'Bài đầu tiên giới thiệu khái niệm cơ bản',
           isFreePreview: true,
+          videoSourceType: 'CLOUDINARY',
+          externalVideoInput: '',
         },
       }
     );

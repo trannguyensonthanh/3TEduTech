@@ -150,7 +150,12 @@ export interface AdminCourseView extends Course {
 }
 
 export interface SectionWithLessons {
-  sectionId: number | string;
+  /* [SỬA] Trước đây là `number | string`. Không có đường dẫn dữ liệu nào tạo ra
+     sectionId kiểu chuỗi cho kiểu này (id tạm khi soạn thảo nằm ở trường riêng
+     `tempId`), nhưng chính phần `| string` làm `SectionWithLessons` lệch khỏi
+     `Section`, khiến union `SectionWithLessons[] | Section[]` ở trường
+     Course.sections không gán được cho các component nhận `Section`. */
+  sectionId: number;
   sectionName: string;
   sectionOrder: number;
   description?: string | null;

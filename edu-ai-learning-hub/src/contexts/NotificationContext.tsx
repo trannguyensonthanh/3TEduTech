@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -85,8 +86,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     }
   }, []);
 
-  // Save notifications to localStorage whenever they change
+  /* [SỬA] Hai effect này cùng chạy khi mount. Effect ghi trước đây chạy ngay ở
+     lượt đầu với giá trị TRƯỚC KHI nạp, tức mảng rỗng, và ghi đè "[]" lên dữ
+     liệu đã lưu. Nếu người dùng đóng tab trong khoảng đó — hoặc JSON.parse ở
+     effect nạp ném lỗi và state ở lại rỗng — thông báo đã lưu bị xóa sạch.
+     Cờ hasLoadedRef chặn đúng lượt ghi đầu tiên đó. */
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      return;
+    }
     localStorage.setItem(
       '3tedutech-notifications',
       JSON.stringify(notifications)

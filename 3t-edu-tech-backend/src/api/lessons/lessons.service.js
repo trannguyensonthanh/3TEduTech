@@ -11,6 +11,10 @@ const { getConnection, sql } = require('../../database/connection');
 const cloudinaryUtil = require('../../utils/cloudinary.util');
 const lessonAttachmentRepository = require('./lessonAttachment.repository');
 const subtitleRepository = require('./subtitle.repository');
+// [THÊM] Trước đây hàm sinh câu hỏi bằng AI dùng `quizRepository` mà KHÔNG
+// hề import — ReferenceError ngay khi tính năng được gọi. ESLint bắt được
+// (no-undef) sau khi cổng lint được siết lại.
+const quizRepository = require('../quizzes/quizzes.repository');
 const { extractYoutubeId, extractVimeoId } = require('../../utils/video.util');
 const authRepository = require('../auth/auth.repository');
 const enrollmentService = require('../enrollments/enrollments.service');
@@ -1000,26 +1004,67 @@ const generateLessonQuiz = async (lessonId, questionsPerLesson = 3, difficulty =
     throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'AI không thể tạo câu hỏi nào đạt yêu cầu từ nội dung bài học này.');
   }
 
-  // Lưu các câu hỏi vào Database
+  /* [SỬA] Cả khối lưu câu hỏi này trước đây không thể chạy nổi:
+       1. `quizRepository` không được import  -> ReferenceError.
+       2. `quizRepository.createOptions` KHÔNG TỒN TẠI; hàm thật tên là
+          `createOptionsForQuestion(questionId, optionsData, transaction)`.
+       3. Hàm đó gọi `transaction.request()` vô điều kiện nên bắt buộc phải có
+          transaction — truyền thiếu là ném TypeError.
+       4. Trường `OrderIndex` không được đọc tới; tên đúng là `OptionOrder`.
+       5. `QuestionOrder` không được truyền nên cột này nhận NULL.
+     Ngoài ra nay bọc cả vòng lặp trong MỘT giao dịch: trước đây mỗi câu hỏi ghi
+     độc lập, lỗi giữa chừng để lại một bộ câu hỏi dở dang. */
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+  let begun = false;
+  let committed = false;
   const savedQuestions = [];
-  for (const q of questions) {
-    const newQuestion = await quizRepository.createQuestion({
-      LessonID: lessonId,
-      QuestionText: q.question,
-      Explanation: q.explanation || null
-    });
+  try {
+    await transaction.begin();
+    begun = true;
 
-    const optionsData = q.options.map((opt, idx) => ({
-      QuestionID: newQuestion.QuestionID,
-      OptionText: opt,
-      IsCorrectAnswer: idx === q.correct_index ? true : false,
-      OrderIndex: idx
-    }));
+    for (const [index, q] of questions.entries()) {
+      const newQuestion = await quizRepository.createQuestion(
+        {
+          LessonID: lessonId,
+          QuestionText: q.question,
+          Explanation: q.explanation || null,
+          QuestionOrder: index,
+        },
+        transaction
+      );
 
-    await quizRepository.createOptions(optionsData);
-    savedQuestions.push(newQuestion);
+      const optionsData = q.options.map((opt, idx) => ({
+        OptionText: opt,
+        IsCorrectAnswer: idx === q.correct_index,
+        OptionOrder: idx,
+      }));
+
+      await quizRepository.createOptionsForQuestion(
+        newQuestion.QuestionID,
+        optionsData,
+        transaction
+      );
+      savedQuestions.push(newQuestion);
+    }
+
+    await transaction.commit();
+    committed = true;
+  } catch (error) {
+    if (begun && !committed) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error('Rollback khi lưu câu hỏi AI thất bại:', rollbackError);
+      }
+    }
+    logger.error(`Lỗi khi lưu câu hỏi AI cho bài học ${lessonId}:`, error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Không lưu được câu hỏi vừa tạo.'
+    );
   }
-  
+
   return {
     message: `Đã tạo thành công ${savedQuestions.length} câu hỏi.`,
     totalQuestions: savedQuestions.length,

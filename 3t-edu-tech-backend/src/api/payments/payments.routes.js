@@ -17,10 +17,6 @@ router.post(
 // Route xử lý Return URL từ VNPay (không cần authenticate)
 router.get(
   '/vnpay_return',
-  (req, res, next) => {
-    console.log('VNPay return URL accessed');
-    next();
-  },
   validate(paymentValidation.vnpayReturn),
   paymentController.handleVnpayReturn
 );

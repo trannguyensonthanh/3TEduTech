@@ -27,28 +27,34 @@ describe('📚 COURSES BROWSE — Duyệt khóa học', () => {
     console.log(`  ✅ Danh sách: ${courses.length} khóa học`);
   });
 
-  test('Lấy khóa học với sortBy=studentCount_desc', async () => {
+  /* [SỬA] Ba phép thử dưới đây dùng dạng `truong_desc` (gạch dưới), nhưng
+     courses.repository phân tích sortBy bằng `split(':')` và chỉ chấp nhận
+     CreatedAt | PublishedAt | Price | Name. Dạng gạch dưới chưa bao giờ được
+     hiểu — máy chủ lặng lẽ rơi về sắp xếp mặc định, và phép thử chỉ kiểm tra
+     mã 200 nên không ai thấy. (`studentCount` và `rating` cũng không nằm trong
+     danh sách cho phép.) Nay dùng đúng định dạng và đúng trường. */
+  test('Lấy khóa học với sortBy=PublishedAt:desc', async () => {
     const res = await get('/courses', {
-      query: { page: 1, limit: 5, sortBy: 'studentCount_desc', userPage: true },
+      query: { page: 1, limit: 5, sortBy: 'PublishedAt:desc', userPage: true },
     });
     expect(res.status).toBe(200);
-    console.log(`  ✅ Sort by student count: OK (${getCourses(res.data).length} kết quả)`);
+    console.log(`  ✅ Sort by published date: OK (${getCourses(res.data).length} kết quả)`);
   });
 
-  test('Lấy khóa học với sortBy=createdAt_desc', async () => {
+  test('Lấy khóa học với sortBy=CreatedAt:desc', async () => {
     const res = await get('/courses', {
-      query: { page: 1, limit: 5, sortBy: 'createdAt_desc' },
+      query: { page: 1, limit: 5, sortBy: 'CreatedAt:desc' },
     });
     expect(res.status).toBe(200);
     console.log(`  ✅ Sort by newest: OK`);
   });
 
-  test('Lấy khóa học với sortBy=rating_desc', async () => {
+  test('Lấy khóa học với sortBy=Price:asc', async () => {
     const res = await get('/courses', {
-      query: { page: 1, limit: 5, sortBy: 'rating_desc' },
+      query: { page: 1, limit: 5, sortBy: 'Price:asc' },
     });
     expect(res.status).toBe(200);
-    console.log(`  ✅ Sort by rating: OK`);
+    console.log(`  ✅ Sort by price: OK`);
   });
 
   test('Phân trang — trang 2', async () => {

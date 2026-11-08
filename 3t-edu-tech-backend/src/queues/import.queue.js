@@ -201,6 +201,15 @@ const startImportWorker = () => {
     logger.error(`[Import] Job ${job?.id} thất bại: ${err.message}`);
   });
 
+  /* [THÊM] Thiếu listener 'error' là lỗi nghiêm trọng: Worker của BullMQ là một
+     EventEmitter, và một sự kiện 'error' không có listener sẽ được Node ném ra
+     dưới dạng ngoại lệ chưa bắt — GIẾT tiến trình. Sự kiện này phát sinh khi
+     Redis rớt hoặc gia hạn khóa thất bại, tức đúng lúc hệ thống đang yếu nhất.
+     mediaUpload.queue.js đã đăng ký cả hai; tệp này thì chưa. */
+  worker.on('error', (error) => {
+    logger.error('[Import] Lỗi worker:', error);
+  });
+
   logger.info('📥 [Import] Worker nhập khóa học đã sẵn sàng (concurrency = 1).');
   return worker;
 };

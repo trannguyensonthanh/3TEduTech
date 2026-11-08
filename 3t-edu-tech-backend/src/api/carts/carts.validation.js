@@ -7,7 +7,9 @@ const Joi = require('joi');
  */
 const addCourseToCart = {
   body: Joi.object().keys({
-    courseId: Joi.number().integer().required(),
+    // [SỬA] Thêm .positive(): trước đây courseId âm (-5) lọt qua validation
+    // rồi mới bị service trả 404 — tầng kiểm tra đầu vào bỏ sót.
+    courseId: Joi.number().integer().positive().required(),
   }),
 };
 
@@ -16,7 +18,9 @@ const addCourseToCart = {
  */
 const removeCourseFromCart = {
   params: Joi.object().keys({
-    courseId: Joi.number().integer().required(),
+    // [SỬA] Thêm .positive(): trước đây courseId âm (-5) lọt qua validation
+    // rồi mới bị service trả 404 — tầng kiểm tra đầu vào bỏ sót.
+    courseId: Joi.number().integer().positive().required(),
   }),
 };
 

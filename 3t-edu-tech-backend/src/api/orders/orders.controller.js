@@ -37,8 +37,16 @@ const getMyOrderDetails = catchAsync(async (req, res) => {
 
 // Callback/Webhook (Ví dụ - Sẽ cần điều chỉnh theo cổng thanh toán)
 const handlePaymentWebhook = catchAsync(async (req, res) => {
-  const vnpParams = req.query;
-  logger.info('Received VNPay IPN:', vnpParams);
+  /* [SỬA] Tuyến này được đăng ký cho CẢ GET lẫn POST (xem orders.routes.js),
+     nhưng trước đây chỉ đọc req.query — nhánh POST luôn nhận object rỗng nên
+     luôn trượt bước kiểm tra chữ ký. VNPay gửi IPN bằng GET, còn trình duyệt
+     quay về có thể là POST tùy cấu hình, nên gộp cả hai nguồn. */
+  const vnpParams = { ...req.query, ...req.body };
+  /* Chỉ ghi lại mã đơn và mã phản hồi; payload IPN chứa mã giao dịch và số tiền
+     nên không in nguyên văn ra nhật ký. */
+  logger.info(
+    `Received VNPay IPN for order ${vnpParams.vnp_TxnRef || 'N/A'} (code ${vnpParams.vnp_ResponseCode || 'N/A'}).`
+  );
   const result = await paymentService.processVnpayIpn(vnpParams);
   res.status(httpStatus.OK).json({
     RspCode: result.RspCode,
@@ -49,10 +57,6 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 const handleStripeWebhook = catchAsync(async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
-  console.log(
-    'Webhook Raw Body Type:',
-    Buffer.isBuffer(req.body) ? 'Buffer' : typeof req.body
-  );
   try {
     event = stripe.webhooks.constructEvent(
       req.body,
@@ -77,17 +81,14 @@ const cancelOrder = catchAsync(async (req, res) => {
 const mockPayment = catchAsync(async (req, res) => {
   const accountId = req.user.id;
   const { orderId } = req.params;
-  const { status } = req.body; // 'success' or 'failed'
-  
-  if (status === 'success') {
-    // Gọi internal function để xử lý đơn hàng thành công
-    await orderService.processSuccessfulOrder(orderId, null);
-    res.status(httpStatus.OK).send({ message: 'Mock payment success processed' });
-  } else {
-    // Hủy đơn hàng
-    await orderService.cancelPendingOrder(accountId, orderId);
-    res.status(httpStatus.OK).send({ message: 'Mock payment failed processed (cancelled)' });
-  }
+  const { status } = req.body; // 'success' | 'failed' — đã được Joi kiểm tra
+  await orderService.processMockPayment(accountId, orderId, status);
+  res.status(httpStatus.OK).send({
+    message:
+      status === 'success'
+        ? 'Đã ghi nhận thanh toán mô phỏng thành công.'
+        : 'Đã hủy đơn hàng theo thanh toán mô phỏng thất bại.',
+  });
 });
 
 module.exports = {

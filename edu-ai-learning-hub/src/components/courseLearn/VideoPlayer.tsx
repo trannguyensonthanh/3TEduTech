@@ -24,13 +24,25 @@ export default function VideoPlayer({
 }: Props) {
   const playerRef = useRef<any | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  console.log('VideoPlayer: ', source);
+
+  /* [SỬA] Giữ callback trong ref.
+     Effect bên dưới cố ý chỉ phụ thuộc vào URL video: thêm onProgress/onEnded
+     vào mảng phụ thuộc sẽ HỦY VÀ TẠO LẠI player video.js mỗi lần component cha
+     render lại (cha hiếm khi bọc chúng trong useCallback). Nhưng để nguyên thì
+     các trình xử lý sự kiện giữ mãi phiên bản callback ĐẦU TIÊN — closure cũ.
+     Dùng ref giải quyết cả hai: effect không phụ thuộc vào chúng, mà trình xử
+     lý vẫn luôn gọi phiên bản mới nhất. */
+  const onProgressRef = useRef(onProgress);
+  const onEndedRef = useRef(onEnded);
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+    onEndedRef.current = onEnded;
+  }, [onProgress, onEnded]);
+
   useEffect(() => {
     if (!containerRef.current || !source?.src) {
-      console.error('Container or source invalid');
       return;
     }
-    console.log('VideoPlayer: ', srcSub);
     // Nếu player đã khởi tạo → chỉ cần đổi source
     if (playerRef.current) {
       playerRef.current.src(source);
@@ -72,16 +84,16 @@ export default function VideoPlayer({
       const progress = {
         playedSeconds: player.currentTime(),
       };
-      if (typeof onProgress === 'function') {
-        onProgress(progress);
+      if (typeof onProgressRef.current === 'function') {
+        onProgressRef.current(progress);
       }
     }, 5000);
 
     player.on('timeupdate', throttledProgress);
 
     player.on('ended', () => {
-      if (typeof onEnded === 'function') {
-        onEnded();
+      if (typeof onEndedRef.current === 'function') {
+        onEndedRef.current();
       }
     });
 
@@ -92,7 +104,10 @@ export default function VideoPlayer({
         playerRef.current = null;
       }
     };
-  }, [source?.src]); // Chỉ re-run effect khi URL video thay đổi
+    // `source` và `srcSub` chỉ được đọc lúc khởi tạo; đổi phụ đề thì nên dựng
+    // lại player để danh sách track được cập nhật.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source?.src, srcSub]);
 
   return source?.src ? (
     <div data-vjs-player>

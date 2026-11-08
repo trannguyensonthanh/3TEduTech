@@ -7,6 +7,7 @@ const {
   authorize,
 } = require('../../middlewares/auth.middleware');
 const Roles = require('../../core/enums/Roles');
+const authenticateInternal = require('../../middlewares/internalAuth.middleware');
 
 const router = express.Router({ mergeParams: true });
 
@@ -16,9 +17,13 @@ router.get(
   subtitleController.getSubtitles
 );
 
-// Webhook tự động từ AI Service gửi phụ đề .srt
+// Webhook tự động từ AI Service gửi phụ đề .srt.
+// [SỬA] Route này nằm TRƯỚC router.use(authenticate, ...) bên dưới nên trước
+// đây hoàn toàn không có xác thực, và controller cũng không kiểm chữ ký — ai
+// cũng chèn được phụ đề vào bất kỳ bài học nào. Nay bắt buộc khóa nội bộ.
 router.post(
   '/auto-webhook',
+  authenticateInternal,
   subtitleController.handleAiSubtitleWebhook
 );
 
@@ -31,12 +36,6 @@ router.use(
 // Thêm phụ đề mới
 router.post(
   '/',
-  (req, res, next) => {
-    console.log('Request Body:', req.body);
-    console.log('Request Params:', req.params);
-    console.log('Request Query:', req.query);
-    next();
-  },
   validate(subtitleValidation.addSubtitle),
   subtitleController.addSubtitle
 );

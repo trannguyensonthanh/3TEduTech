@@ -5,3 +5,7 @@ build
 coverage
 .env
 *.log
+
+# Thư mục rác / script dùng một lần — không nên tính vào số lỗi lint.
+_jx
+_to_delete

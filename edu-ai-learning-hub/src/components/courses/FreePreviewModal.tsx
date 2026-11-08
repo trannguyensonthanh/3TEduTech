@@ -22,6 +22,7 @@ import {
   XCircle,
 } from 'lucide-react'; // Dùng lucide
 import { Button } from '@/components/ui/button';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface FreePreviewModalProps {
   isOpen: boolean;
@@ -160,7 +161,7 @@ const FreePreviewModal: React.FC<FreePreviewModalProps> = ({
               {/* Thêm ScrollArea nếu text dài */}
               <div
                 className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: lesson.textContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.textContent) }}
               />
             </ScrollArea>
           ) : lesson?.lessonType === 'QUIZ' ? (

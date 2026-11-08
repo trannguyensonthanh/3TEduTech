@@ -5,6 +5,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from src.config import get_settings
 from src.api.routes import chat, ingest, search, agent, extract, generate
 from src.core.security import require_internal_key
@@ -91,15 +92,33 @@ def create_app() -> FastAPI:
         ),
         version="2.0.0",
         lifespan=lifespan,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        # [SỬA] Trước đây bật vô điều kiện. Hai endpoint này nằm NGOÀI prefix
+        # /api nên lớp xác thực nội bộ không chạm tới, tức chúng công bố toàn bộ
+        # lược đồ của mọi endpoint được bảo vệ cho bất kỳ ai gọi được cổng này.
+        # Bật lại bằng ENABLE_API_DOCS=true khi cần.
+        docs_url="/docs" if settings.enable_api_docs else None,
+        redoc_url="/redoc" if settings.enable_api_docs else None,
+        openapi_url="/openapi.json" if settings.enable_api_docs else None,
     )
 
     # CORS
+    # [SỬA] Trước đây luôn allow_credentials=True trong khi cors_origins mặc
+    # định là "*", và KHÔNG tệp compose nào đặt CORS_ORIGINS cho container này
+    # — nên production chạy đúng cấu hình đó. Trình duyệt từ chối thẳng cặp
+    # `Allow-Origin: *` + `Allow-Credentials: true`, và nếu giá trị "*" sau này
+    # bị thay bằng một giá trị phản chiếu origin thì nó thành lỗ hổng thật.
+    # Chỉ bật credentials khi đã khai báo danh sách origin cụ thể.
+    cors_origins = settings.cors_origins_list
+    allow_credentials = "*" not in cors_origins
+    if not allow_credentials:
+        logging.getLogger(__name__).warning(
+            "CORS_ORIGINS đang là '*' — tắt allow_credentials. Hãy khai báo danh "
+            "sách origin cụ thể nếu cần gửi cookie/thông tin xác thực."
+        )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins_list,
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -138,7 +157,9 @@ def create_app() -> FastAPI:
         if vllm_info["enabled"]:
             vllm_online = await _check_vllm_health()
             vllm_info["engine"] = "online" if vllm_online else "offline"
-            vllm_info["base_url"] = settings.vllm_base_url
+            # [GỠ] base_url từng được trả về ở đây. /health là endpoint CÔNG KHAI
+            # (nằm ngoài prefix /api nên không qua lớp xác thực nội bộ), mà giá
+            # trị này là địa chỉ nội bộ trong VPC của máy GPU.
             if not vllm_online:
                 overall_status = "degraded"
                 vllm_info["notice"] = (
@@ -155,10 +176,26 @@ def create_app() -> FastAPI:
         # không hiểu vì sao.
         from src.core.llm_provider import trang_thai_provider
 
-        return {
+        collections = {
+            "master": get_collection_stats(settings.chroma_collection_master),
+            "courses": get_collection_stats(settings.chroma_collection_courses),
+        }
+        # [SỬA] Kho vector hỏng PHẢI làm healthcheck thất bại. Trước đây
+        # get_collection_stats nuốt lỗi và trả count 0, nên /health vẫn báo
+        # "healthy" và Docker giữ nguyên container trong danh sách phục vụ.
+        if not all(c.get("ok") for c in collections.values()):
+            overall_status = "unhealthy"
+
+        # [GỠ] llm.gemini_last_error chứa nguyên văn thông báo ngoại lệ của nhà
+        # cung cấp, có thể kèm URL yêu cầu — không trả ra endpoint công khai.
+        llm_status = {
+            k: v for k, v in trang_thai_provider().items() if k != "gemini_last_error"
+        }
+
+        body = {
             "status": overall_status,
             "llm_provider": settings.llm_provider,
-            "llm": trang_thai_provider(),
+            "llm": llm_status,
             "vllm": vllm_info,
             # [SỬA 18/08/2026] Thêm `available`.
             #
@@ -180,11 +217,11 @@ def create_app() -> FastAPI:
                 "chat": settings.gemini_chat_model,
                 "embedding": settings.gemini_embedding_model,
             },
-            "collections": {
-                "master": get_collection_stats(settings.chroma_collection_master),
-                "courses": get_collection_stats(settings.chroma_collection_courses),
-            },
+            "collections": collections,
         }
+        if overall_status == "unhealthy":
+            return JSONResponse(status_code=503, content=body)
+        return body
 
     # ========================================================================
     # [THÊM 17/08/2026 — LEVEL 3] BẮT BUỘC XÁC THỰC NỘI BỘ CHO MỌI ROUTE /api

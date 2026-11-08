@@ -64,7 +64,6 @@ const createVnpayUrl = async (
     // returnUrl: 'https://mysite.com/another_return_path'
   };
   const clientIp = ipAddr.split(',')[0].trim();
-  console.log('--- IP ĐƯỢC GỬI ĐẾN SERVICE ---', clientIp);
   const paymentUrl = vnpayUtil.createPaymentUrl(
     clientIp,
     amount,
@@ -231,9 +230,13 @@ const processVnpayIpn = async (vnpParams) => {
     return { RspCode: '04', Message: 'Invalid Amount' };
   }
   const pool = await getConnection();
+  /* [SỬA] Trước đây rollback vô điều kiện trong catch. Nếu chính begin() ném lỗi
+     thì rollback() ném tiếp ENOTBEGUN và lỗi đó thoát ra ngoài, đè mất lỗi gốc. */
   const transaction = new sql.Transaction(pool);
+  let begun = false;
   try {
     await transaction.begin();
+    begun = true;
     let paymentStatusId;
     let paymentCompletedAt = null;
     let newOrderStatus;
@@ -258,7 +261,8 @@ const processVnpayIpn = async (vnpParams) => {
         `SELECT * FROM CoursePayments WHERE ExternalTransactionID = @ExternalTransactionID AND PaymentMethodID = @PaymentMethodID;`
       )
       .then((r) => r.recordset[0]);
-    console.log('payment', payment);
+    /* [GỠ] Trước đây in nguyên dòng CoursePayments (mã giao dịch của cổng
+       thanh toán, số tiền) mỗi lần nhận IPN. */
     if (payment && payment.PaymentStatusID === PaymentStatus.SUCCESS) {
       logger.warn(
         `VNPay IPN Info: Payment for Order ${orderId} with VNPayTxnNo ${vnpTransactionNo} already processed as SUCCESS.`
@@ -363,7 +367,13 @@ const processVnpayIpn = async (vnpParams) => {
       `VNPay IPN Critical Error processing Order ${orderId}:`,
       error
     );
-    await transaction.rollback();
+    if (begun) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error('VNPay IPN rollback failed:', rollbackError);
+      }
+    }
     return { RspCode: '99', Message: 'Unknown error' };
   }
 };
@@ -464,8 +474,11 @@ const processStripeWebhook = async (event) => {
     }
     const pool = await getConnection();
     const transaction = new sql.Transaction(pool);
+    // [SỬA] Xem ghi chú ở processVnpayIpn: rollback vô điều kiện che mất lỗi gốc.
+    let begun = false;
     try {
       await transaction.begin();
+      begun = true;
       const paymentData = {
         OrderID: orderId,
         FinalAmount: new Decimal(session.amount_total)
@@ -508,7 +521,13 @@ const processStripeWebhook = async (event) => {
         `Error processing Stripe webhook for OrderID ${orderId}:`,
         error
       );
-      await transaction.rollback();
+      if (begun) {
+        try {
+          await transaction.rollback();
+        } catch (rollbackError) {
+          logger.error('Stripe webhook rollback failed:', rollbackError);
+        }
+      }
       throw error;
     }
   }
@@ -662,6 +681,7 @@ const processCryptoWebhook = async (signature, rawBody) => {
   }
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  let committed = false;
   try {
     await transaction.begin();
     await paymentRepository.updatePaymentStatus(
@@ -685,11 +705,17 @@ const processCryptoWebhook = async (signature, rawBody) => {
       );
     }
     await transaction.commit();
+    committed = true;
     logger.info(
       `Successfully processed Crypto webhook for OrderID ${orderId}, new status: ${newOrderStatus}`
     );
   } catch (error) {
-    if (transaction.active) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       // Kiểm tra trước khi rollback
       await transaction.rollback();
     }
@@ -782,8 +808,11 @@ const capturePayPalPayment = async (
   const captureInfo = captureData.purchase_units[0].payments.captures[0];
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  // [SỬA] Xem ghi chú ở processVnpayIpn: rollback vô điều kiện che mất lỗi gốc.
+  let begun = false;
   try {
     await transaction.begin();
+    begun = true;
     let payment = await paymentRepository.findPaymentByExternalId(
       payPalOrderId,
       'PAYPAL'
@@ -828,7 +857,13 @@ const capturePayPalPayment = async (
       paymentId: payment.PaymentID,
     };
   } catch (error) {
-    await transaction.rollback();
+    if (begun) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error('PayPal capture rollback failed:', rollbackError);
+      }
+    }
     logger.error(
       `Error processing PayPal capture for order ${internalOrderId}:`,
       error
@@ -937,6 +972,7 @@ const processMomoWebhook = async (body) => {
   }
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
+  let committed = false;
   try {
     await transaction.begin();
 
@@ -976,11 +1012,17 @@ const processMomoWebhook = async (body) => {
     }
 
     await transaction.commit();
+    committed = true;
     logger.info(
       `Successfully processed MoMo webhook for OrderID: ${internalOrderId}.`
     );
   } catch (error) {
-    if (transaction.active) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       await transaction.rollback();
     }
     logger.error(

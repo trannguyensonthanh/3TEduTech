@@ -3,6 +3,8 @@ import {
   useContext,
   useEffect,
   useState,
+  useMemo,
+  useCallback,
   ReactNode,
 } from "react";
 
@@ -55,12 +57,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
+  }, []);
+
+  /* [SỬA] Trước đây object value được tạo mới ở mỗi lượt render, nên mọi
+     component dùng useTheme() render lại theo Provider. */
+  const value = useMemo(
+    () => ({ theme, toggleTheme, setTheme }),
+    [theme, toggleTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

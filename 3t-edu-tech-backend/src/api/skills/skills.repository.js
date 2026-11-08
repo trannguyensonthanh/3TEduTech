@@ -190,7 +190,6 @@ const deleteSkillById = async (skillId) => {
  * @returns {Promise<object>} - Skill object (tìm thấy hoặc vừa tạo).
  */
 const findOrCreateSkill = async (skillName, transaction) => {
-  console.log('Finding or creating skill:', skillName);
   const findRequest = transaction.request();
   findRequest.input('SkillName', sql.NVarChar, skillName);
   let result = await findRequest.query(

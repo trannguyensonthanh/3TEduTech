@@ -102,8 +102,7 @@ const CurriculumSectionAdminView: React.FC<CurriculumSectionAdminViewProps> = ({
       {isExpanded && (
         <div className='pl-8 pr-3 pb-3 divide-y divide-border bg-muted/30'>
           {section.lessons && section.lessons.length > 0 ? (
-            section.lessons
-              .sort((a, b) => a.lessonOrder - b.lessonOrder)
+            [...section.lessons].sort((a, b) => a.lessonOrder - b.lessonOrder)
               .map((lesson, index) => (
                 <div
                   key={lesson.lessonId}

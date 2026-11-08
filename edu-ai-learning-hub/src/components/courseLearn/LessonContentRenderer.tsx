@@ -14,6 +14,7 @@ import VideoPlayer from './VideoPlayer';
 // Types
 import { Lesson } from '@/types/common.types';
 import { QuizAttemptResultResponse } from '@/services/quiz.service';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface LessonContentRendererProps {
   lesson: Lesson;
@@ -112,7 +113,7 @@ const LessonContentRenderer: React.FC<LessonContentRendererProps> = ({
         <CardContent className='p-0 sm:p-6'>
           <article className='prose prose-sm sm:prose-base dark:prose-invert max-w-none lg:prose-lg xl:prose-xl mx-auto py-1 leading-relaxed'>
             {lesson.textContent ? (
-              <div dangerouslySetInnerHTML={{ __html: lesson.textContent }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.textContent) }} />
             ) : (
               <div className='text-center py-10 text-muted-foreground'>
                 <Icons.fileText className='h-12 w-12 mx-auto mb-3 opacity-40' />

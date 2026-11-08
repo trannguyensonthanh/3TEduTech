@@ -363,9 +363,6 @@ const enrichProposal = async (user, jobId) => {
      Đối chiếu bằng khóa tạm ở trên — AI Service đã loại mọi khóa lạ, nhưng ở
      đây vẫn tra qua Map nên khóa không khớp đơn giản là bị bỏ qua. Phòng thủ
      hai lớp cho cùng một rủi ro. */
-  let sectionCount;
-  let lessonCount;
-
   /* ⚠️ Kiểm tra `item` có phải object không TRƯỚC KHI đọc `item.key`.
      AI Service đã lọc rồi, nhưng ở đây KHÔNG được phép tin điều đó: một
      `null` lọt vào mảng là đủ ném TypeError, và lỗi đó xảy ra SAU khi token
@@ -391,8 +388,8 @@ const enrichProposal = async (user, jobId) => {
     return count;
   };
 
-  sectionCount = applyDescriptions(data.sections, sectionByKey, 'ai');
-  lessonCount = applyDescriptions(data.lessons, lessonByKey, 'ai');
+  const sectionCount = applyDescriptions(data.sections, sectionByKey, 'ai');
+  const lessonCount = applyDescriptions(data.lessons, lessonByKey, 'ai');
 
   const shortDescription =
     typeof data.short_description === 'string' ? data.short_description.trim() : '';
@@ -792,7 +789,6 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
 
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
-  await transaction.begin();
 
   let courseId;
   let createdSections = 0;
@@ -817,6 +813,11 @@ const acceptProposalLocked = async (user, jobId, body, job) => {
   const lessonsNeedingVideo = [];
 
   try {
+    /* [SỬA] begin() trước đây nằm NGOÀI try này, nên nếu chính nó ném lỗi thì
+       lỗi thoát hoàn toàn khỏi phần xử lý lỗi của hàm (không rollback, không
+       dọn dẹp, không thông báo cho giảng viên). */
+    await transaction.begin();
+
     const courseData = buildCourseData({
       proposal,
       body,

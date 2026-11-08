@@ -26,6 +26,11 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
+  /* [THÊM] Gỡ console.* và debugger khỏi bản dựng production.
+     Dự án có 200+ lời gọi console.log trong src/, trong đó có những chỗ in cả
+     payload request. Giữ nguyên ở chế độ dev để còn gỡ lỗi. */
+  esbuild: mode === 'production' ? { drop: ['console', 'debugger'] } : undefined,
+
   plugins: [
     react(),
     // componentTagger() has been removed

@@ -113,64 +113,130 @@ const requestWithdrawal = async (instructorId, requestData) => {
     );
   }
 
-  const availableBalanceVND =
-    await balanceTransactionRepository.getCurrentBalance(instructorId);
+  // [SỬA] Toàn bộ phần kiểm tra số dư + ghi yêu cầu nay nằm trong MỘT giao dịch,
+  // và được tuần tự hóa theo từng giảng viên bằng sp_getapplock.
+  //
+  // Trước đây: chỉ đọc getCurrentBalance rồi ghi, không giao dịch, không khóa.
+  // Số dư lại chỉ bị trừ khi quản trị đánh dấu payout là PAID, nên yêu cầu đang
+  // PENDING/PROCESSING không giữ chỗ gì cả — giảng viên nộp N yêu cầu cùng toàn
+  // bộ số dư thì cả N đều qua (double-spend). Hai yêu cầu gửi song song cũng
+  // cùng đọc được số dư cũ.
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+  let committed = false;
+  await transaction.begin();
 
-  let requestedAmountInBaseCurrency = new Decimal(0);
-  const requestedAmountDecimal = new Decimal(requestedAmount);
+  let withdrawalRequest;
+  try {
+    // Khóa theo giảng viên, tự nhả khi giao dịch kết thúc.
+    await transaction
+      .request()
+      .input('Resource', sql.NVarChar, `withdrawal:${instructorId}`)
+      .query(`
+            DECLARE @rc INT;
+            EXEC @rc = sp_getapplock
+                 @Resource = @Resource,
+                 @LockMode = 'Exclusive',
+                 @LockOwnerType = 'Transaction',
+                 @LockTimeout = 10000;
+            IF @rc < 0 THROW 50001, 'Khong lay duoc khoa yeu cau rut tien.', 1;
+        `);
 
-  if (requestedCurrencyId === 'VND') {
-    requestedAmountInBaseCurrency = requestedAmountDecimal;
-  } else if (requestedCurrencyId === 'USD') {
-    try {
-      const rate = await exchangeRateService.getLatestRate('USD', 'VND');
-      requestedAmountInBaseCurrency = requestedAmountDecimal.times(rate);
-    } catch (error) {
+    const currentBalanceVND =
+      await balanceTransactionRepository.getCurrentBalance(
+        instructorId,
+        transaction
+      );
+
+    // Trừ đi phần đã bị giữ chỗ bởi các yêu cầu còn treo.
+    const pendingRows = await payoutRepository.getPendingWithdrawalAmounts(
+      instructorId,
+      transaction
+    );
+    let pendingVND = new Decimal(0);
+    for (const row of pendingRows) {
+      const amount = new Decimal(row.RequestedAmount.toString());
+      if (row.RequestedCurrencyID === Currency.VND) {
+        pendingVND = pendingVND.plus(amount);
+      } else if (row.RequestedCurrencyID === 'USD') {
+        const pendingRate = await exchangeRateService.getLatestRate(
+          'USD',
+          'VND'
+        );
+        pendingVND = pendingVND.plus(amount.times(pendingRate));
+      }
+    }
+
+    const availableBalanceVND = new Decimal(currentBalanceVND)
+      .minus(pendingVND)
+      .toNumber();
+
+    let requestedAmountInBaseCurrency = new Decimal(0);
+    const requestedAmountDecimal = new Decimal(requestedAmount);
+
+    if (requestedCurrencyId === 'VND') {
+      requestedAmountInBaseCurrency = requestedAmountDecimal;
+    } else if (requestedCurrencyId === 'USD') {
+      try {
+        const rate = await exchangeRateService.getLatestRate('USD', 'VND');
+        requestedAmountInBaseCurrency = requestedAmountDecimal.times(rate);
+      } catch (error) {
+        throw new ApiError(
+          httpStatus.SERVICE_UNAVAILABLE,
+          'Không thể lấy tỷ giá để xử lý yêu cầu rút USD. Vui lòng thử lại sau.'
+        );
+      }
+    } else {
       throw new ApiError(
-        httpStatus.SERVICE_UNAVAILABLE,
-        'Không thể lấy tỷ giá để xử lý yêu cầu rút USD. Vui lòng thử lại sau.'
+        httpStatus.BAD_REQUEST,
+        `Loại tiền tệ rút '${requestedCurrencyId}' không được hỗ trợ.`
       );
     }
-  } else {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Loại tiền tệ rút '${requestedCurrencyId}' không được hỗ trợ.`
+
+    const minWithdrawalSettingKey = `MinWithdrawalAmount${requestedCurrencyId}`;
+    const minWithdrawalDefault = requestedCurrencyId === 'USD' ? '10' : '250000';
+    const minWithdrawalSetting = await settingsService.getSettingValue(
+      minWithdrawalSettingKey,
+      minWithdrawalDefault
     );
+    const minWithdrawalAmount = new Decimal(minWithdrawalSetting);
+
+    if (requestedAmountDecimal.lessThan(minWithdrawalAmount)) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Số tiền rút tối thiểu là ${minWithdrawalAmount.toString()} ${requestedCurrencyId}.`
+      );
+    }
+
+    if (requestedAmountInBaseCurrency.greaterThan(availableBalanceVND)) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Số dư khả dụng không đủ. Bạn chỉ có thể rút tối đa tương đương ${new Decimal(availableBalanceVND).toDP(0).toString()} VND.`
+      );
+    }
+
+    const newRequestData = {
+      InstructorID: instructorId,
+      RequestedAmount: requestedAmount,
+      RequestedCurrencyID: requestedCurrencyId,
+      PaymentMethodID: selectedPayoutMethod.MethodID,
+      PayoutDetailsSnapshot: selectedPayoutMethod.Details,
+      Status: WithdrawalStatus.PENDING,
+      InstructorNotes: notes,
+    };
+    withdrawalRequest = await payoutRepository.createWithdrawalRequest(
+      newRequestData,
+      transaction
+    );
+    await transaction.commit();
+    committed = true;
+  } catch (error) {
+    if (!committed) {
+      await transaction.rollback();
+    }
+    throw error;
   }
 
-  const minWithdrawalSettingKey = `MinWithdrawalAmount${requestedCurrencyId}`;
-  const minWithdrawalDefault = requestedCurrencyId === 'USD' ? '10' : '250000';
-  const minWithdrawalSetting = await settingsService.getSettingValue(
-    minWithdrawalSettingKey,
-    minWithdrawalDefault
-  );
-  const minWithdrawalAmount = new Decimal(minWithdrawalSetting);
-
-  if (requestedAmountDecimal.lessThan(minWithdrawalAmount)) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Số tiền rút tối thiểu là ${minWithdrawalAmount.toString()} ${requestedCurrencyId}.`
-    );
-  }
-
-  if (requestedAmountInBaseCurrency.greaterThan(availableBalanceVND)) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Số dư khả dụng không đủ. Bạn chỉ có thể rút tối đa tương đương ${new Decimal(availableBalanceVND).toDP(0).toString()} VND.`
-    );
-  }
-
-  const newRequestData = {
-    InstructorID: instructorId,
-    RequestedAmount: requestedAmount,
-    RequestedCurrencyID: requestedCurrencyId,
-    PaymentMethodID: selectedPayoutMethod.MethodID,
-    PayoutDetailsSnapshot: selectedPayoutMethod.Details,
-    Status: WithdrawalStatus.PENDING,
-    InstructorNotes: notes,
-  };
-  const withdrawalRequest =
-    await payoutRepository.createWithdrawalRequest(newRequestData);
 
   try {
     const instructorProfile =
@@ -181,14 +247,18 @@ const requestWithdrawal = async (instructorId, requestData) => {
       Roles.SUPERADMIN,
     ]);
     if (adminIds && adminIds.length > 0) {
-      adminIds.forEach((adminIdObj) => {
-        notificationService.createNotification(
-          adminIdObj.AccountID,
-          'WITHDRAWAL_REQUESTED',
-          message,
-          { type: 'WithdrawalRequest', id: withdrawalRequest.RequestID }
-        );
-      });
+      // [SỬA] Trước đây dùng forEach không await, nên catch bên dưới không bao
+      // giờ bắt được lỗi gửi thông báo — nó thành unhandledRejection.
+      await Promise.allSettled(
+        adminIds.map((adminIdObj) =>
+          notificationService.createNotification(
+            adminIdObj.AccountID,
+            'WITHDRAWAL_REQUESTED',
+            message,
+            { type: 'WithdrawalRequest', id: withdrawalRequest.RequestID }
+          )
+        )
+      );
     }
   } catch (notifyError) {
     logger.error(
@@ -247,6 +317,7 @@ const reviewWithdrawalRequest = async (
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
 
+  let committed = false;
   try {
     await transaction.begin();
 
@@ -310,6 +381,7 @@ const reviewWithdrawalRequest = async (
         );
 
         await transaction.commit();
+        committed = true;
         logger.info(
           `Withdrawal request ${requestId} approved. Payout ${newPayoutId} created and request status set to PROCESSING.`
         );
@@ -328,6 +400,7 @@ const reviewWithdrawalRequest = async (
         transaction
       );
       await transaction.commit();
+      committed = true;
       logger.info(
         `Withdrawal request ${requestId} rejected by admin ${adminUser.id}.`
       );
@@ -352,7 +425,12 @@ const reviewWithdrawalRequest = async (
     return updatedRequest;
   } catch (error) {
     logger.error(`Error reviewing withdrawal request ${requestId}:`, error);
-    if (transaction.rolledBack === false) {
+    // [SỬA] Guard cũ dựa vào transaction.active / transaction.rolledBack —
+    // mssql 11 KHÔNG có hai thuộc tính này (cả hai luôn undefined), nên guard
+    // là mã chết: một chiều thì rollback không bao giờ chạy, chiều kia thì
+    // rollback bị bỏ qua. Cả hai đều để lại transaction mở và rò kết nối khỏi
+    // pool (tối đa 10 kết nối).
+    if (!committed) {
       await transaction.rollback();
     }
     if (
@@ -668,7 +746,6 @@ const getMyTransactions = async (instructorId, options = {}) => {
     } else if (t.Type === 'DEBIT_WITHDRAWAL' && t.PayoutMethodName) {
       detailedDescription = `Rút tiền thành công qua ${t.PayoutMethodName} (Yêu cầu Payout #${t.RelatedEntityID})`;
     }
-    console.log(t);
     return {
       transactionId: t.TransactionID,
       transactionTimestamp: t.TransactionTimestamp,

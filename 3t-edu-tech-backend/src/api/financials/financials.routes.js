@@ -54,8 +54,14 @@ router.patch(
   financialsController.processPayoutExecution
 );
 
+// [SỬA] Route này là route DUY NHẤT trong tệp thiếu authenticate + authorize.
+// Controller nhận tham số lọc instructorId tùy ý, nên trước đây bất kỳ ai
+// không đăng nhập cũng đọc được toàn bộ yêu cầu rút tiền kèm
+// PayoutDetailsSnapshot (thông tin tài khoản ngân hàng).
 router.get(
   '/withdrawal-requests',
+  authenticate,
+  authorize([Roles.ADMIN, Roles.SUPERADMIN]),
   validate(financialsValidation.getWithdrawalRequests),
   financialsController.getWithdrawalRequests
 );

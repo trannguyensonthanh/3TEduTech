@@ -6,6 +6,7 @@ import logging
 from src.core.transcription import transcribe_video, is_transcription_available
 from src.rag.loader import ingest_text
 from src.config import get_settings
+from src.core.url_guard import assert_url_is_public, assert_webhook_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +53,16 @@ async def download_and_transcribe_task(
         fd, temp_path = tempfile.mkstemp(suffix=".mp4")
         os.close(fd)
 
+        # [THÊM] Kiểm tra lại ngay trước khi chạm mạng. Validator ở tầng schema
+        # chỉ xét hình dạng URL; ở đây mới phân giải DNS để chặn tên miền trỏ về
+        # dải nội bộ (169.254.0.0/16 là endpoint metadata của EC2).
+        await assert_url_is_public(video_url)
+
         logger.info(f"Downloading video from {video_url} to {temp_path}")
-        async with aiohttp.ClientSession() as session:
+        # [THÊM] Trước đây ClientSession không có timeout nào: một URL tùy ý có
+        # thể giữ kết nối mở vô hạn.
+        download_timeout = aiohttp.ClientTimeout(total=30 * 60, sock_connect=15)
+        async with aiohttp.ClientSession(timeout=download_timeout) as session:
             async with session.get(video_url) as response:
                 if response.status != 200:
                     logger.error(f"Failed to download video: {response.status}")
@@ -120,11 +129,17 @@ async def download_and_transcribe_task(
             if webhook_url and srt_content:
                 logger.info(f"Delivering SRT subtitle to webhook: {webhook_url}")
                 try:
+                    # Backend yêu cầu khóa nội bộ cho endpoint webhook này.
+                    # Để trống ở cả hai phía = chạy mở, đúng quy ước sẵn có.
+                    assert_webhook_allowed(webhook_url)
+                    wh_headers = {}
+                    if settings.internal_api_key:
+                        wh_headers["X-Internal-Key"] = settings.internal_api_key
                     async with aiohttp.ClientSession() as session:
                         async with session.post(webhook_url, json={
                             "srtContent": srt_content,
                             "languageCode": lang_code or "vi"
-                        }, timeout=15) as wh_res:
+                        }, headers=wh_headers, timeout=15) as wh_res:
                             if wh_res.status in (200, 201):
                                 logger.info("✅ Successfully synced auto-generated SRT subtitle with Backend!")
                             else:

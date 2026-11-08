@@ -1,7 +1,9 @@
 # src/models/schemas.py
 """Pydantic request/response models for the API."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from src.core.url_guard import check_url_shape, check_url_shape_for_webhook
 
 
 # --- Chat History ---
@@ -80,6 +82,22 @@ class TranscriptionRequest(BaseModel):
     lesson_name: str = Field(default="Unknown Lesson", description="Name of the lesson")
     lesson_id: int | None = Field(default=None, description="Optional ID of the lesson for subtitle auto-sync")
     webhook_url: str | None = Field(default=None, description="Optional callback URL to deliver generated SRT subtitle")
+
+    # [THÊM] Chặn SSRF ngay tại tầng nhận yêu cầu (trả 422), trước khi tác vụ
+    # nền kịp chạm vào mạng. Xem src/core/url_guard.py.
+    @field_validator("video_url")
+    @classmethod
+    def _video_url_must_be_public(cls, v: str) -> str:
+        return check_url_shape(v)
+
+    @field_validator("webhook_url")
+    @classmethod
+    def _webhook_url_must_be_wellformed(cls, v: str | None) -> str | None:
+        # webhook trỏ ngược về backend nên có thể là địa chỉ nội bộ; việc kiểm
+        # tra danh sách gốc được phép nằm ở tasks.py, ngay trước khi gửi.
+        if v is None:
+            return v
+        return check_url_shape_for_webhook(v)
 
 
 class IngestCourseRequest(BaseModel):

@@ -427,7 +427,6 @@ const updateCourseById = async (courseId, updateData, transaction = null) => {
     : (await getConnection()).request();
   executor.input('CourseID', sql.BigInt, courseId);
   executor.input('UpdatedAt', sql.DateTime2, new Date());
-  console.log(`Updating course ${courseId} with data:`, updateData);
   const setClauses = ['UpdatedAt = @UpdatedAt'];
   const pascalUpdateData = toPascalCaseObject(updateData);
   const keys = Object.keys(pascalUpdateData);
@@ -492,13 +491,8 @@ const deleteCourseById = async (courseId, transaction = null) => {
       ? transaction.request()
       : (await getConnection()).request();
     executor.input('CourseID', sql.BigInt, courseId);
-    console.log(`Deleting course with CourseID: ${courseId}`);
     const result = await executor.query(
       'DELETE FROM Courses WHERE CourseID = @CourseID'
-    );
-    console.log(
-      `Rows affected when deleting course ${courseId}:`,
-      result.rowsAffected[0]
     );
     return result.rowsAffected[0];
   } catch (error) {

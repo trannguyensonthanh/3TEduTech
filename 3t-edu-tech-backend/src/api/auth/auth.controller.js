@@ -69,6 +69,11 @@ const resetPassword = catchAsync(async (req, res) => {
 });
 
 const logout = catchAsync(async (req, res) => {
+  /* [SỬA] Trước đây chỉ xóa cookie phía trình duyệt. Refresh token là JWT không
+     trạng thái nên một bản sao vẫn đổi được thẻ truy cập mới cho tới ngày hết
+     hạn. Nay thu hồi hẳn qua danh sách trên Redis. */
+  await authService.logout(req.cookies?.refreshToken);
+
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: config.env === 'production',

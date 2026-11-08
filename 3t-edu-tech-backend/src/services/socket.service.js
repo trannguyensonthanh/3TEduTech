@@ -57,7 +57,7 @@ const initSocketServer = (httpServer) => {
 
   let SocketIOServer;
   try {
-    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies, import/no-unresolved
     ({ Server: SocketIOServer } = require('socket.io'));
   } catch (error) {
     logger.warn(
@@ -189,7 +189,9 @@ const getConnectionCount = () => (io ? io.engine.clientsCount : 0);
 /** Đóng sạch khi tắt server (graceful shutdown). */
 const closeSocketServer = async () => {
   if (!io) return;
-  await new Promise((resolve) => io.close(resolve));
+  await new Promise((resolve) => {
+    io.close(resolve);
+  });
   io = null;
   logger.info('[Socket.IO] Đã đóng.');
 };

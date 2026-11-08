@@ -144,13 +144,26 @@ router.put(
    nâng cấp là (b) — thay đúng middleware này, không đụng tới nơi nào khác.
    ========================================================================== */
 const promoteQueryToken = (req, res, next) => {
-  if (!req.header('Authorization') && req.query.access_token) {
-    req.headers.authorization = `Bearer ${req.query.access_token}`;
+  const { query } = req;
+  if (!req.header('Authorization') && query.access_token) {
+    req.headers.authorization = `Bearer ${query.access_token}`;
   }
-  /* Gỡ khỏi query TRƯỚC khi tới tầng kiểm tra: schema Joi của tuyến này chỉ
-     khai `path`, và Joi từ chối khóa lạ — để nguyên thì mọi yêu cầu xem trước
-     đều trả 400. */
-  delete req.query.access_token;
+
+  /* [SỬA] Trước đây là `delete req.query.access_token;` — một lệnh KHÔNG có tác
+     dụng gì. Trong Express 5, `req.query` là getter phân tích lại chuỗi truy vấn
+     ở MỖI lần truy cập và trả về một object mới (`req.query === req.query` cho
+     ra false), nên thao tác xóa áp lên một bản sao dùng một lần.
+     Muốn gỡ thật thì phải định nghĩa một own property che getter đó. Nhờ vậy
+     token không còn lọt xuống các tầng sau (kể cả nơi ghi nhật ký req.query). */
+  const { access_token: removed, ...rest } = query;
+  if (removed !== undefined) {
+    Object.defineProperty(req, 'query', {
+      value: rest,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
   next();
 };
 

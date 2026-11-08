@@ -205,7 +205,7 @@ const CourseEdit: React.FC = () => {
       console.log('[SSE] Closing event source connection.');
       ctrl.abort(); // Hủy kết nối khi component unmount
     };
-  }, [course?.courseId, course?.slug, queryClient]);
+  }, [course?.courseId, course?.slug, queryClient, navigate]);
 
   // -- Khởi tạo Form với dữ liệu từ API --
   useEffect(() => {

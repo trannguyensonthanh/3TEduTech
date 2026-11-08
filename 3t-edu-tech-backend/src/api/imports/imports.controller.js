@@ -184,7 +184,7 @@ const previewFile = catchAsync(async (req, res) => {
     return;
   }
 
-  let start = match[1] ? parseInt(match[1], 10) : 0;
+  const start = match[1] ? parseInt(match[1], 10) : 0;
   let end = match[2] ? parseInt(match[2], 10) : total - 1;
 
   if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= total) {

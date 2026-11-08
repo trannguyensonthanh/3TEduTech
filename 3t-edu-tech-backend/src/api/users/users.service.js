@@ -47,7 +47,6 @@ const updateUserProfile = async (accountId, updateBody) => {
       dataToUpdate[key] = updateBody[key];
     }
   });
-  console.log(updateBody);
   if (Object.keys(dataToUpdate).length === 0) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,

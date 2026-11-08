@@ -24,6 +24,7 @@ import {
 import { Lesson } from '@/types/common.types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDurationShort } from '@/utils/formatter.util';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface LessonDetailsDialogProps {
   open: boolean;
@@ -100,7 +101,7 @@ const LessonDetailsDialog: React.FC<LessonDetailsDialogProps> = ({
                 <div
                   className='border rounded-md p-4 prose prose-sm dark:prose-invert max-w-none'
                   dangerouslySetInnerHTML={{
-                    __html: lesson.textContent || '<p>No content.</p>',
+                    __html: sanitizeHtml(lesson.textContent || '<p>No content.</p>'),
                   }}
                 />
               </div>

@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/common/Icons';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface DiscussionPostItemProps {
   post: Post;
@@ -75,7 +76,7 @@ export const DiscussionPostItem: React.FC<DiscussionPostItemProps> = ({
         </div>
         <div
           className='prose prose-sm dark:prose-invert max-w-none text-foreground/90 whitespace-pre-wrap leading-relaxed'
-          dangerouslySetInnerHTML={{ __html: post.postText }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.postText) }}
         />
         <div className='mt-2 flex items-center gap-1'>
           {!post.parentPostId && (

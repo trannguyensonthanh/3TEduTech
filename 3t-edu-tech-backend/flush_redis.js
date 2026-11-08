@@ -1,4 +1,5 @@
 const Redis = require('ioredis');
+
 const redisClient = new Redis('redis://localhost:16379');
 redisClient.flushall().then(() => {
   console.log('Cache cleared successfully!');

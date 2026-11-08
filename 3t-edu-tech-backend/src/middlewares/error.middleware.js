@@ -58,10 +58,18 @@ const errorHandler = (err, req, res, next) => {
 
   res.locals.errorMessage = err.message;
 
+  /* [SỬA] Không bao giờ đính stack trace vào phản hồi HTTP, kể cả ở chế độ
+     phát triển. Stack đã được ghi đầy đủ xuống nhật ký ngay bên dưới — đó mới
+     là nơi của nó. Trả ra HTTP thì nó lộ đường dẫn tệp trong container và cấu
+     trúc thư mục mã nguồn cho bất kỳ ai gọi được endpoint.
+
+     Chính bộ kiểm thử của dự án đặt ra hợp đồng này: helper `khongDuocNo` trong
+     tests/20-edge-inputs.test.js coi mọi phản hồi chứa "/app/src/" hoặc
+     "at Object." là thất bại. Trước đây điều khoản đó không bao giờ bị kích
+     hoạt vì tầng kiểm tra đầu vào chưa chạy nên các yêu cầu hỏng vẫn trả 200. */
   const response = {
     code: statusCode,
     message,
-    ...(config.env === 'development' && { stack: err.stack }),
   };
 
   if (config.env === 'development' || err.isOperational === false) {

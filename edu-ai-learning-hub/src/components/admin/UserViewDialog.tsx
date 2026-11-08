@@ -24,6 +24,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { UserProfile } from '@/services/user.service';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 /* Vai trò là phân loại chứ không phải trạng thái: màu trung tính, phân biệt
    bằng biểu tượng kèm nhãn chữ. */
@@ -239,7 +240,7 @@ const UserViewDialog = ({ user, open, onOpenChange }: UserViewDialogProps) => {
                       </h3>
                       <div
                         className='prose prose-sm dark:prose-invert max-w-none'
-                        dangerouslySetInnerHTML={{ __html: user.aboutMe }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(user.aboutMe) }}
                       />
                     </div>
                   )}

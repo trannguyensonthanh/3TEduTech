@@ -39,7 +39,7 @@ export const extractYoutubeId = (
 
   // Regex để trích xuất YouTube Video ID từ URL
   const youtubeRegex =
-    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
+    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?|live|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/;
   const match = url.match(youtubeRegex);
   if (match && match[1]) {
     return match[1];
@@ -96,7 +96,7 @@ export const extractVimeoId = (
   // - player.vimeo.com/video/ID
   // - Có thể có các tham số khác (?h=...)
   const vimeoRegex =
-    /(?:vimeo\.com\/(?:[^\/]+\/(?:videos|video)\/)?|player\.vimeo\.com\/video\/)([0-9]+)/;
+    /(?:vimeo\.com\/(?:[^/]+\/(?:videos|video)\/)?|player\.vimeo\.com\/video\/)([0-9]+)/;
   const match = url.match(vimeoRegex);
 
   if (match && match[1]) {
